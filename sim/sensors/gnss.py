@@ -8,6 +8,7 @@ from sim.world.vehicle import VehicleMotion
 
 VERTICAL_RATIO = 1.5  # A18
 PORTAL_GROWTH = 5.0  # A19: error and h_acc factor right at a portal
+RADIAL_68 = float(np.sqrt(-2.0 * np.log(1.0 - 0.68)))  # 1.5096: radial 68% of a circular Gaussian, in per-axis sigmas
 MIN_COURSE_SPEED_MPS = 0.5  # below this the course is held and sigma_course = speed_std / 0.5 rad
 
 
@@ -62,10 +63,11 @@ def generate_gnss(
     bad_dir = rng.uniform(0.0, 2 * np.pi, len(t))
     speed_noise, course_noise = rng.normal(size=len(t)), rng.normal(size=len(t))
 
-    h_acc = g.position_std.value * _portal_factor(road_map, s, env.portal_degrade_m)
-    err = unit * h_acc[:, None] * np.array([1.0, 1.0, VERTICAL_RATIO])  # A18
+    sigma = g.position_std.value * _portal_factor(road_map, s, env.portal_degrade_m)  # per-axis horizontal sigma
+    err = unit * sigma[:, None] * np.array([1.0, 1.0, VERTICAL_RATIO])  # A18
     err[:, 0] += bad * env.bad_fix_error_m * np.cos(bad_dir)
     err[:, 1] += bad * env.bad_fix_error_m * np.sin(bad_dir)
+    h_acc = RADIAL_68 * sigma  # radial 68% horizontal accuracy, as Android and iOS report it
     h_acc = np.where(bad, np.hypot(h_acc, env.bad_fix_error_m), h_acc)  # honest: the receiver reports the larger error
 
     speed_std = g.speed_std.value

@@ -78,6 +78,8 @@ A scenario defines the road, tunnels, exits, vehicles, phones and environment ef
 
 Profile types: `cruise` (constant speed up to a position), `ramp` (speed change), `stop` (stop at a position and wait), `stop_and_go` (seeded random stop-and-go between `from_s` and `to_s`: `kmh` is the speed while moving, `stop_s` = [min, max] stop duration, `go_s` = [min, max] driving time between stops; both ranges are sampled with the scenario seed; example: `{ "type": "stop_and_go", "from_s": 500, "to_s": 1500, "kmh": 30, "stop_s": [5, 20], "go_s": [10, 40] }`). Transitions are jerk-limited. A `handling_events` item: `{ "t": 150, "duration_s": 4, "new_mount": {...} }`.
 
+`tunnel_env.pressure_step_pa` is positive when the pressure inside the tunnel is higher than outside (the barometer then reads a lower altitude).
+
 ### 3.3 Trace format
 
 The simulation output and the real-data loader output share the same format. Arrays are columnar (one list per field), so the JSON stays small and can be fed straight into charts.
@@ -113,7 +115,7 @@ The simulation output and the real-data loader output share the same format. Arr
 }
 ```
 
-Rules: a real recording has no `truth` or only partial truth; a missing sensor field is simply not written. If there is no GNSS fix at a second, that row does not exist (instead of writing an empty value). `mode` values: `gnss`, `dead_reckoning`, `recovering`. The API can decimate the IMU for the UI with the `decimate_hz` parameter; computation always runs at full rate.
+Rules: a real recording has no `truth` or only partial truth; a missing sensor field is simply not written. If there is no GNSS fix at a second, that row does not exist (instead of writing an empty value). `mode` values: `gnss`, `dead_reckoning`, `recovering`. The API can decimate the IMU for the UI with the `decimate_hz` parameter; computation always runs at full rate. `h_acc` is the radial 68% horizontal accuracy in metres, as reported by Android and iOS.
 
 ### 3.4 Estimator interface
 

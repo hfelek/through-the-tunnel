@@ -2,7 +2,7 @@ import numpy as np
 
 from sim.contracts.preset import load_preset
 from sim.contracts.scenario import GnssEnv, Road
-from sim.sensors.gnss import generate_gnss
+from sim.sensors.gnss import RADIAL_68, generate_gnss
 from sim.world.road import RoadMap
 from sim.world.vehicle import VehicleMotion
 
@@ -42,4 +42,4 @@ def test_open_sky_error_matches_preset():
     sky = np.abs(s_true - 20_500) > 5_000
     err = np.r_[(g["x"] - s_true)[sky], g["y"][sky]]
     assert abs(np.std(err) / PRESET.gnss.position_std.value - 1) < 0.15
-    assert np.all(np.abs(g["course"][sky]) < 0.1) and (g["h_acc"][sky] == PRESET.gnss.position_std.value).all()
+    assert np.all(np.abs(g["course"][sky]) < 0.1) and np.allclose(g["h_acc"][sky], RADIAL_68 * PRESET.gnss.position_std.value)
