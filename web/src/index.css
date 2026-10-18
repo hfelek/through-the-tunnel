@@ -66,3 +66,7 @@ body { margin: 0; }
 .time-readout { font-variant-numeric: tabular-nums; min-width: 90px; text-align: right; }
 .map-view.empty { display: flex; align-items: center; justify-content: center; color: var(--muted); border-style: dashed; }
 .view-error { padding: 12px 14px; border-radius: 8px; background: #fef2f2; border: 1px solid #fecaca; color: var(--danger); font-size: 14px; }
+.profile { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.profile.empty { display: flex; align-items: center; justify-content: center; color: var(--muted); border-style: dashed; }
+.profile svg { display: block; }
+.axis-label { font-size: 11px; fill: var(--muted); }

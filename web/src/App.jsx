@@ -4,6 +4,7 @@ import { initialState, reducer } from './state'
 import Toolbar from './components/Toolbar'
 import Panel from './components/Panel'
 import ErrorBoundary from './components/ErrorBoundary'
+import ElevationProfile from './components/ElevationProfile'
 import MapView from './components/MapView'
 import Timeline from './components/Timeline'
 import { Charts } from './components/Placeholders'
@@ -52,6 +53,9 @@ export default function App() {
         <div className="left">
           <ErrorBoundary name="Map" resetKey={state.trace}>
             <MapView trace={state.trace} estimators={state.estimators} t={t} />
+          </ErrorBoundary>
+          <ErrorBoundary name="Elevation" resetKey={state.trace}>
+            <ElevationProfile trace={state.trace} estimators={state.estimators} t={t} />
           </ErrorBoundary>
           <ErrorBoundary name="Timeline" resetKey={state.trace}>
             <Timeline duration={duration} t={t} onChange={setT} />
