@@ -12,7 +12,10 @@ COMFORT_ACCEL_MPS2 = 1.5  # A11
 KMH = 1 / 3.6
 JITTER_FADE_S = 3.0  # jitter fades in/out linearly over this time
 JITTER_FREQ_HZ = (0.02, 0.1)  # slow speed variation: 10-50 s periods
-VERTICAL_BLEND_M = 40.0  # pitch is blended over this length, like road vertical curves
+VERTICAL_BLEND_M = 40.0  # A12
+MIN_GAP_M = 15.0  # A10
+GAP_MARGIN_M = 0.01  # numerical margin so discrete steps never dip below the minimum gap
+FOLLOW_DECEL_MPS2 = 3.0  # A10: firm braking (~0.3 g) a follower may use to keep the gap
 MAX_DURATION_S = 2 * 3600.0
 
 
@@ -62,8 +65,12 @@ def _s_curve(v0: float, v1: float, accel: float) -> tuple[float, "callable"]:
 class _Run:
     """Steps the vehicle at a fixed dt and records (t, s, v)."""
 
-    def __init__(self, vehicle: Vehicle, road_len: float, dt: float, rng: np.random.Generator) -> None:
+    def __init__(
+        self, vehicle: Vehicle, road_len: float, dt: float, rng: np.random.Generator,
+        leader: "VehicleMotion | None" = None, min_gap_m: float = MIN_GAP_M,
+    ) -> None:
         self.dt, self.road_len, self.rng = dt, road_len, rng
+        self.leader, self.min_gap = leader, min_gap_m
         self.t0, self.s, self.vb = vehicle.start_t, vehicle.start_s, vehicle.initial_kmh * KMH
         self.g = 0.0  # jitter gain 0..1
         n = 4
@@ -85,6 +92,8 @@ class _Run:
         j = self.amp * float(np.sum(np.cos(2 * math.pi * self.f * self.t + self.phi)))
         gain = self.g**2 * (3 - 2 * self.g)  # smoothstep: no acceleration kink at fade ends
         v = max(vb + gain * j, 0.0) if vb > 0 else 0.0
+        if self.leader is not None and v > 0:
+            v = min(v, self._gap_speed_cap())
         if self.rec:
             self.s += 0.5 * (self.v_prev + v) * self.dt
         self.v_prev = v
@@ -94,6 +103,16 @@ class _Run:
             raise _RoadEnd
         if self.k * self.dt > MAX_DURATION_S:
             raise ValueError("vehicle never reaches the road end")
+
+    def _gap_speed_cap(self) -> float:
+        """Highest speed that still lets the follower stop in time to keep the minimum gap (A10)."""
+        lead = self.leader
+        s_lead = np.interp(self.t, lead.t, lead.s, right=np.inf)
+        room = max(float(s_lead) - self.s - self.min_gap - GAP_MARGIN_M, 0.0)
+        if math.isinf(room):
+            return math.inf
+        v_lead = float(np.interp(self.t, lead.t, lead.v, left=0.0))
+        return max(min(v_lead + math.sqrt(2 * FOLLOW_DECEL_MPS2 * max(room - self.v_prev * self.dt, 0.0)), 2 * room / self.dt - self.v_prev), 0.0)
 
     def change(self, v1: float, accel: float) -> None:
         total, f = _s_curve(self.vb, v1, accel)
@@ -153,9 +172,15 @@ def _road_pitch(road_map: RoadMap) -> tuple[np.ndarray, np.ndarray]:
     return pitch, np.gradient(pitch, line.s)
 
 
-def simulate_vehicle(vehicle: Vehicle, road_map: RoadMap, rate_hz: float, rng: np.random.Generator) -> VehicleMotion:
-    """Run the vehicle's profile on the road at `rate_hz` until it reaches the road end."""
-    run = _Run(vehicle, road_map.length_m, 1.0 / rate_hz, rng)
+def simulate_vehicle(
+    vehicle: Vehicle, road_map: RoadMap, rate_hz: float, rng: np.random.Generator,
+    leader: VehicleMotion | None = None, min_gap_m: float = MIN_GAP_M,
+) -> VehicleMotion:
+    """Run the vehicle's profile on the road at `rate_hz` until it reaches the road end.
+
+    With a `leader`, the vehicle slows down so it never gets closer than `min_gap_m` to it.
+    """
+    run = _Run(vehicle, road_map.length_m, 1.0 / rate_hz, rng, leader, min_gap_m)
     try:
         for item in vehicle.profile:
             if isinstance(item, Cruise):
@@ -183,3 +208,21 @@ def simulate_vehicle(vehicle: Vehicle, road_map: RoadMap, rate_hz: float, rng: n
         a_lat=v**2 * pos["curvature"],
         a_vert=v**2 * np.interp(s, line_s, dps),
     )
+
+
+def simulate_vehicles(
+    vehicles: list[Vehicle], road_map: RoadMap, rate_hz: float, rng: np.random.Generator, min_gap_m: float = MIN_GAP_M
+) -> list[VehicleMotion]:
+    """Simulate vehicles in list order; each one follows the previous one in the list (single lane, no overtaking)."""
+    motions: list[VehicleMotion] = []
+    for vehicle, child in zip(vehicles, rng.spawn(len(vehicles))):
+        leader = motions[-1] if motions else None
+        if leader is not None:
+            s_lead = float(np.interp(vehicle.start_t, leader.t, leader.s, right=np.inf))
+            if vehicle.start_s > s_lead - min_gap_m:
+                raise ValueError(
+                    f"vehicle '{vehicle.id}' starts at s={vehicle.start_s} m at t={vehicle.start_t} s, "
+                    f"less than {min_gap_m} m behind its leader '{vehicles[len(motions) - 1].id}' (at s={s_lead:.1f} m)"
+                )
+        motions.append(simulate_vehicle(vehicle, road_map, rate_hz, child, leader, min_gap_m))
+    return motions
