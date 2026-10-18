@@ -331,7 +331,7 @@ The runner merges all sensor streams by time, calls `update` in order and sample
 
 - [ ] **T4.1 Runner and CLI.** `run_scenario(scenario, estimators=[]) → trace`; feeds estimators only with measurements as in Section 3.4. `python -m sim run scenarios/x.json -o out.json`.
     - Accept: the same seed gives a byte-identical trace; a 5 km scenario with one vehicle runs in under 5 seconds (without estimators).
-- [ ] **T4.2 Scenario library [claude.ai].** Under `scenarios/`: `short_straight_500m`, `curved_2km`, `curved_5km_exit_inside`, `undersea_3km_dip` (−4% down, +4% up), `stop_and_go_3km`, `hard_brake_inside`, `phone_handled_mid_tunnel`, `convoy_3_cars`, `budget_phone_5km`, `twin_tunnels_short_gap` (200 m between two tunnels), `beacons_5km`.
+- [ ] **T4.2 Scenario library [claude.ai].** Under `scenarios/`: `short_straight_500m`, `curved_2km`, `curved_5km_exit_inside`, `undersea_3km_dip` (−4% down, +4% up), `stop_and_go_3km`, `hard_brake_inside`, `phone_handled_mid_tunnel`, `budget_phone_5km`, `twin_tunnels_short_gap` (200 m between two tunnels), `beacons_5km`.
     - Accept: all validate and run without errors; each `description` says what it tests.
 
 ### Phase 5 — Baseline and metrics
@@ -353,7 +353,7 @@ The runner merges all sensor streams by time, calls `update` in order and sample
 - [ ] **T7.1 App skeleton.** API client, global state (`useReducer`), scenario picker, "Run" button, loading and error display. Layout: map on top, timeline in the middle, charts below, panel on the right.
     - Accept: picking and running a scenario puts the trace into state; errors show the API message.
 - [ ] **T7.2 Top-down map view (SVG).** Road, darker tunnel section, exit markers; true vehicle (filled) and each method's estimate (hollow, method-specific color); ±2σ as a bar along the road. Zoom, pan, "follow the car".
-    - Accept: correct positions for each t; 3 vehicles drawn at once.
+    - Accept: correct positions for each t.
 - [ ] **T7.3 Side elevation profile.** s–z chart, tunnel shaded, vehicle positions.
     - Accept: the dip is clearly visible in `undersea_3km_dip`.
 - [ ] **T7.4 Playback controls.** Play/pause, speed (×1, ×5, ×20), time slider; all views synced to the same `t`.
@@ -461,7 +461,6 @@ The project is complete without real data; it can be added later through Phase 1
 - [ ] Increase barometer fan noise and show how the particle filter reacts.
 - [ ] Turn beacons on/off and change their spacing.
 - [ ] Switch to the budget phone preset.
-- [ ] Increase to 3 vehicles and make one a slow driver.
 - [ ] Show that in a long straight, flat tunnel the particle filter gains nothing (honest failure).
 - [ ] Change an estimator parameter live (EKF process noise, ZUPT threshold, callout factor k).
 - [ ] Make a small code change live and run the tests.
@@ -481,6 +480,7 @@ Every change that touches the contracts or the task list goes here, newest first
 
 | Date | Change | Affected |
 | --- | --- | --- |
+| 2026-10-18 | convoy_3_cars removed; multi-vehicle scenarios are out of scope (the T2.3 code stays). Traffic is represented by a single vehicle in stop_and_go_3km. The 3-vehicle demo item and the T7.2 "3 vehicles" criterion are removed | T4.2, T7.2, Section 6 |
 | 2026-10-18 | Plan translated to English | Whole document |
 | 2026-10-18 | Division of work and credit rules added; Claude.ai tasks tagged [claude.ai]; CLAUDE.md prepared | Section 1, T0.2, T0.3, T3.1, T4.2, T11.1–T11.3 |
 | 2026-10-18 | Real data process (Section 5, Phase 10) made optional | Sections 1, 3.6, 5, 6, T3.1, Phase 10 |
