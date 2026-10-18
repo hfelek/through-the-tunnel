@@ -11,7 +11,7 @@ JERK_MPS3 = 2.0  # A11
 COMFORT_ACCEL_MPS2 = 1.5  # A11
 KMH = 1 / 3.6
 JITTER_FADE_S = 3.0  # jitter fades in/out linearly over this time
-JITTER_FREQ_HZ = (0.02, 0.1)  # slow speed variation: 10-50 s periods
+JITTER_FREQ_HZ = (0.02, 0.1)  # A27: slow speed variation, 10-50 s periods
 VERTICAL_BLEND_M = 40.0  # A12
 MIN_GAP_M = 15.0  # A10
 GAP_MARGIN_M = 0.01  # numerical margin so discrete steps never dip below the minimum gap
@@ -73,7 +73,7 @@ class _Run:
         self.leader, self.min_gap = leader, min_gap_m
         self.t0, self.s, self.vb = vehicle.start_t, vehicle.start_s, vehicle.initial_kmh * KMH
         self.g = 0.0  # jitter gain 0..1
-        n = 4
+        n = 4  # A27: sum of 4 random-phase cosines
         self.f = rng.uniform(*JITTER_FREQ_HZ, n)
         self.phi = rng.uniform(0, 2 * math.pi, n)
         self.amp = vehicle.speed_jitter_kmh * KMH * math.sqrt(2 / n)  # std = speed_jitter_kmh
