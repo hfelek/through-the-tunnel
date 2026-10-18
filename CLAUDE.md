@@ -66,8 +66,10 @@ If asked to, reply "This task is tagged [claude.ai]." and stop.
   Small pure functions. One-line docstrings unless the math needs more.
 - JavaScript only (no TypeScript). React function components + hooks.
   CSS modules or inline styles. Charts with Recharts. No other UI framework.
-- Python acceptance criteria get pytest tests in `tests/test_<module>.py`.
-  Frontend acceptance criteria are checked manually by the user; no frontend test framework.
+- Tests stay light: per task 1–3 short smoke tests in one file (runs, right
+  shape, one key sanity check). Check remaining acceptance criteria with a
+  one-off command and report the result in one line. Frontend is checked
+  manually by the user.
 
 ## Definition of done (every task)
 
@@ -76,3 +78,7 @@ If asked to, reply "This task is tagged [claude.ai]." and stop.
 3. Append one line to the AI log without reading it:
    `echo '| T2.1 | <what you generated, one line> | |' >> docs/AI_LOG.md`
    (the user fills the last column).
+
+## Git
+- Push the task commit to your working branch. Never open a pull request;
+  the user merges into main.

@@ -1,1 +1,12 @@
 .DS_Store
+
+out/
+data/real/raw/
+node_modules/
+dist/
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/

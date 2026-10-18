@@ -9,7 +9,7 @@ The plan avoids rework in two ways. First, data formats and interfaces (Section 
 **Working rules**
 
 1. One task = one commit. The commit message starts with the task ID (`T2.1: road geometry`). Do not move on until the task's acceptance criteria are met.
-2. Each task's tests are part of the task. If `pytest` is not green, the task is not done.
+2. Each task has 1–3 light smoke tests; no exhaustive test suites. If `pytest` is not green, the task is not done.
 3. The contracts in Section 3 are fixed. If a task needs to change one, Claude Code stops and asks. If approved: `docs/CONTRACTS.md` first, then code, then the user adds a row to the Change log.
 4. Change requests that come up mid-way become new tasks in the relevant phase with a `CR` number (for example `T5.3-CR1`). Finished task code is not rewritten; the new task builds on top of it.
 5. Every assumption goes into `docs/ASSUMPTIONS.md` with a number (A1, A2…) and is referenced in code where it applies (`# A7`).
