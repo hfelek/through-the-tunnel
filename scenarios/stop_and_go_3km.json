@@ -1,0 +1,123 @@
+{
+  "schema_version": "1.0",
+  "id": "stop_and_go_3km",
+  "description": "A 3 km straight, flat tunnel with seeded stop-and-go traffic over 2 km inside it (30 km/h while moving, stops of 5-30 s, 15-40 s of driving between stops). The vehicle spends several minutes in the tunnel. Expected failure of the constant-speed baseline; tests stop detection (ZUPT) and the EKF speed state.",
+  "seed": 105,
+  "rates_hz": {
+    "imu": 100,
+    "gnss": 1,
+    "baro": 10,
+    "mag": 50,
+    "output": 10
+  },
+  "road": {
+    "start_heading_deg": 90,
+    "segments": [
+      {
+        "type": "straight",
+        "length_m": 1500,
+        "grade_pct": 0
+      },
+      {
+        "type": "straight",
+        "length_m": 3000,
+        "grade_pct": 0
+      },
+      {
+        "type": "straight",
+        "length_m": 1500,
+        "grade_pct": 0
+      }
+    ],
+    "tunnels": [
+      {
+        "id": "T1",
+        "start_s": 1500,
+        "end_s": 4500
+      }
+    ],
+    "exits": [
+      {
+        "id": "E1",
+        "s": 4200,
+        "name": "Exit A"
+      }
+    ],
+    "speed_limits": [
+      {
+        "from_s": 0,
+        "to_s": 6000,
+        "kmh": 80
+      }
+    ]
+  },
+  "vehicles": [
+    {
+      "id": "car1",
+      "start_s": 0,
+      "start_t": 0,
+      "initial_kmh": 60,
+      "speed_jitter_kmh": 2,
+      "profile": [
+        {
+          "type": "cruise",
+          "kmh": 60,
+          "until_s": 1800
+        },
+        {
+          "type": "stop_and_go",
+          "from_s": 2000,
+          "to_s": 4000,
+          "kmh": 30,
+          "stop_s": [
+            5,
+            30
+          ],
+          "go_s": [
+            15,
+            40
+          ]
+        },
+        {
+          "type": "ramp",
+          "to_kmh": 60,
+          "accel_mps2": 1.2
+        },
+        {
+          "type": "cruise",
+          "kmh": 60,
+          "until_s": 6000
+        }
+      ],
+      "phone": {
+        "preset": "flagship_2024",
+        "mount": {
+          "yaw_deg": 4,
+          "pitch_deg": 65,
+          "roll_deg": -2
+        },
+        "handling_events": []
+      }
+    }
+  ],
+  "gnss_env": {
+    "portal_degrade_m": 60,
+    "reacquire_delay_s": [
+      2,
+      6
+    ],
+    "bad_fixes_after_exit": 3,
+    "bad_fix_error_m": 25
+  },
+  "tunnel_env": {
+    "pressure_step_pa": 20,
+    "fan_pressure_noise_pa": 8,
+    "mag_disturbance_ut": 25
+  },
+  "beacons": {
+    "enabled": false,
+    "spacing_m": 400,
+    "tx_power_dbm": -59,
+    "path_loss_exp": 2.2
+  }
+}

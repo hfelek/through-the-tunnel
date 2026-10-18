@@ -1,0 +1,114 @@
+{
+  "schema_version": "1.0",
+  "id": "twin_tunnels_short_gap",
+  "description": "Two 1.5 km straight, flat tunnels with a 200 m open gap between them at 70 km/h, so the car is in the open for only about 10 s. With a 2-6 s reacquisition delay, 3 bad fixes after exit and portal degradation on both sides, few or no good fixes arrive in the gap. Tests that the bad fixes are rejected and that drift from the first tunnel carries correctly into the second; the exit is inside the second tunnel.",
+  "seed": 110,
+  "rates_hz": {
+    "imu": 100,
+    "gnss": 1,
+    "baro": 10,
+    "mag": 50,
+    "output": 10
+  },
+  "road": {
+    "start_heading_deg": 90,
+    "segments": [
+      {
+        "type": "straight",
+        "length_m": 1500,
+        "grade_pct": 0
+      },
+      {
+        "type": "straight",
+        "length_m": 1500,
+        "grade_pct": 0
+      },
+      {
+        "type": "straight",
+        "length_m": 200,
+        "grade_pct": 0
+      },
+      {
+        "type": "straight",
+        "length_m": 1500,
+        "grade_pct": 0
+      },
+      {
+        "type": "straight",
+        "length_m": 1500,
+        "grade_pct": 0
+      }
+    ],
+    "tunnels": [
+      {
+        "id": "T1",
+        "start_s": 1500,
+        "end_s": 3000
+      },
+      {
+        "id": "T2",
+        "start_s": 3200,
+        "end_s": 4700
+      }
+    ],
+    "exits": [
+      {
+        "id": "E1",
+        "s": 4200,
+        "name": "Exit A"
+      }
+    ],
+    "speed_limits": [
+      {
+        "from_s": 0,
+        "to_s": 6200,
+        "kmh": 80
+      }
+    ]
+  },
+  "vehicles": [
+    {
+      "id": "car1",
+      "start_s": 0,
+      "start_t": 0,
+      "initial_kmh": 70,
+      "speed_jitter_kmh": 2,
+      "profile": [
+        {
+          "type": "cruise",
+          "kmh": 70,
+          "until_s": 6200
+        }
+      ],
+      "phone": {
+        "preset": "flagship_2024",
+        "mount": {
+          "yaw_deg": 4,
+          "pitch_deg": 65,
+          "roll_deg": -2
+        },
+        "handling_events": []
+      }
+    }
+  ],
+  "gnss_env": {
+    "portal_degrade_m": 60,
+    "reacquire_delay_s": [
+      2,
+      6
+    ],
+    "bad_fixes_after_exit": 3,
+    "bad_fix_error_m": 25
+  },
+  "tunnel_env": {
+    "pressure_step_pa": 20,
+    "fan_pressure_noise_pa": 8,
+    "mag_disturbance_ut": 25
+  },
+  "beacons": {
+    "enabled": false,
+    "spacing_m": 400,
+    "tx_power_dbm": -59,
+    "path_loss_exp": 2.2
+  }
+}

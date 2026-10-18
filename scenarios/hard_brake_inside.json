@@ -1,0 +1,115 @@
+{
+  "schema_version": "1.0",
+  "id": "hard_brake_inside",
+  "description": "A 2 km straight, flat tunnel at 80 km/h with a hard stop at 6 m/s^2 (well above the 3.4 m/s^2 AASHTO comfortable deceleration) 900 m into the tunnel, a 15 s wait, then acceleration back to 80 km/h. Tests the response to a sudden speed change: the baseline keeps its last speed and runs ahead, while an IMU-driven EKF should track the stop.",
+  "seed": 106,
+  "rates_hz": {
+    "imu": 100,
+    "gnss": 1,
+    "baro": 10,
+    "mag": 50,
+    "output": 10
+  },
+  "road": {
+    "start_heading_deg": 90,
+    "segments": [
+      {
+        "type": "straight",
+        "length_m": 1500,
+        "grade_pct": 0
+      },
+      {
+        "type": "straight",
+        "length_m": 2000,
+        "grade_pct": 0
+      },
+      {
+        "type": "straight",
+        "length_m": 1500,
+        "grade_pct": 0
+      }
+    ],
+    "tunnels": [
+      {
+        "id": "T1",
+        "start_s": 1500,
+        "end_s": 3500
+      }
+    ],
+    "exits": [
+      {
+        "id": "E1",
+        "s": 3200,
+        "name": "Exit A"
+      }
+    ],
+    "speed_limits": [
+      {
+        "from_s": 0,
+        "to_s": 5000,
+        "kmh": 80
+      }
+    ]
+  },
+  "vehicles": [
+    {
+      "id": "car1",
+      "start_s": 0,
+      "start_t": 0,
+      "initial_kmh": 80,
+      "speed_jitter_kmh": 2,
+      "profile": [
+        {
+          "type": "cruise",
+          "kmh": 80,
+          "until_s": 2150
+        },
+        {
+          "type": "stop",
+          "at_s": 2400,
+          "decel_mps2": 6.0,
+          "dwell_s": 15
+        },
+        {
+          "type": "ramp",
+          "to_kmh": 80,
+          "accel_mps2": 1.5
+        },
+        {
+          "type": "cruise",
+          "kmh": 80,
+          "until_s": 5000
+        }
+      ],
+      "phone": {
+        "preset": "flagship_2024",
+        "mount": {
+          "yaw_deg": 4,
+          "pitch_deg": 65,
+          "roll_deg": -2
+        },
+        "handling_events": []
+      }
+    }
+  ],
+  "gnss_env": {
+    "portal_degrade_m": 60,
+    "reacquire_delay_s": [
+      2,
+      6
+    ],
+    "bad_fixes_after_exit": 3,
+    "bad_fix_error_m": 25
+  },
+  "tunnel_env": {
+    "pressure_step_pa": 20,
+    "fan_pressure_noise_pa": 8,
+    "mag_disturbance_ut": 25
+  },
+  "beacons": {
+    "enabled": false,
+    "spacing_m": 400,
+    "tx_power_dbm": -59,
+    "path_loss_exp": 2.2
+  }
+}
