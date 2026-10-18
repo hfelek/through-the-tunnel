@@ -21,6 +21,7 @@ from sim.contracts.trace import (
     VehicleTrace,
 )
 from sim.estimators.registry import get_estimator
+from sim.eval.callouts import compute_callouts
 from sim.eval.metrics import compute_metrics
 from sim.sensors.baro import generate_baro
 from sim.sensors.ble import generate_ble
@@ -110,7 +111,9 @@ def _run_estimators(
     return result
 
 
-def run_scenario(scenario: Scenario, estimators: dict[str, dict] | None = None) -> Trace:
+def run_scenario(
+    scenario: Scenario, estimators: dict[str, dict] | None = None, callout_k: float = 1.0,
+) -> Trace:
     """Simulate all vehicles and sensors; run each requested estimator (registry id -> params) per vehicle."""
     estimators = estimators or {}
     rates, n_veh = scenario.rates_hz, len(scenario.vehicles)
@@ -139,12 +142,16 @@ def run_scenario(scenario: Scenario, estimators: dict[str, dict] | None = None) 
         truth = _truth(motion, road_map)
         tunnels = [(tn.id, tn.start_s, tn.end_s) for tn in road_map.tunnels]
         fix_t = sensors["gnss"]["t"].tolist() if "gnss" in sensors else []
+        exits = [(x.id, x.s) for x in road_map.exits]
+        callouts = {
+            key: compute_callouts(e.t, e.s, e.sigma_s, truth.t, truth.s, exits, callout_k) for key, e in est.items()
+        }
         metrics = {
-            k: compute_metrics(e.t, e.s, e.sigma_s, e.display_s, truth.t, truth.s, tunnels, fix_t)
-            for k, e in est.items()
+            key: compute_metrics(e.t, e.s, e.sigma_s, e.display_s, truth.t, truth.s, tunnels, fix_t, callouts[key])
+            for key, e in est.items()
         }
         vehicles.append(VehicleTrace(
             id=veh.id, truth=truth, measurements=meas,
-            events=_events(motion, road_map, ph.handling_events), estimates=est, metrics=metrics,
+            events=_events(motion, road_map, ph.handling_events), estimates=est, callouts=callouts, metrics=metrics,
         ))
     return Trace(scenario_id=scenario.id, map=_map_columns(road_map), vehicles=vehicles)

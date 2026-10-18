@@ -55,8 +55,10 @@ def compute_metrics(
         "consistency_pct": float(100 * np.mean(np.abs(ein) < CONSISTENCY_K * sig[inside])) if len(ein) else None,
         "max_display_jump_m": float(np.max(np.abs(np.diff(disp) - np.diff(s_true)))) if len(et) > 1 else 0.0,
         "exit_error_m": {}, "recovery_time_s": {},
-        "callout_timing_error_s": [float(c.t - c.t_ideal) for c in callouts],
+        "callout_timing_error_s": {},
     }
+    for c in callouts:
+        out["callout_timing_error_s"].setdefault(c.exit, {})[str(int(c.distance_m))] = float(c.t - c.t_ideal)
     for i, (tid, _, end_s) in enumerate(tunnels):
         t_exit = _cross_t(tt, ts, end_s)
         out["exit_error_m"][tid] = None if t_exit is None else float(np.interp(t_exit, et, err))

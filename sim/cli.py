@@ -16,10 +16,11 @@ def main(argv: list[str] | None = None) -> None:
     run.add_argument("scenario")
     run.add_argument("-o", "--output", required=True)
     run.add_argument("--estimators", default="", help="comma-separated registry ids (default parameters)")
+    run.add_argument("--callout-k", type=float, default=1.0, help="callout trigger: s + k*sigma (all estimators)")
     args = p.parse_args(argv)
     ids = [i for i in args.estimators.split(",") if i]
     try:
-        trace = run_scenario(load_scenario(args.scenario), {i: {} for i in ids})
+        trace = run_scenario(load_scenario(args.scenario), {i: {} for i in ids}, callout_k=args.callout_k)
     except KeyError as e:
         sys.exit(f"unknown estimator id: {e}")
     write_trace(trace, args.output)

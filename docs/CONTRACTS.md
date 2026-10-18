@@ -145,7 +145,7 @@ The runner merges all sensor streams by time, calls `update` in order and sample
 | Maximum display jump | Largest change of `display_s` in one output step minus true progress |
 | Consistency | Percentage of time with abs(error) < 2σ. Ideal ≈ 95% |
 
-Consistency is measured inside tunnels only, because with GNSS every method is trivially consistent. Exit error and recovery time are computed per tunnel.
+Consistency is measured inside tunnels only, because with GNSS every method is trivially consistent. Exit error and recovery time are computed per tunnel. Undefined metrics are omitted from the trace rather than written as null, so a missing key means undefined. Callouts fire when `ŝ + k·σ ≥ exit_s − d`; `callout_k` is a navigation-layer parameter applied equally to all estimators.
 
 ### 3.6 API
 
