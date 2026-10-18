@@ -4,12 +4,13 @@ import { vehicleDuration } from '../lib/trace'
 
 const fmt = (v, unit) => (typeof v === 'number' ? `${v.toFixed(1)} ${unit}` : 'n/a')
 
-export default memo(function Panel({ trace, estimators }) {
+export default memo(function Panel({ trace, estimators, outdated }) {
   const vehicle = trace?.vehicles?.[0]
   if (!vehicle) return <aside className="panel"><p className="muted">Run a scenario to see results.</p></aside>
   const dur = vehicleDuration(vehicle)
   return (
     <aside className="panel">
+      {outdated && <div className="outdated">Outdated, run to update</div>}
       <h2>
         <span className="swatch" style={{ background: TRUTH_COLOR }} />
         {vehicle.id}

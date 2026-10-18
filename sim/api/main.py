@@ -51,6 +51,24 @@ def scenario(scenario_id: str) -> dict:
     return json.loads(path.read_text())
 
 
+class SaveRequest(BaseModel):
+    id: str
+    scenario: Scenario
+
+
+@app.post("/api/scenarios", status_code=201)
+def save_scenario(req: SaveRequest) -> dict[str, str]:
+    if not ID_RE.fullmatch(req.id):
+        raise HTTPException(422, f"invalid scenario id {req.id!r}: use lowercase letters, digits and _")
+    body = req.scenario.model_copy(update={"id": req.id}).model_dump_json(indent=2)
+    try:
+        with (SCENARIOS / f"{req.id}.json").open("x") as f:  # "x": never overwrite an existing file
+            f.write(body + "\n")
+    except FileExistsError:
+        raise HTTPException(409, f"scenario {req.id!r} already exists") from None
+    return {"id": req.id}
+
+
 @app.get("/api/estimators")
 def estimators() -> list[dict[str, str]]:
     return list_estimators()

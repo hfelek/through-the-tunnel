@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useMemo, useReducer } from 'react'
-import { getEstimators, getScenario, getScenarios, simulate } from './api'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { getEstimators, getPresets, getScenario, getScenarios, saveScenario, simulate } from './api'
 import { initialState, reducer } from './state'
 import Toolbar from './components/Toolbar'
 import Panel from './components/Panel'
+import Controls from './components/Controls'
+import JsonEditor from './components/JsonEditor'
 import ErrorBoundary from './components/ErrorBoundary'
 import ElevationProfile from './components/ElevationProfile'
 import MapView from './components/MapView'
@@ -21,6 +23,7 @@ export default function App() {
   const fail = (e) => dispatch({ type: 'error', message: e.message })
 
   useEffect(() => {
+    getPresets().then((presets) => dispatch({ type: 'presets_loaded', presets }), fail)
     getEstimators().then((estimators) => dispatch({ type: 'estimators_loaded', estimators }), fail)
     getScenarios().then((scenarios) => {
       dispatch({ type: 'scenarios_loaded', scenarios })
@@ -35,14 +38,43 @@ export default function App() {
   }, [state.scenarioId])
 
   const select = useCallback((id) => dispatch({ type: 'select_scenario', id }), [])
-  const run = useCallback(() => {
-    dispatch({ type: 'run_start' })
-    const params = Object.fromEntries(state.estimators.map((e) => [e.id, {}]))
-    simulate(state.scenario, params).then(
-      (trace) => dispatch({ type: 'run_done', trace }),
-      (e) => dispatch({ type: 'run_failed', message: e.message }),
+  // the latest state for handlers that fire after a render (slider release, auto-run)
+  const latest = useRef(state)
+  useEffect(() => { latest.current = state })
+  const runSeq = useRef(0)
+  const runWith = useCallback((scenario) => {
+    const { estimators, calloutK } = latest.current
+    const runId = ++runSeq.current
+    dispatch({ type: 'run_start', runId })
+    const params = Object.fromEntries(estimators.map((e) => [e.id, {}]))
+    simulate(scenario, params, 10, calloutK).then(
+      (trace) => dispatch({ type: 'run_done', runId, trace }),
+      (e) => dispatch({ type: 'run_failed', runId, message: e.message }),
     )
-  }, [state.estimators, state.scenario])
+  }, [])
+  const run = useCallback(() => runWith(latest.current.scenario), [runWith])
+  // a control change: update the JSON now; run too when it is a commit and auto-run is on
+  const edit = useCallback((scenario, commit) => {
+    latest.current = { ...latest.current, scenario }
+    dispatch({ type: 'edit_scenario', scenario })
+    if (commit && latest.current.autoRun) runWith(scenario)
+  }, [runWith])
+  const commit = useCallback(() => { if (latest.current.autoRun) runWith(latest.current.scenario) }, [runWith])
+  const setCalloutK = useCallback((value) => {
+    latest.current = { ...latest.current, calloutK: value }
+    dispatch({ type: 'set_callout_k', value })
+  }, [])
+  const setAutoRun = useCallback((value) => dispatch({ type: 'set_auto_run', value }), [])
+
+  const [editing, setEditing] = useState(false)
+  const openEditor = useCallback(() => setEditing(true), [])
+  const applyJson = useCallback((scenario) => { setEditing(false); edit(scenario, true) }, [edit])
+  const closeEditor = useCallback(() => setEditing(false), [])
+  const save = useCallback(async (id, scenario) => {
+    await saveScenario(id, scenario)
+    const scenarios = await getScenarios()
+    dispatch({ type: 'saved', id, scenarios })
+  }, [])
 
   return (
     <div className="app">
@@ -82,10 +114,20 @@ export default function App() {
             </ChartStack>
           </ErrorBoundary>
         </div>
-        <ErrorBoundary name="Panel" resetKey={state.trace}>
-          <Panel trace={state.trace} estimators={state.estimators} />
-        </ErrorBoundary>
+        <div className="right">
+          <ErrorBoundary name="Controls">
+            <Controls
+              scenario={state.scenario} presets={state.presets} calloutK={state.calloutK} autoRun={state.autoRun}
+              onEdit={edit} onCommit={commit} onCalloutK={setCalloutK} onAutoRun={setAutoRun}
+              onEditJson={openEditor} onSave={save}
+            />
+          </ErrorBoundary>
+          <ErrorBoundary name="Panel" resetKey={state.trace}>
+            <Panel trace={state.trace} estimators={state.estimators} outdated={state.outdated} />
+          </ErrorBoundary>
+        </div>
       </main>
+      {editing && state.scenario && <JsonEditor scenario={state.scenario} onApply={applyJson} onClose={closeEditor} />}
     </div>
   )
 }

@@ -153,6 +153,7 @@ Consistency is measured inside tunnels only, because with GNSS every method is t
 | --- | --- |
 | `GET /api/scenarios` | Scenario list (id, description) |
 | `GET /api/scenarios/{id}` | Scenario JSON |
+| `POST /api/scenarios` | Body: `{ id, scenario }` → saves `scenarios/{id}.json` (201). `id` must match `^[a-z0-9_]+$` and the scenario must validate; its own `id` field is set to `id`. 409 if the file exists (never overwritten), 422 on a bad id or invalid scenario |
 | `GET /api/estimators` | Methods in the registry |
 | `GET /api/presets` | Sensor presets |
 | `POST /api/simulate` | Body: `{ scenario, estimators: {id: params}, decimate_hz (default 10), callout_k (default 1.0) }` → trace |

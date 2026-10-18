@@ -36,7 +36,7 @@ body { margin: 0; }
   background: #fef2f2; border: 1px solid #fecaca; color: var(--danger); font-size: 14px;
 }
 
-.layout { flex: 1; display: grid; grid-template-columns: 1fr 300px; gap: 12px; padding: 12px 16px; }
+.layout { flex: 1; display: grid; grid-template-columns: 1fr 340px; gap: 12px; padding: 12px 16px; }
 .left { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .placeholder {
   display: flex; align-items: center; justify-content: center; color: var(--muted);
@@ -95,3 +95,27 @@ body { margin: 0; }
 .time-readout { font-variant-numeric: tabular-nums; min-width: 150px; text-align: right; font-size: 13px; line-height: 1.4; }
 .scale-bar { position: absolute; right: 12px; bottom: 10px; display: flex; flex-direction: column; align-items: center; font-size: 12px; color: var(--text); pointer-events: none; }
 .scale-line { width: 100%; height: 6px; border: 2px solid var(--text); border-top: none; }
+
+.right { display: flex; flex-direction: column; gap: 12px; align-self: start; min-width: 0; }
+.outdated { margin-bottom: 8px; padding: 4px 8px; border-radius: 6px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e; font-size: 13px; }
+.controls { display: flex; flex-direction: column; gap: 8px; }
+.controls h2 { margin: 0; }
+.controls button, .controls select, .controls input[type=number], .controls .save-as input, .json-actions button {
+  font: inherit; padding: 4px 10px; border: 1px solid var(--accent); border-radius: 6px; background: var(--accent); color: #fff; cursor: pointer;
+}
+.controls button.secondary, .json-actions button.secondary { background: #fff; color: var(--text); border-color: var(--border); }
+.controls select, .controls input[type=number], .controls .save-as input { background: #fff; color: var(--text); border-color: var(--border); cursor: auto; }
+.controls button:disabled { opacity: 0.5; cursor: not-allowed; }
+.ctl { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.ctl input[type=range] { width: 100%; margin: 0; }
+.ctl-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
+.seed { width: 90px; }
+.save-as { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
+.save-as input { flex: 1; min-width: 0; }
+.json-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(640px, 100vw); z-index: 20; display: flex; flex-direction: column; gap: 8px;
+  padding: 12px 16px; background: var(--card); border-left: 1px solid var(--border); box-shadow: -4px 0 16px rgba(0,0,0,0.15);
+}
+.json-head { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.json-text { flex: 1; resize: none; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; padding: 8px; border: 1px solid var(--border); border-radius: 6px; white-space: pre; }
+.json-actions { display: flex; gap: 8px; }

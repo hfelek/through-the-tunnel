@@ -45,3 +45,10 @@ export const simulate = (scenario, estimators, decimateHz = 10, calloutK = 1.0) 
       callout_k: calloutK,
     }),
   })
+
+export const saveScenario = (id, scenario) =>
+  request('/api/scenarios', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, scenario }),
+  })
