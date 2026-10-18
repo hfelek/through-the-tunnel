@@ -14,7 +14,7 @@ Everything in English: replies, code, comments, commit messages, docs.
 
 ## Budget rules (credit is limited)
 
-- One task per session. Do not start the next task unless told to.
+- One phase per session, one commit per task. After each task, stop and wait for "next".
 - For tasks that create or change 3 or more files: first reply with a short plan
   (max 8 lines: files, main functions, tests) and wait for "ok". Smaller tasks: just do them.
 - Never read: `data/`, `out/`, `docs/figures/`, `web/node_modules/`, `web/dist/`, lock files.

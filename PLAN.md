@@ -2,7 +2,7 @@
 
 ## How to use
 
-Give Claude Code one task per session (for example: "Implement T2.1 from PLAN.md"). `CLAUDE.md` reminds Claude Code of the rules below in every session.
+Give Claude Code one phase per session, one task at a time (for example: "Implement T2.1 from PLAN.md"). `CLAUDE.md` reminds Claude Code of the rules below in every session.
 
 The plan avoids rework in two ways. First, data formats and interfaces (Section 3) are fixed before any code is written. Second, the system first runs end to end in its simplest form (simulation → baseline estimate → API → screen); advanced methods are plugged into the existing interface later and appear in the UI automatically.
 
