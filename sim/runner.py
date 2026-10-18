@@ -21,6 +21,7 @@ from sim.contracts.trace import (
     VehicleTrace,
 )
 from sim.estimators.registry import get_estimator
+from sim.eval.metrics import compute_metrics
 from sim.sensors.baro import generate_baro
 from sim.sensors.ble import generate_ble
 from sim.sensors.gnss import generate_gnss
@@ -135,8 +136,15 @@ def run_scenario(scenario: Scenario, estimators: dict[str, dict] | None = None) 
             _run_estimators(road_map, sensors, float(motion.t[0]), float(motion.t[-1]), rates.output, estimators)
             if estimators else {}
         )
+        truth = _truth(motion, road_map)
+        tunnels = [(tn.id, tn.start_s, tn.end_s) for tn in road_map.tunnels]
+        fix_t = sensors["gnss"]["t"].tolist() if "gnss" in sensors else []
+        metrics = {
+            k: compute_metrics(e.t, e.s, e.sigma_s, e.display_s, truth.t, truth.s, tunnels, fix_t)
+            for k, e in est.items()
+        }
         vehicles.append(VehicleTrace(
-            id=veh.id, truth=_truth(motion, road_map), measurements=meas,
-            events=_events(motion, road_map, ph.handling_events), estimates=est,
+            id=veh.id, truth=truth, measurements=meas,
+            events=_events(motion, road_map, ph.handling_events), estimates=est, metrics=metrics,
         ))
     return Trace(scenario_id=scenario.id, map=_map_columns(road_map), vehicles=vehicles)

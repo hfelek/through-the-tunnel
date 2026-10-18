@@ -145,6 +145,8 @@ The runner merges all sensor streams by time, calls `update` in order and sample
 | Maximum display jump | Largest change of `display_s` in one output step minus true progress |
 | Consistency | Percentage of time with abs(error) < 2σ. Ideal ≈ 95% |
 
+Consistency is measured inside tunnels only, because with GNSS every method is trivially consistent. Exit error and recovery time are computed per tunnel.
+
 ### 3.6 API
 
 | Endpoint | Purpose |
