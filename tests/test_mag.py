@@ -47,3 +47,17 @@ def test_noise_free_norm_and_heading_on_a_grade():
     true_yaw = (np.interp(mag["t"], motion.t, motion.yaw) + np.pi) % (2 * np.pi) - np.pi
     err = (mag_yaw(mag, motion, MOUNT) - true_yaw + np.pi) % (2 * np.pi) - np.pi
     assert np.all(np.abs(np.degrees(err)) < 1.0)
+
+
+def test_disturbance_is_zero_outside_tunnels():
+    road = Road(start_heading_deg=0, segments=[{"type": "straight", "length_m": 1500}],
+                tunnels=[{"id": "T1", "start_s": 500, "end_s": 1000}])
+    rm = RoadMap(road)
+    motion, preset = _motion(rm, 1500), load_preset("flagship_2024").model_copy(deep=True)
+    preset.mag.noise_std.value = 0.0
+    on, off = (generate_mag(motion, rm, ENV, preset, MOUNT, [], 50.0, np.random.default_rng(0), tunnel_effects=fx) for fx in (True, False))
+    s = np.interp(on["t"], motion.t, motion.s)
+    outside = ~rm.in_tunnel(s)
+    assert (outside & (s > 1000) & (s < 1001)).any() and (outside & (s < 500) & (s > 499)).any()
+    for k in ("mx", "my", "mz"):
+        assert np.array_equal(on[k][outside], off[k][outside]) and not np.allclose(on[k][~outside], off[k][~outside])

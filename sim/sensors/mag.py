@@ -40,7 +40,8 @@ def generate_mag(
     if tunnel_effects:
         field = _tunnel_field(road_map, env.mag_disturbance_ut, grid_w)
         grid_s = RESOLUTION_M * np.arange(len(field))
-        b_world = b_world + np.stack([np.interp(s, grid_s, field[:, k]) for k in range(3)], axis=1)
+        dist = np.stack([np.interp(s, grid_s, field[:, k]) for k in range(3)], axis=1)
+        b_world = b_world + dist * road_map.in_tunnel(s)[:, None]  # the 1 m grid interpolation must not leak past a portal
     vehicle_to_world = _rot("z", yaw) @ _rot("y", -pitch)  # forward axis = (cos y cos p, sin y cos p, sin p), roll 0
     b_vehicle = np.einsum("nji,nj->ni", vehicle_to_world, b_world)
     rot, _ = mount_rotations(t, mount, handling_events)
