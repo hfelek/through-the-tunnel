@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./data/**)",
+      "Read(./out/**)",
+      "Read(./docs/figures/**)",
+      "Read(./web/node_modules/**)",
+      "Read(./web/dist/**)",
+      "Read(./web/package-lock.json)"
+    ]
+  }
+}
