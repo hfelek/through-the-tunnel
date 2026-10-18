@@ -10,6 +10,8 @@ Everything in English: replies, code, comments, commit messages, docs.
   `grep -n -A 10 '\*\*T2.1 ' PLAN.md` (replace T2.1; read more lines if the task continues).
 - `docs/CONTRACTS.md`: list sections with `grep -n '^###' docs/CONTRACTS.md`,
   then read only the sections the task touches.
+- Fresh cloud environment: run `pip install -q -e '.[dev]'` once at session start.
+  Always run tests as `python -m pytest -q`.
 - `docs/ASSUMPTIONS.md`: numbered assumptions (A1, A2, ...). Read when the task mentions one.
 
 ## Budget rules (credit is limited)
@@ -21,7 +23,7 @@ Everything in English: replies, code, comments, commit messages, docs.
   For any large file use `head`, `wc -l` or `grep`.
 - Do not re-read a file already in context unless it changed.
 - Edit with minimal diffs. Never rewrite a whole file to change a few lines.
-- Keep command output short: `pytest -q -x`, `ruff check -q`, pipe long output to `tail -n 30`.
+- Keep command output short: `python -m pytest -q -x`, `ruff check -q`, pipe long output to `tail -n 30`.
 - Do not start long-running processes (`make dev`, `uvicorn`, `npm run dev`).
   The user runs and checks the app in the browser.
 - Stay inside the task. No refactors or "improvements" to finished tasks.
@@ -73,11 +75,9 @@ If asked to, reply "This task is tagged [claude.ai]." and stop.
 
 ## Definition of done (every task)
 
-1. Acceptance criteria met; `pytest -q` green; `ruff check -q` clean.
+1. Acceptance criteria met; `python -m pytest -q` green; `ruff check -q` clean.
 2. One commit: `T2.1: short description` (task ID first).
-3. Append one line to the AI log without reading it:
-   `echo '| T2.1 | <what you generated, one line> | |' >> docs/AI_LOG.md`
-   (the user fills the last column).
+3. End your final reply with one line: `AI log: <what you generated>`.
 
 ## Git
 - Push the task commit to your working branch. Never open a pull request;

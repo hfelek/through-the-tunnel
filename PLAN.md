@@ -13,7 +13,7 @@ The plan avoids rework in two ways. First, data formats and interfaces (Section 
 3. The contracts in Section 3 are fixed. If a task needs to change one, Claude Code stops and asks. If approved: `docs/CONTRACTS.md` first, then code, then the user adds a row to the Change log.
 4. Change requests that come up mid-way become new tasks in the relevant phase with a `CR` number (for example `T5.3-CR1`). Finished task code is not rewritten; the new task builds on top of it.
 5. Every assumption goes into `docs/ASSUMPTIONS.md` with a number (A1, A2…) and is referenced in code where it applies (`# A7`).
-6. AI usage: Claude Code appends one line to `docs/AI_LOG.md` per task (what it generated). The user fills in what was corrected or overruled.
+6. AI usage: Claude Code ends each task reply with one `AI log:` line; the full log is kept outside the repo and added at delivery (T11.3).
 7. The user ticks the task's checkbox when it is done.
 
 **Phase order and why**
