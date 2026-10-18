@@ -14,7 +14,7 @@ The formats in this section are turned into code in Phase 1 and afterwards chang
 | Position on road | `s`: arc length along the centerline (m). All error metrics use `s` |
 | Vehicle frame | x forward, y left, z up |
 | Phone frame | Android convention: x to the right of the screen, y to the top of the screen, z out of the screen. The accelerometer reports specific force: a phone lying face up on a table reads +9.81 on z. iOS conversion happens only in the real-data loader |
-| Mount | Vehicle-to-phone rotation: yaw, pitch, roll in degrees, set in the scenario |
+| Mount | Vehicle-to-phone rotation: yaw, pitch, roll in degrees, set in the scenario. All angles 0 = phone flat, face up, top pointing forward (phone y = vehicle x, phone x = vehicle right, phone z = vehicle up). Applied as intrinsic rotations in the order yaw (about z), pitch (about the new x), roll (about the new y). Pitch 65° tilts the top up toward the driver |
 | Heading | Radians, counter-clockwise from east (ENU); left turns have positive curvature; grade = rise/run. GNSS `course` in the trace uses the same convention; conversion from compass bearing happens only in the real-data loader |
 
 ### 3.2 Scenario JSON
