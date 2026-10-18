@@ -11,17 +11,19 @@ const MIN_SCALE = 0.01 // px per metre
 const MAX_SCALE = 20
 
 export default function MapView({ trace, estimators, t }) {
-  const wrapRef = useRef(null)
-  const svgRef = useRef(null)
+  // callback refs (state): the svg only exists once a trace is present
+  const [wrapEl, setWrapEl] = useState(null)
+  const [svgEl, setSvgEl] = useState(null)
   const [w, setW] = useState(800)
   // scale null = default (FOLLOW_VIEW_M across the width)
   const [view, setView] = useState({ cx: 0, cy: 0, scale: null, follow: true })
 
   useEffect(() => {
+    if (!wrapEl) return
     const ro = new ResizeObserver(([e]) => setW(Math.max(200, e.contentRect.width)))
-    ro.observe(wrapRef.current)
+    ro.observe(wrapEl)
     return () => ro.disconnect()
-  }, [])
+  }, [wrapEl])
 
   const vehicle = trace?.vehicles?.[0]
   const map = trace?.map
@@ -38,7 +40,8 @@ export default function MapView({ trace, estimators, t }) {
     latest.current = { w, cx, cy, scale, follow }
   })
   useEffect(() => {
-    const svg = svgRef.current
+    const svg = svgEl
+    if (!svg) return
     const onWheel = (ev) => {
       ev.preventDefault()
       const L = latest.current
@@ -55,7 +58,7 @@ export default function MapView({ trace, estimators, t }) {
     }
     svg.addEventListener('wheel', onWheel, { passive: false })
     return () => svg.removeEventListener('wheel', onWheel)
-  }, [map])
+  }, [svgEl])
 
   const drag = useRef(null)
   const onPointerDown = (ev) => {
@@ -76,15 +79,19 @@ export default function MapView({ trace, estimators, t }) {
   const toggleFollow = () =>
     setView((v) => (v.follow ? { ...v, follow: false, cx, cy, scale } : { ...v, follow: true, scale: null }))
 
+  const geom = { cx, cy, scale, w, h: HEIGHT }
   if (!map || !vehicle) {
-    return <section className="map-view placeholder" style={{ height: HEIGHT }}>Run a scenario to see the map.</section>
+    return (
+      <section className="map-view empty" ref={setWrapEl} style={{ height: HEIGHT }}>
+        Run a scenario to see the map.
+      </section>
+    )
   }
 
-  const geom = { cx, cy, scale, w, h: HEIGHT }
   return (
-    <section className="map-view" ref={wrapRef} style={{ height: HEIGHT }}>
+    <section className="map-view" ref={setWrapEl} style={{ height: HEIGHT }}>
       <svg
-        ref={svgRef}
+        ref={setSvgEl}
         width={w}
         height={HEIGHT}
         onPointerDown={onPointerDown}

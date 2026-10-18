@@ -3,6 +3,7 @@ import { getEstimators, getScenario, getScenarios, simulate } from './api'
 import { initialState, reducer } from './state'
 import Toolbar from './components/Toolbar'
 import Panel from './components/Panel'
+import ErrorBoundary from './components/ErrorBoundary'
 import MapView from './components/MapView'
 import Timeline from './components/Timeline'
 import { Charts } from './components/Placeholders'
@@ -49,11 +50,19 @@ export default function App() {
       />
       <main className="layout">
         <div className="left">
-          <MapView trace={state.trace} estimators={state.estimators} t={t} />
-          <Timeline duration={duration} t={t} onChange={setT} />
-          <Charts />
+          <ErrorBoundary name="Map" resetKey={state.trace}>
+            <MapView trace={state.trace} estimators={state.estimators} t={t} />
+          </ErrorBoundary>
+          <ErrorBoundary name="Timeline" resetKey={state.trace}>
+            <Timeline duration={duration} t={t} onChange={setT} />
+          </ErrorBoundary>
+          <ErrorBoundary name="Charts" resetKey={state.trace}>
+            <Charts />
+          </ErrorBoundary>
         </div>
-        <Panel trace={state.trace} estimators={state.estimators} />
+        <ErrorBoundary name="Panel" resetKey={state.trace}>
+          <Panel trace={state.trace} estimators={state.estimators} />
+        </ErrorBoundary>
       </main>
     </div>
   )
