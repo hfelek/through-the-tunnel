@@ -75,7 +75,7 @@ A scenario defines the road, tunnels, exits, vehicles, phones and environment ef
 }
 ```
 
-Profile types: `cruise` (constant speed up to a position), `ramp` (speed change), `stop` (stop at a position and wait), `stop_and_go` (seeded random stop-and-go between two positions). Transitions are jerk-limited. A `handling_events` item: `{ "t": 150, "duration_s": 4, "new_mount": {...} }`.
+Profile types: `cruise` (constant speed up to a position), `ramp` (speed change), `stop` (stop at a position and wait), `stop_and_go` (seeded random stop-and-go between `from_s` and `to_s`: `kmh` is the speed while moving, `stop_s` = [min, max] stop duration, `go_s` = [min, max] driving time between stops; both ranges are sampled with the scenario seed; example: `{ "type": "stop_and_go", "from_s": 500, "to_s": 1500, "kmh": 30, "stop_s": [5, 20], "go_s": [10, 40] }`). Transitions are jerk-limited. A `handling_events` item: `{ "t": 150, "duration_s": 4, "new_mount": {...} }`.
 
 ### 3.3 Trace format
 
