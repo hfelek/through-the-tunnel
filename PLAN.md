@@ -131,6 +131,7 @@ The formats in this section are turned into code in Phase 1 and afterwards chang
 | Vehicle frame | x forward, y left, z up |
 | Phone frame | Android convention: x to the right of the screen, y to the top of the screen, z out of the screen. The accelerometer reports specific force: a phone lying face up on a table reads +9.81 on z. iOS conversion happens only in the real-data loader |
 | Mount | Vehicle-to-phone rotation: yaw, pitch, roll in degrees, set in the scenario |
+| Heading | Radians, counter-clockwise from east (ENU); left turns have positive curvature; grade = rise/run. GNSS `course` in the trace uses the same convention; conversion from compass bearing happens only in the real-data loader |
 
 ### 3.2 Scenario JSON
 

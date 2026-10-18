@@ -12,3 +12,4 @@ Numbered assumptions. Code that depends on one references it with a comment (`# 
 - **A8** In simulation, sensor timestamps are synchronized and delay-free.
 - **A9** The callout point is where the exit on the route begins; the driver does not miss the exit.
 - **A10** With several vehicles, the single lane means a follower cannot get closer than a minimum gap to the vehicle ahead.
+- **A11** Longitudinal motion is jerk-limited at 2.0 m/s³. Speed changes the scenario gives no acceleration for (cruise to a new speed, `stop_and_go`) use 1.5 m/s². Both are typical passenger-comfort bounds (e.g. Hoberock 1977, "A survey of longitudinal acceleration comfort studies in ground transportation vehicles").
