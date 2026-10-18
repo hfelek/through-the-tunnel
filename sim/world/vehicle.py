@@ -15,7 +15,7 @@ JITTER_FREQ_HZ = (0.02, 0.1)  # slow speed variation: 10-50 s periods
 VERTICAL_BLEND_M = 40.0  # A12
 MIN_GAP_M = 15.0  # A10
 GAP_MARGIN_M = 0.01  # numerical margin so discrete steps never dip below the minimum gap
-FOLLOW_DECEL_MPS2 = 3.0  # A10: firm braking (~0.3 g) a follower may use to keep the gap
+FOLLOW_DECEL_MPS2 = 3.0  # A13
 MAX_DURATION_S = 2 * 3600.0
 
 
