@@ -1,0 +1,100 @@
+import { memo, useMemo, useState } from 'react'
+import { Area, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, XAxis, YAxis } from 'recharts'
+import ErrorBoundary from './ErrorBoundary'
+import { estimatorColor, TRUTH_COLOR } from '../colors'
+import { M, TICK, X_AXIS_H, Y_AXIS_W, fmt } from '../lib/plotGeometry'
+import { tunnelIntervals } from '../lib/trace'
+
+const CHART_H = 220
+const RANGES = { auto: 'Auto', 50: '±50 m', 200: '±200 m' }
+
+/** One row per estimate time: error and the 2σ band [err - 2σ, err + 2σ] per estimator (error space). */
+function buildRows(vehicle) {
+  const byT = new Map()
+  const ids = []
+  for (const [id, est] of Object.entries(vehicle.estimates ?? {})) {
+    const err = vehicle.metrics?.[id]?.error
+    if (!err?.length) continue
+    ids.push(id)
+    const n = Math.min(err.length, est.t.length)
+    for (let i = 0; i < n; i++) {
+      const row = byT.get(est.t[i]) ?? { t: est.t[i] }
+      row[id] = err[i]
+      row[`${id}_band`] = [err[i] - 2 * est.sigma_s[i], err[i] + 2 * est.sigma_s[i]]
+      byT.set(est.t[i], row)
+    }
+  }
+  return { ids, rows: [...byT.values()].sort((a, b) => a.t - b.t) }
+}
+
+/** Own callout times per estimator, plus the ideal times (same for all estimators, taken once per distance). */
+function callouts(vehicle, ids) {
+  const own = ids.flatMap((id) => (vehicle.callouts?.[id] ?? []).filter((c) => c.t != null).map((c) => ({ id, t: c.t })))
+  const ideal = new Map()
+  for (const id of ids) {
+    for (const c of vehicle.callouts?.[id] ?? []) {
+      const key = `${c.exit}/${c.distance_m}`
+      if (c.t_ideal != null && !ideal.has(key)) ideal.set(key, { t: c.t_ideal, label: String(c.distance_m) })
+    }
+  }
+  return { own, ideal: [...ideal.values()] }
+}
+
+const Plot = memo(function Plot({ rows, ids, colors, own, ideal, intervals, w, duration, range }) {
+  const domain = range === 'auto' ? ['auto', 'auto'] : [-range, range]
+  return (
+    <div className="chart-row" style={{ height: CHART_H }}>
+      <div className="chart-title">
+        Along-track error (m), shaded: ±2σ around the estimate
+        {ids.map((id) => <span key={id} style={{ color: colors[id] }}> {id}</span>)}
+      </div>
+      <ComposedChart width={w} height={CHART_H} data={rows} margin={M} accessibilityLayer={false}>
+        <CartesianGrid vertical={false} stroke="#e5e7eb" />
+        <XAxis type="number" dataKey="t" domain={[0, duration]} allowDataOverflow height={X_AXIS_H} tick={TICK} tickFormatter={fmt} />
+        <YAxis width={Y_AXIS_W} domain={domain} allowDataOverflow tick={TICK} tickFormatter={fmt} tickCount={5} />
+        {intervals.map((iv) => (
+          <ReferenceArea key={iv.ref} x1={iv.start} x2={iv.end} fill="#374151" fillOpacity={0.14} stroke="none" ifOverflow="hidden" />
+        ))}
+        {ids.map((id) => (
+          <Area key={`${id}_band`} dataKey={`${id}_band`} stroke="none" fill={colors[id]} fillOpacity={0.15} isAnimationActive={false} activeDot={false} connectNulls />
+        ))}
+        <ReferenceLine y={0} stroke="#6b7280" />
+        {ideal.map((c) => (
+          <ReferenceLine key={`i${c.label}`} x={c.t} stroke={TRUTH_COLOR} strokeDasharray="4 3" strokeWidth={1} ifOverflow="hidden"
+            label={{ value: c.label, position: 'top', fontSize: 10, fill: TRUTH_COLOR }} />
+        ))}
+        {own.map((c, k) => <ReferenceLine key={`o${k}`} x={c.t} stroke={colors[c.id]} strokeWidth={1} ifOverflow="hidden" />)}
+        {ids.map((id) => (
+          <Line key={id} dataKey={id} stroke={colors[id]} strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={false} connectNulls />
+        ))}
+      </ComposedChart>
+    </div>
+  )
+})
+
+function ErrorChart({ trace, estimators, duration, w }) {
+  const vehicle = trace?.vehicles?.[0]
+  const [range, setRange] = useState('auto')
+  const data = useMemo(() => (vehicle?.truth?.t?.length ? buildRows(vehicle) : null), [vehicle])
+  const intervals = useMemo(() => tunnelIntervals(vehicle?.events, duration), [vehicle, duration])
+  const marks = useMemo(() => (data ? callouts(vehicle, data.ids) : null), [vehicle, data])
+  const colors = useMemo(() => Object.fromEntries((data?.ids ?? []).map((id) => [id, estimatorColor(estimators, id)])), [data, estimators])
+  if (!vehicle) return null
+  if (!data) return <div className="chart-controls muted">No ground truth in this trace</div>
+  return (
+    <>
+      <div className="chart-controls">
+        Error range:{' '}
+        <select value={range} onChange={(e) => setRange(e.target.value)}>
+          {Object.entries(RANGES).map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+        </select>
+      </div>
+      <ErrorBoundary name="Error chart" resetKey={data}>
+        <Plot rows={data.rows} ids={data.ids} colors={colors} own={marks.own} ideal={marks.ideal} intervals={intervals}
+          w={w} duration={duration} range={range === 'auto' ? 'auto' : Number(range)} />
+      </ErrorBoundary>
+    </>
+  )
+}
+
+export default memo(ErrorChart)

@@ -45,7 +45,9 @@ body { margin: 0; }
 
 .charts { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
 .charts.empty { display: flex; align-items: center; justify-content: center; height: 120px; color: var(--muted); border-style: dashed; }
-.chart-toggles { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; margin-bottom: 4px; }
+.chart-controls { position: relative; z-index: 3; background: var(--card); font-size: 13px; padding: 2px 0 4px; cursor: default; } /* sits above the cursor line */
+.chart-toggles { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.chart-controls select { font: inherit; }
 .chart-stack { position: relative; cursor: crosshair; }
 .chart-row { position: relative; }
 .chart-row + .chart-row { border-top: 1px solid var(--border); }
