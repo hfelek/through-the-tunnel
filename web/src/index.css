@@ -42,8 +42,6 @@ body { margin: 0; }
   display: flex; align-items: center; justify-content: center; color: var(--muted);
   background: var(--card); border: 1px dashed var(--border); border-radius: 8px;
 }
-.placeholder.map { height: 320px; }
-.placeholder.timeline { height: 60px; }
 .placeholder.charts { height: 360px; }
 
 .panel { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; align-self: start; font-size: 14px; }
@@ -52,3 +50,17 @@ body { margin: 0; }
 .est-card { border-top: 1px solid var(--border); padding-top: 8px; margin-top: 8px; line-height: 1.5; }
 .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
 .muted { color: var(--muted); }
+
+.map-view { position: relative; background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.map-view svg { display: block; cursor: grab; touch-action: none; user-select: none; }
+.map-view svg:active { cursor: grabbing; }
+.exit-label { font-size: 12px; fill: #b91c1c; font-weight: 600; pointer-events: none; }
+.follow-toggle { position: absolute; top: 8px; right: 10px; font-size: 13px; background: rgba(255,255,255,0.9); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border); }
+.legend { position: absolute; left: 10px; bottom: 8px; display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; background: rgba(255,255,255,0.9); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+.dot.hollow { border: 2px solid; }
+.dot.gnss { background: #6b7280; width: 6px; height: 6px; opacity: 0.6; }
+.timeline { display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; }
+.timeline input[type=range] { flex: 1; }
+.time-readout { font-variant-numeric: tabular-nums; min-width: 90px; text-align: right; }

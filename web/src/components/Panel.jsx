@@ -1,18 +1,12 @@
 import { estimatorColor, TRUTH_COLOR } from '../colors'
+import { vehicleDuration } from '../lib/trace'
 
 const fmt = (v, unit) => (typeof v === 'number' ? `${v.toFixed(1)} ${unit}` : 'n/a')
-
-function duration(vehicle) {
-  const t = vehicle.truth?.t?.length
-    ? vehicle.truth.t
-    : Object.values(vehicle.estimates ?? {})[0]?.t
-  return t?.length ? t[t.length - 1] : null
-}
 
 export default function Panel({ trace, estimators }) {
   const vehicle = trace?.vehicles?.[0]
   if (!vehicle) return <aside className="panel"><p className="muted">Run a scenario to see results.</p></aside>
-  const dur = duration(vehicle)
+  const dur = vehicleDuration(vehicle)
   return (
     <aside className="panel">
       <h2>

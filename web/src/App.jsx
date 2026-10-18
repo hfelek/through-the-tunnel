@@ -1,12 +1,17 @@
-import { useEffect, useReducer } from 'react'
+import { useEffect, useMemo, useReducer, useState } from 'react'
 import { getEstimators, getScenario, getScenarios, simulate } from './api'
 import { initialState, reducer } from './state'
 import Toolbar from './components/Toolbar'
 import Panel from './components/Panel'
-import { Charts, MapView, Timeline } from './components/Placeholders'
+import MapView from './components/MapView'
+import Timeline from './components/Timeline'
+import { Charts } from './components/Placeholders'
+import { vehicleDuration } from './lib/trace'
 
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState)
+  const [t, setT] = useState(0) // playback time, separate so moving it never rebuilds the trace
+  const duration = useMemo(() => vehicleDuration(state.trace?.vehicles?.[0]), [state.trace])
   const fail = (e) => dispatch({ type: 'error', message: e.message })
 
   useEffect(() => {
@@ -27,7 +32,10 @@ export default function App() {
     dispatch({ type: 'run_start' })
     const params = Object.fromEntries(state.estimators.map((e) => [e.id, {}]))
     simulate(state.scenario, params).then(
-      (trace) => dispatch({ type: 'run_done', trace }),
+      (trace) => {
+        setT(0)
+        dispatch({ type: 'run_done', trace })
+      },
       (e) => dispatch({ type: 'run_failed', message: e.message }),
     )
   }
@@ -41,8 +49,8 @@ export default function App() {
       />
       <main className="layout">
         <div className="left">
-          <MapView />
-          <Timeline />
+          <MapView trace={state.trace} estimators={state.estimators} t={t} />
+          <Timeline duration={duration} t={t} onChange={setT} />
           <Charts />
         </div>
         <Panel trace={state.trace} estimators={state.estimators} />
