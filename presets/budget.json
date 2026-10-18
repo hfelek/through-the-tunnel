@@ -1,0 +1,84 @@
+{
+  "id": "budget",
+  "description": "Low-cost smartphone: flagship values scaled by the multipliers in assumption A16 (older IMU and barometer generation, weaker GNSS antenna).",
+  "accel": {
+    "noise_density": {
+      "value": 0.00313812,
+      "unit": "m/s^2/sqrt(Hz)",
+      "source": "Flagship × 2 (A16)"
+    },
+    "initial_bias_max": {
+      "value": 0.4903325,
+      "unit": "m/s^2",
+      "source": "Flagship × 2.5 (A16)"
+    },
+    "bias_random_walk": {
+      "value": 0.00109641,
+      "unit": "m/s^2/sqrt(s)",
+      "source": "Flagship × 3 (A16)"
+    },
+    "scale_error_max": {
+      "value": 0.01,
+      "unit": "fraction",
+      "source": "Flagship × 2.5 (A16)"
+    }
+  },
+  "gyro": {
+    "noise_density": {
+      "value": 0.00027926,
+      "unit": "rad/s/sqrt(Hz)",
+      "source": "Flagship × 2 (A16)"
+    },
+    "initial_bias_max": {
+      "value": 0.02617995,
+      "unit": "rad/s",
+      "source": "Flagship × 3 (A16)"
+    },
+    "bias_random_walk": {
+      "value": 0.00015612,
+      "unit": "rad/s/sqrt(s)",
+      "source": "Flagship × 3 (A16)"
+    },
+    "scale_error_max": {
+      "value": 0.01,
+      "unit": "fraction",
+      "source": "Flagship × 2.5 (A16)"
+    }
+  },
+  "baro": {
+    "noise_std": {
+      "value": 4.8,
+      "unit": "Pa",
+      "source": "Flagship × 4 (A16)"
+    },
+    "drift_random_walk": {
+      "value": 0.26832816,
+      "unit": "Pa/sqrt(s)",
+      "source": "Flagship × 3 (A16)"
+    }
+  },
+  "gnss": {
+    "position_std": {
+      "value": 4.0,
+      "unit": "m",
+      "source": "Flagship × 2 (A16)"
+    },
+    "position_corr_time": {
+      "value": 30,
+      "unit": "s",
+      "source": "Flagship × 1 (A16)"
+    },
+    "speed_std": {
+      "value": 0.3,
+      "unit": "m/s",
+      "source": "Flagship × 2 (A16)"
+    }
+  },
+  "mag": {
+    "noise_std": {
+      "value": 0.6,
+      "unit": "uT",
+      "source": "Flagship × 2 (A16)"
+    }
+  }
+}

@@ -15,3 +15,6 @@ Numbered assumptions. Code that depends on one references it with a comment (`# 
 - **A11** Longitudinal motion is jerk-limited at 2.0 m/s³. Speed changes the scenario gives no acceleration for (cruise to a new speed, `stop_and_go`) use 1.5 m/s². Both are typical passenger-comfort bounds (e.g. Hoberock 1977, "A survey of longitudinal acceleration comfort studies in ground transportation vehicles").
 - **A12** Pitch is blended over 40 m (`VERTICAL_BLEND_M`) at grade changes, like road vertical curves, so the vertical acceleration `v² · d(pitch)/ds` has no spikes at grade steps.
 - **A13** Follower braking up to 3.0 m/s², below the AASHTO comfortable deceleration of 3.4 m/s².
+- **A14** The phone's temperature changes by about 2 K during a 3-minute tunnel. Bias drift values in presets are derived from datasheet temperature coefficients with this assumption.
+- **A15** GNSS position error is time-correlated (Gauss–Markov, 30 s); GNSS speed noise 0.15 m/s and magnetometer noise 0.3 µT in open sky are typical smartphone values, not datasheet figures.
+- **A16** The budget preset is the flagship preset scaled by fixed multipliers (2–4×), since low-cost phone sensor datasheets are rarely public.

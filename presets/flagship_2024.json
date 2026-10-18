@@ -1,0 +1,84 @@
+{
+  "id": "flagship_2024",
+  "description": "Current flagship smartphone: Bosch BMI260-class IMU, BMP390-class barometer, single-frequency GNSS.",
+  "accel": {
+    "noise_density": {
+      "value": 0.00156906,
+      "unit": "m/s^2/sqrt(Hz)",
+      "source": "Bosch BMI260 product page (smartphone IMU): https://www.bosch-sensortec.com/products/motion-sensors/imus/bmi260/ — noise density 160 µg/√Hz"
+    },
+    "initial_bias_max": {
+      "value": 0.196133,
+      "unit": "m/s^2",
+      "source": "Bosch BMI260 product page (smartphone IMU): https://www.bosch-sensortec.com/products/motion-sensors/imus/bmi260/ — zero-g offset ±20 mg"
+    },
+    "bias_random_walk": {
+      "value": 0.00036547,
+      "unit": "m/s^2/sqrt(s)",
+      "source": "Derived (A14): BMI260 TCO ±0.25 mg/K × 2 K over 180 s, spread as a random walk"
+    },
+    "scale_error_max": {
+      "value": 0.004,
+      "unit": "fraction",
+      "source": "Bosch BMI260 product page (smartphone IMU): https://www.bosch-sensortec.com/products/motion-sensors/imus/bmi260/ — sensitivity error ±0.4%"
+    }
+  },
+  "gyro": {
+    "noise_density": {
+      "value": 0.00013963,
+      "unit": "rad/s/sqrt(Hz)",
+      "source": "Bosch BMI260 product page (smartphone IMU): https://www.bosch-sensortec.com/products/motion-sensors/imus/bmi260/ — noise density 0.008 dps/√Hz"
+    },
+    "initial_bias_max": {
+      "value": 0.00872665,
+      "unit": "rad/s",
+      "source": "Bosch BMI260 product page (smartphone IMU): https://www.bosch-sensortec.com/products/motion-sensors/imus/bmi260/ — zero-rate offset ±0.5 dps"
+    },
+    "bias_random_walk": {
+      "value": 5.204e-05,
+      "unit": "rad/s/sqrt(s)",
+      "source": "Derived (A14): BMI260 TCO ±0.02 dps/K × 2 K over 180 s, spread as a random walk"
+    },
+    "scale_error_max": {
+      "value": 0.004,
+      "unit": "fraction",
+      "source": "Bosch BMI260 product page (smartphone IMU): https://www.bosch-sensortec.com/products/motion-sensors/imus/bmi260/ — sensitivity error ±0.4% (with CRT)"
+    }
+  },
+  "baro": {
+    "noise_std": {
+      "value": 1.2,
+      "unit": "Pa",
+      "source": "Bosch BMP390: relative accuracy ±3 Pa, temperature coefficient ±0.6 Pa/K (datasheet BST-BMP390-DS002); ~0.1 m altitude noise floor (Adafruit BMP390 product page) — 0.1 m ≈ 1.2 Pa"
+    },
+    "drift_random_walk": {
+      "value": 0.08944272,
+      "unit": "Pa/sqrt(s)",
+      "source": "Derived (A14): BMP390 ±0.6 Pa/K × 2 K over 180 s, spread as a random walk"
+    }
+  },
+  "gnss": {
+    "position_std": {
+      "value": 2.0,
+      "unit": "m",
+      "source": "GPS.gov accuracy page: smartphones typically within a 4.9 m radius (95%) under open sky; ≈2 m 1σ per horizontal axis"
+    },
+    "position_corr_time": {
+      "value": 30,
+      "unit": "s",
+      "source": "Assumption A15: GNSS position error is time-correlated (multipath, atmosphere), first-order Gauss–Markov"
+    },
+    "speed_std": {
+      "value": 0.15,
+      "unit": "m/s",
+      "source": "Assumption A15: Doppler-derived speed noise of a smartphone receiver in open sky"
+    }
+  },
+  "mag": {
+    "noise_std": {
+      "value": 0.3,
+      "unit": "uT",
+      "source": "Assumption A15: typical smartphone magnetometer noise; used only to show the tunnel disturbance"
+    }
+  }
+}
