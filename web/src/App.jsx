@@ -7,7 +7,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import ElevationProfile from './components/ElevationProfile'
 import MapView from './components/MapView'
 import Timeline from './components/Timeline'
-import { Charts } from './components/Placeholders'
+import SensorCharts from './components/SensorCharts'
 import { vehicleDuration } from './lib/trace'
 import { usePlayback } from './lib/usePlayback'
 
@@ -66,7 +66,7 @@ export default function App() {
             />
           </ErrorBoundary>
           <ErrorBoundary name="Charts" resetKey={state.trace}>
-            <Charts />
+            <SensorCharts trace={state.trace} duration={duration} t={t} onSeek={seek} />
           </ErrorBoundary>
         </div>
         <ErrorBoundary name="Panel" resetKey={state.trace}>

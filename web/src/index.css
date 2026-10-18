@@ -42,7 +42,15 @@ body { margin: 0; }
   display: flex; align-items: center; justify-content: center; color: var(--muted);
   background: var(--card); border: 1px dashed var(--border); border-radius: 8px;
 }
-.placeholder.charts { height: 360px; }
+
+.charts { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
+.charts.empty { display: flex; align-items: center; justify-content: center; height: 120px; color: var(--muted); border-style: dashed; }
+.chart-toggles { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; margin-bottom: 4px; }
+.chart-stack { position: relative; cursor: crosshair; }
+.chart-row { position: relative; }
+.chart-row + .chart-row { border-top: 1px solid var(--border); }
+.chart-title { position: absolute; left: 52px; top: 2px; z-index: 1; font-size: 11px; color: var(--muted); pointer-events: none; }
+.chart-cursor { position: absolute; top: 0; bottom: 0; width: 1px; background: #111827; opacity: 0.7; pointer-events: none; z-index: 2; }
 
 .panel { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; align-self: start; font-size: 14px; }
 .panel h2 { font-size: 16px; margin: 0 0 8px; }

@@ -1,23 +1,9 @@
 import { useMemo } from 'react'
 import { interpAt } from '../lib/interp'
+import { tunnelIntervals } from '../lib/trace'
 import { SPEEDS } from '../lib/usePlayback'
 
 const JUMP_LEAD_S = 5 // jump this long before the event so the change is visible
-
-/** Tunnel intervals from tunnel_enter / tunnel_exit events (an unclosed tunnel runs to the end). */
-function tunnelIntervals(events, duration) {
-  const open = {}
-  const out = []
-  for (const ev of events ?? []) {
-    if (ev.type === 'tunnel_enter') open[ev.ref] = ev.t
-    else if (ev.type === 'tunnel_exit' && open[ev.ref] != null) {
-      out.push({ ref: ev.ref, start: open[ev.ref], end: ev.t })
-      delete open[ev.ref]
-    }
-  }
-  for (const [ref, start] of Object.entries(open)) out.push({ ref, start, end: duration })
-  return out.sort((a, b) => a.start - b.start)
-}
 
 export default function Timeline({ trace, duration, t, playing, speed, onSeek, onToggle, onSpeed }) {
   const vehicle = trace?.vehicles?.[0]
