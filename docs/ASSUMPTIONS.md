@@ -19,3 +19,5 @@ Numbered assumptions. Code that depends on one references it with a comment (`# 
 - **A15** GNSS position error is time-correlated (Gauss–Markov, 30 s); GNSS speed noise 0.15 m/s and magnetometer noise 0.3 µT in open sky are typical smartphone values, not datasheet figures.
 - **A16** The budget preset is the flagship preset scaled by fixed multipliers (2–4×), since low-cost phone sensor datasheets are rarely public.
 - **A17** Vibration and handling. Engine idle: 0.03 m/s² accel and 0.002 rad/s gyro RMS. Moving: accel RMS 0.03 + 0.01·v m/s², gyro RMS 0.002 + 0.0005·v rad/s (v in m/s). Phone handling: 2 m/s² accel and 1 rad/s gyro RMS for the event duration. Tunable; chosen so that stopped and moving are separable for ZUPT.
+- **A18** GNSS vertical error is 1.5 × horizontal: satellites are only above the horizon, so vertical geometry is weaker; FAA GPS SPS Performance Analysis reports show 95% vertical/horizontal ratios of about 1.35–1.6.
+- **A19** GNSS error and reported h_acc grow linearly to 5× within portal_degrade_m of a portal, on both sides, from sky blockage and multipath; tunable.
