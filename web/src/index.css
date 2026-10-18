@@ -119,3 +119,19 @@ body { margin: 0; }
 .json-head { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
 .json-text { flex: 1; resize: none; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; padding: 8px; border: 1px solid var(--border); border-radius: 6px; white-space: pre; }
 .json-actions { display: flex; gap: 8px; }
+
+.picker-item { border-top: 1px solid var(--border); padding-top: 6px; margin-top: 6px; font-size: 14px; }
+.picker-item details { margin: 4px 0 0 22px; font-size: 13px; }
+.picker-item summary { cursor: pointer; color: var(--muted); }
+.param { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 2px 8px; margin: 3px 0; }
+.param input { width: 80px; font: inherit; padding: 2px 4px; border: 1px solid var(--border); border-radius: 4px; }
+.param-err { flex-basis: 100%; color: var(--danger); font-size: 12px; }
+button.link { background: none; border: 0; padding: 0; margin-top: 4px; color: var(--accent); cursor: pointer; font: inherit; text-decoration: underline; }
+.metrics { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; overflow-x: auto; }
+.metrics.empty { color: var(--muted); border-style: dashed; text-align: center; }
+.metrics table { border-collapse: collapse; font-size: 13px; width: 100%; }
+.metrics th, .metrics td { padding: 4px 8px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--border); }
+.metrics thead th { font-weight: 600; vertical-align: bottom; white-space: normal; min-width: 70px; }
+.metrics th:first-child { text-align: left; }
+.metrics td.best { font-weight: 700; background: #ecfdf5; }
+.metrics td.missed { color: var(--danger); font-weight: 600; }

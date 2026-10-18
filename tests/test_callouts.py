@@ -1,6 +1,6 @@
 import numpy as np
 
-from sim.eval.callouts import compute_callouts
+from sim.eval.callouts import compute_callouts, ideal_times, missed_callouts
 
 EXITS = [("E1", 1000.0)]
 T = np.arange(0, 100.05, 0.1)  # 10 m/s, 10 Hz output
@@ -11,6 +11,11 @@ def test_perfect_estimate_fires_at_ideal_time():
     cs = compute_callouts(T, S, np.zeros_like(T), T, S, EXITS, k=1.0)
     assert sorted(c.distance_m for c in cs) == [0, 200, 500]
     assert all(abs(c.t - c.t_ideal) <= 0.1 + 1e-9 for c in cs)
+    ideal = ideal_times(T, S, EXITS)
+    assert missed_callouts(cs, ideal) == []
+    stuck = np.full_like(T, 100.0)  # never gets near the exit: nothing fires, all three are missed
+    assert compute_callouts(T, stuck, np.zeros_like(T), T, S, EXITS) == []
+    assert sorted(m["distance_m"] for m in missed_callouts([], ideal)) == [0, 200, 500]
 
 
 def test_larger_k_fires_earlier_or_equal():

@@ -4,6 +4,8 @@ import { initialState, reducer } from './state'
 import Toolbar from './components/Toolbar'
 import Panel from './components/Panel'
 import Controls from './components/Controls'
+import EstimatorPicker from './components/EstimatorPicker'
+import MetricsTable from './components/MetricsTable'
 import JsonEditor from './components/JsonEditor'
 import ErrorBoundary from './components/ErrorBoundary'
 import ElevationProfile from './components/ElevationProfile'
@@ -43,28 +45,33 @@ export default function App() {
   useEffect(() => { latest.current = state })
   const runSeq = useRef(0)
   const runWith = useCallback((scenario) => {
-    const { estimators, calloutK } = latest.current
+    const { selected, params, calloutK } = latest.current
     const runId = ++runSeq.current
     dispatch({ type: 'run_start', runId })
-    const params = Object.fromEntries(estimators.map((e) => [e.id, {}]))
-    simulate(scenario, params, 10, calloutK).then(
+    const chosen = Object.fromEntries(selected.map((id) => [id, params[id] ?? {}]))
+    simulate(scenario, chosen, 10, calloutK).then(
       (trace) => dispatch({ type: 'run_done', runId, trace }),
       (e) => dispatch({ type: 'run_failed', runId, message: e.message }),
     )
   }, [])
   const run = useCallback(() => runWith(latest.current.scenario), [runWith])
-  // a control change: update the JSON now; run too when it is a commit and auto-run is on
-  const edit = useCallback((scenario, commit) => {
-    latest.current = { ...latest.current, scenario }
-    dispatch({ type: 'edit_scenario', scenario })
-    if (commit && latest.current.autoRun) runWith(scenario)
+  // an edit action: apply it now (the ref sees it before the next render); run too when it is a commit and auto-run is on
+  const applyEdit = useCallback((action, commit) => {
+    latest.current = reducer(latest.current, action)
+    dispatch(action)
+    if (commit && latest.current.autoRun) runWith(latest.current.scenario)
   }, [runWith])
+  const edit = useCallback((scenario, commit) => applyEdit({ type: 'edit_scenario', scenario }, commit), [applyEdit])
   const commit = useCallback(() => { if (latest.current.autoRun) runWith(latest.current.scenario) }, [runWith])
-  const setCalloutK = useCallback((value) => {
-    latest.current = { ...latest.current, calloutK: value }
-    dispatch({ type: 'set_callout_k', value })
-  }, [])
+  const setCalloutK = useCallback((value) => applyEdit({ type: 'set_callout_k', value }, false), [applyEdit])
   const setAutoRun = useCallback((value) => dispatch({ type: 'set_auto_run', value }), [])
+  const toggleEstimator = useCallback((id) => applyEdit({ type: 'toggle_estimator', id }, true), [applyEdit])
+  const setParam = useCallback((id, name, value) => applyEdit({ type: 'set_param', id, name, value }, true), [applyEdit])
+  const resetParams = useCallback((id) => applyEdit({ type: 'reset_params', id }, true), [applyEdit])
+  const resetToSaved = useCallback(() => {
+    const id = latest.current.scenarioId
+    if (id) getScenario(id).then((scenario) => edit(scenario, true), fail)
+  }, [edit])
 
   const [editing, setEditing] = useState(false)
   const openEditor = useCallback(() => setEditing(true), [])
@@ -99,6 +106,9 @@ export default function App() {
               onSpeed={setSpeed}
             />
           </ErrorBoundary>
+          <ErrorBoundary name="Metrics" resetKey={state.trace}>
+            <MetricsTable trace={state.trace} estimators={state.estimators} />
+          </ErrorBoundary>
           <ErrorBoundary name="Charts" resetKey={state.trace}>
             <ChartStack duration={duration} t={t} onSeek={seek}>
               {(w) => (
@@ -119,7 +129,13 @@ export default function App() {
             <Controls
               scenario={state.scenario} presets={state.presets} calloutK={state.calloutK} autoRun={state.autoRun}
               onEdit={edit} onCommit={commit} onCalloutK={setCalloutK} onAutoRun={setAutoRun}
-              onEditJson={openEditor} onSave={save}
+              onEditJson={openEditor} onReset={resetToSaved} onSave={save}
+            />
+          </ErrorBoundary>
+          <ErrorBoundary name="Methods">
+            <EstimatorPicker
+              estimators={state.estimators} selected={state.selected} params={state.params}
+              onToggle={toggleEstimator} onParam={setParam} onReset={resetParams}
             />
           </ErrorBoundary>
           <ErrorBoundary name="Panel" resetKey={state.trace}>

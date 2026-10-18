@@ -51,3 +51,9 @@ def compute_callouts(
         Callout(exit=e, distance_m=d, t=t, t_ideal=ideal[(e, d)])
         for (e, d), t in fired.items() if (e, d) in ideal
     ]
+
+
+def missed_callouts(fired: Sequence[Callout], ideal: dict[tuple[str, int], float]) -> list[dict[str, float | str]]:
+    """Callouts the true vehicle reached (ideal time exists) that this estimator never fired."""
+    done = {(c.exit, int(c.distance_m)) for c in fired}
+    return [{"exit": e, "distance_m": d} for (e, d) in ideal if (e, d) not in done]

@@ -50,7 +50,7 @@ function SaveAs({ scenario, onSave }) {
  * Quick controls. Every one reads its value from the scenario and writes through onEdit(newScenario, commit);
  * commit=false only updates the JSON (slider drag), commit=true also runs when auto-run is on.
  */
-export default memo(function Controls({ scenario, presets, calloutK, autoRun, onEdit, onCommit, onCalloutK, onAutoRun, onEditJson, onSave }) {
+export default memo(function Controls({ scenario, presets, calloutK, autoRun, onEdit, onCommit, onCalloutK, onAutoRun, onEditJson, onReset, onSave }) {
   if (!scenario) return null
   const car = scenario.vehicles[0]
   const L = E.roadLength(scenario)
@@ -66,6 +66,7 @@ export default memo(function Controls({ scenario, presets, calloutK, autoRun, on
       <div className="ctl-row">
         <label><input type="checkbox" checked={autoRun} onChange={(e) => onAutoRun(e.target.checked)} /> Auto-run</label>
         <button className="secondary" onClick={onEditJson}>Edit JSON</button>
+        <button className="secondary" onClick={onReset} title="Reload this scenario from disk, discarding edits">Reset to saved</button>
         <SaveAs scenario={scenario} onSave={onSave} />
       </div>
       {scenario.road.tunnels[0] && (

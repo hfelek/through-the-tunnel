@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from sim.contracts.scenario import Scenario
 from sim.contracts.trace import decimate
-from sim.estimators import list_estimators
+from sim.estimators import EstimatorFailed, list_estimators, validate_params
 from sim.runner import run_scenario
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -70,7 +70,7 @@ def save_scenario(req: SaveRequest) -> dict[str, str]:
 
 
 @app.get("/api/estimators")
-def estimators() -> list[dict[str, str]]:
+def estimators() -> list[dict]:
     return list_estimators()
 
 
@@ -85,6 +85,14 @@ def simulate(req: SimulateRequest) -> Response:
     for key in req.estimators:
         if key not in known:
             raise HTTPException(422, f"unknown estimator: {key}")
-    trace = run_scenario(req.scenario, req.estimators, callout_k=req.callout_k)
+    for key, params in req.estimators.items():
+        try:
+            validate_params(key, params)
+        except (ValueError, TypeError) as e:
+            raise HTTPException(422, str(e)) from None
+    try:
+        trace = run_scenario(req.scenario, req.estimators, callout_k=req.callout_k)
+    except EstimatorFailed as e:
+        raise HTTPException(422, str(e)) from None
     body = decimate(trace, req.decimate_hz).model_dump_json(exclude_none=True)
     return Response(body, media_type="application/json")

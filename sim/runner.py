@@ -20,8 +20,8 @@ from sim.contracts.trace import (
     Truth,
     VehicleTrace,
 )
-from sim.estimators.registry import get_estimator
-from sim.eval.callouts import compute_callouts
+from sim.estimators.registry import EstimatorFailed, get_estimator
+from sim.eval.callouts import compute_callouts, ideal_times, missed_callouts
 from sim.eval.metrics import compute_metrics
 from sim.sensors.baro import generate_baro
 from sim.sensors.ble import generate_ble
@@ -92,21 +92,24 @@ def _run_estimators(
     t_out = t0 + np.arange(int(np.floor((t1 - t0) * rate_hz + 1e-9)) + 1) / rate_hz
     result: dict[str, EstimateColumns] = {}
     for key, params in estimators.items():
-        est: Estimator = get_estimator(key)()
-        est.reset(road_map, params)
         cols = EstimateColumns()
-        i = 0
-        for t in t_out.tolist():
-            while i < len(stream) and stream[i].t <= t:
-                est.update(stream[i])
-                i += 1
-            e = est.estimate(t)
-            cols.t.append(t)
-            cols.s.append(e.s)
-            cols.v.append(e.v)
-            cols.sigma_s.append(e.sigma_s)
-            cols.display_s.append(e.s)  # no smoothing yet (T8.6)
-            cols.mode.append(e.mode)
+        try:
+            est: Estimator = get_estimator(key)()
+            est.reset(road_map, params)
+            i = 0
+            for t in t_out.tolist():
+                while i < len(stream) and stream[i].t <= t:
+                    est.update(stream[i])
+                    i += 1
+                e = est.estimate(t)
+                cols.t.append(t)
+                cols.s.append(e.s)
+                cols.v.append(e.v)
+                cols.sigma_s.append(e.sigma_s)
+                cols.display_s.append(e.s)  # no smoothing yet (T8.6)
+                cols.mode.append(e.mode)
+        except Exception as exc:
+            raise EstimatorFailed(f"estimator {key} failed: {exc}") from exc
         result[key] = cols
     return result
 
@@ -150,6 +153,10 @@ def run_scenario(
             key: compute_metrics(e.t, e.s, e.sigma_s, e.display_s, truth.t, truth.s, tunnels, fix_t, callouts[key])
             for key, e in est.items()
         }
+        ideal = ideal_times(truth.t, truth.s, exits)
+        for key in est:
+            if missed := missed_callouts(callouts[key], ideal):
+                metrics[key]["missed_callouts"] = missed
         vehicles.append(VehicleTrace(
             id=veh.id, truth=truth, measurements=meas,
             events=_events(motion, road_map, ph.handling_events), estimates=est, callouts=callouts, metrics=metrics,

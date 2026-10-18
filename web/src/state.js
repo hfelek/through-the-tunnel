@@ -2,7 +2,9 @@ export const initialState = {
   scenarios: [],
   scenarioId: null,
   scenario: null, // single source of truth for the scenario JSON
-  estimators: [],
+  estimators: [], // registry entries: {id, label, params, constraints}
+  selected: [], // ids of the estimators that Run sends
+  params: {}, // current parameter values per estimator id
   trace: null, // replaced as a whole, never mutated
   outdated: false, // the scenario was edited after the shown trace was computed
   presets: {},
@@ -18,7 +20,27 @@ export function reducer(state, action) {
     case 'scenarios_loaded':
       return { ...state, scenarios: action.scenarios }
     case 'estimators_loaded':
-      return { ...state, estimators: action.estimators }
+      return {
+        ...state,
+        estimators: action.estimators,
+        selected: action.estimators.map((e) => e.id),
+        params: Object.fromEntries(action.estimators.map((e) => [e.id, { ...e.params }])),
+      }
+    case 'toggle_estimator': {
+      const on = state.selected.includes(action.id)
+      const selected = state.estimators.map((e) => e.id).filter((id) => (id === action.id ? !on : state.selected.includes(id)))
+      return { ...state, selected, outdated: state.trace != null }
+    }
+    case 'set_param':
+      return {
+        ...state,
+        params: { ...state.params, [action.id]: { ...state.params[action.id], [action.name]: action.value } },
+        outdated: state.trace != null,
+      }
+    case 'reset_params': {
+      const defaults = state.estimators.find((e) => e.id === action.id)?.params ?? {}
+      return { ...state, params: { ...state.params, [action.id]: { ...defaults } }, outdated: state.trace != null }
+    }
     case 'presets_loaded':
       return { ...state, presets: action.presets }
     case 'select_scenario':

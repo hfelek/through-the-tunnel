@@ -2,10 +2,12 @@ import { memo, useMemo, useState } from 'react'
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, XAxis, YAxis } from 'recharts'
 import ErrorBoundary from './ErrorBoundary'
 import { estimatorColor, TRUTH_COLOR } from '../colors'
-import { M, TICK, X_AXIS_H, Y_AXIS_W, fmt } from '../lib/plotGeometry'
+import { M, TICK, X_AXIS_H, Y_AXIS_W, fmt, timeToX } from '../lib/plotGeometry'
 import { tunnelIntervals } from '../lib/trace'
 
 const CHART_H = 220
+const MARGIN = { ...M, top: 36 } // room for up to three staggered label levels (x mapping is unchanged)
+const LABEL_CHAR_PX = 6
 const RANGES = { auto: 'Auto', 50: '±50 m', 200: '±200 m' }
 
 /** One row per estimate time: error and the 2σ band [err - 2σ, err + 2σ] per estimator (error space). */
@@ -40,7 +42,21 @@ function callouts(vehicle, ids) {
   return { own, ideal: [...ideal.values()] }
 }
 
+/** Stagger ideal-line labels that would overlap horizontally onto higher levels. */
+function staggerLabels(ideal, duration, w) {
+  const edges = []
+  return [...ideal].sort((a, b) => a.t - b.t).map((c) => {
+    const x = timeToX(c.t, duration, w)
+    const half = (c.label.length * LABEL_CHAR_PX + 6) / 2
+    let level = 0
+    while (level < 2 && edges[level] !== undefined && x - half < edges[level]) level++
+    edges[level] = x + half
+    return { ...c, level }
+  })
+}
+
 const Plot = memo(function Plot({ rows, ids, colors, own, ideal, intervals, w, duration, range }) {
+  const labelled = useMemo(() => staggerLabels(ideal, duration, w), [ideal, duration, w])
   const domain = range === 'auto' ? ['auto', 'auto'] : [-range, range]
   return (
     <div className="chart-row" style={{ height: CHART_H }}>
@@ -48,7 +64,7 @@ const Plot = memo(function Plot({ rows, ids, colors, own, ideal, intervals, w, d
         Along-track error (m), shaded: ±2σ around the estimate
         {ids.map((id) => <span key={id} style={{ color: colors[id] }}> {id}</span>)}
       </div>
-      <ComposedChart width={w} height={CHART_H} data={rows} margin={M} accessibilityLayer={false}>
+      <ComposedChart width={w} height={CHART_H} data={rows} margin={MARGIN} accessibilityLayer={false}>
         <CartesianGrid vertical={false} stroke="#e5e7eb" />
         <XAxis type="number" dataKey="t" domain={[0, duration]} allowDataOverflow height={X_AXIS_H} tick={TICK} tickFormatter={fmt} />
         <YAxis width={Y_AXIS_W} domain={domain} allowDataOverflow tick={TICK} tickFormatter={fmt} tickCount={5} />
@@ -59,9 +75,9 @@ const Plot = memo(function Plot({ rows, ids, colors, own, ideal, intervals, w, d
           <Area key={`${id}_band`} dataKey={`${id}_band`} stroke="none" fill={colors[id]} fillOpacity={0.15} isAnimationActive={false} activeDot={false} connectNulls />
         ))}
         <ReferenceLine y={0} stroke="#6b7280" />
-        {ideal.map((c) => (
+        {labelled.map((c) => (
           <ReferenceLine key={`i${c.label}`} x={c.t} stroke={TRUTH_COLOR} strokeDasharray="4 3" strokeWidth={1} ifOverflow="hidden"
-            label={{ value: c.label, position: 'top', fontSize: 10, fill: TRUTH_COLOR }} />
+            label={{ value: c.label, position: 'top', offset: 2 + c.level * 11, fontSize: 10, fill: TRUTH_COLOR }} />
         ))}
         {own.map((c, k) => <ReferenceLine key={`o${k}`} x={c.t} stroke={colors[c.id]} strokeWidth={1} ifOverflow="hidden" />)}
         {ids.map((id) => (
@@ -81,6 +97,7 @@ function ErrorChart({ trace, estimators, duration, w }) {
   const colors = useMemo(() => Object.fromEntries((data?.ids ?? []).map((id) => [id, estimatorColor(estimators, id)])), [data, estimators])
   if (!vehicle) return null
   if (!data) return <div className="chart-controls muted">No ground truth in this trace</div>
+  if (!data.ids.length) return <div className="chart-controls muted">No estimator selected</div>
   return (
     <>
       <div className="chart-controls">

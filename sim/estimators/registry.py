@@ -1,7 +1,7 @@
 """Estimator registry: the API and UI list methods from here."""
 from __future__ import annotations
 
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from sim.contracts.estimation import Estimator
 
@@ -23,8 +23,42 @@ def unregister(key: str) -> None:
     _REGISTRY.pop(key, None)
 
 
-def list_estimators() -> list[dict[str, str]]:
-    return [{"id": k, "label": c.label} for k, c in _REGISTRY.items()]
+class EstimatorFailed(Exception):
+    """An estimator raised while running; carries its id so the API can name it."""
+
+
+def _defaults(cls: type) -> dict[str, Any]:
+    return dict(getattr(cls, "default_params", {}))
+
+
+def _constraints(cls: type) -> dict[str, dict[str, Any]]:
+    return {k: dict(v) for k, v in getattr(cls, "constraints", {}).items()}
+
+
+def list_estimators() -> list[dict[str, Any]]:
+    """Registry entries with default parameters and their constraints (`type`, optional `min` / `gt`)."""
+    return [
+        {"id": k, "label": c.label, "params": _defaults(c), "constraints": _constraints(c)}
+        for k, c in _REGISTRY.items()
+    ]
+
+
+def validate_params(key: str, params: dict[str, Any]) -> None:
+    """Raise ValueError naming the parameter if a name is unknown or a value is outside its constraints."""
+    cls = _REGISTRY[key]
+    defaults, cons = _defaults(cls), _constraints(cls)
+    for name, value in params.items():
+        if name not in defaults:
+            raise ValueError(f"estimator {key!r}: unknown parameter {name!r} (known: {sorted(defaults)})")
+        c = cons.get(name, {})
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise TypeError(f"estimator {key!r}: parameter {name!r} must be a number, got {value!r}")
+        if c.get("type") == "int" and value != int(value):
+            raise ValueError(f"estimator {key!r}: parameter {name!r} must be an integer, got {value}")
+        if "min" in c and value < c["min"]:
+            raise ValueError(f"estimator {key!r}: parameter {name!r} must be >= {c['min']}, got {value}")
+        if "gt" in c and value <= c["gt"]:
+            raise ValueError(f"estimator {key!r}: parameter {name!r} must be > {c['gt']}, got {value}")
 
 
 def get_estimator(key: str) -> type[Estimator]:

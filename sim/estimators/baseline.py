@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections import deque
+from typing import ClassVar
 
 from sim.contracts.estimation import Estimate, Measurement, Mode
 from sim.estimators.registry import register
@@ -15,14 +16,25 @@ R68_TO_AXIS = 1.5096
 class BaselineEstimator:
     id = "baseline"
     label = "Baseline (last speed)"
+    default_params: ClassVar[dict[str, float]] = {  # sigma_rate_mps is a tuning value, judged by T5.2
+        "gap_timeout_s": 1.5, "n_speed_fixes": 3, "sigma_rate_mps": 0.5, "recover_fixes": 3, "initial_sigma_s": 50.0,
+    }
+    constraints: ClassVar[dict[str, dict[str, object]]] = {
+        "gap_timeout_s": {"type": "float", "gt": 0},
+        "n_speed_fixes": {"type": "int", "min": 1},
+        "sigma_rate_mps": {"type": "float", "min": 0},
+        "recover_fixes": {"type": "int", "min": 1},
+        "initial_sigma_s": {"type": "float", "gt": 0},
+    }
 
     def reset(self, road: RoadMap, params: dict) -> None:
         self.road = road
-        self.gap_timeout_s = float(params.get("gap_timeout_s", 1.5))
-        self.n_speed_fixes = int(params.get("n_speed_fixes", 3))
-        self.sigma_rate_mps = float(params.get("sigma_rate_mps", 0.5))  # tuning value, judged by T5.2
-        self.recover_fixes = int(params.get("recover_fixes", 3))
-        self.initial_sigma_s = float(params.get("initial_sigma_s", 50.0))
+        p = {**self.default_params, **params}
+        self.gap_timeout_s = float(p["gap_timeout_s"])
+        self.n_speed_fixes = int(p["n_speed_fixes"])
+        self.sigma_rate_mps = float(p["sigma_rate_mps"])
+        self.recover_fixes = int(p["recover_fixes"])
+        self.initial_sigma_s = float(p["initial_sigma_s"])
         self._speeds: deque[float] = deque(maxlen=self.n_speed_fixes)
         self._t_fix: float | None = None
         self._s_fix = 0.0

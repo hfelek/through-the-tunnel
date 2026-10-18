@@ -145,7 +145,7 @@ The runner merges all sensor streams by time, calls `update` in order and sample
 | Maximum display jump | Largest change of `display_s` in one output step minus true progress |
 | Consistency | Percentage of time with abs(error) < 2σ. Ideal ≈ 95% |
 
-Consistency is measured inside tunnels only, because with GNSS every method is trivially consistent. Exit error and recovery time are computed per tunnel. Undefined metrics are omitted from the trace rather than written as null, so a missing key means undefined. Callouts fire when `ŝ + k·σ ≥ exit_s − d`; `callout_k` is a navigation-layer parameter applied equally to all estimators.
+Consistency is measured inside tunnels only, because with GNSS every method is trivially consistent. Exit error and recovery time are computed per tunnel. Undefined metrics are omitted from the trace rather than written as null, so a missing key means undefined. `missed_callouts` is a list of `{ exit, distance_m }` for callouts the true vehicle reached (an ideal time exists) that the estimator never fired; the key is omitted when none were missed. Callouts fire when `ŝ + k·σ ≥ exit_s − d`; `callout_k` is a navigation-layer parameter applied equally to all estimators.
 
 ### 3.6 API
 
@@ -154,8 +154,8 @@ Consistency is measured inside tunnels only, because with GNSS every method is t
 | `GET /api/scenarios` | Scenario list (id, description) |
 | `GET /api/scenarios/{id}` | Scenario JSON |
 | `POST /api/scenarios` | Body: `{ id, scenario }` → saves `scenarios/{id}.json` (201). `id` must match `^[a-z0-9_]+$` and the scenario must validate; its own `id` field is set to `id`. 409 if the file exists (never overwritten), 422 on a bad id or invalid scenario |
-| `GET /api/estimators` | Methods in the registry |
+| `GET /api/estimators` | Methods in the registry: `[{ id, label, params: {name: default}, constraints: {name: {type: "int"\|"float", min?, gt?}} }]`. `min` is inclusive, `gt` exclusive |
 | `GET /api/presets` | Sensor presets |
-| `POST /api/simulate` | Body: `{ scenario, estimators: {id: params}, decimate_hz (default 10), callout_k (default 1.0) }` → trace |
+| `POST /api/simulate` | Body: `{ scenario, estimators: {id: params}, decimate_hz (default 10), callout_k (default 1.0) }` → trace. 422 naming the parameter for an unknown parameter name or a value outside its constraints, and `estimator <id> failed: <message>` if an estimator raises |
 | `POST /api/montecarlo` | Body: `{ scenario, estimators, runs }` → metric distributions |
 | `GET /api/real` and `GET /api/real/{id}` | Converted real recordings (Phase 10, optional) |

@@ -25,7 +25,7 @@ def dummy():
 
 
 def test_register_and_list(dummy):
-    assert {"id": "dummy", "label": "Dummy"} in list_estimators()
+    assert {"id": "dummy", "label": "Dummy", "params": {}, "constraints": {}} in list_estimators()
     assert get_estimator("dummy") is dummy
     with pytest.raises(ValueError):
         register(dummy)
