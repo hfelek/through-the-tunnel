@@ -1,4 +1,6 @@
-export default function Toolbar({ state, onSelect, onRun }) {
+import { memo } from 'react'
+
+export default memo(function Toolbar({ state, onSelect, onRun }) {
   const { scenarios, scenarioId, scenario, loading, error } = state
   const current = scenarios.find((s) => s.id === scenarioId)
   return (
@@ -27,4 +29,4 @@ export default function Toolbar({ state, onSelect, onRun }) {
       {error && <div className="error-box">{error}</div>}
     </header>
   )
-}
+})

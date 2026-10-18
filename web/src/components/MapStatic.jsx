@@ -17,17 +17,17 @@ function pathD(map, s0, s1) {
   return pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join('')
 }
 
-/** Centerline and tunnels in a transformed group (strokes stay constant in px). */
-export const RoadLayer = memo(function RoadLayer({ map, cx, cy, scale, w, h }) {
+/** Centerline and tunnel paths in world coordinates; the parent applies the view transform, so this never re-renders on pan, zoom or t. */
+export const RoadPaths = memo(function RoadPaths({ map }) {
   const road = useMemo(() => pathD(map, map.s[0], map.s[map.s.length - 1]), [map])
   const tunnels = useMemo(() => map.tunnels.map((t) => ({ id: t.id, d: pathD(map, t.start_s, t.end_s) })), [map])
   return (
-    <g transform={`translate(${w / 2} ${h / 2}) scale(${scale} ${-scale}) translate(${-cx} ${-cy})`} fill="none" strokeLinejoin="round">
+    <>
       <path d={road} stroke="#9ca3af" strokeWidth={3} vectorEffect="non-scaling-stroke" />
       {tunnels.map((t) => (
         <path key={t.id} d={t.d} stroke="#374151" strokeWidth={8} vectorEffect="non-scaling-stroke" />
       ))}
-    </g>
+    </>
   )
 })
 

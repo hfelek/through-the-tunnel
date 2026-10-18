@@ -1,9 +1,10 @@
+import { memo } from 'react'
 import { estimatorColor, TRUTH_COLOR } from '../colors'
 import { vehicleDuration } from '../lib/trace'
 
 const fmt = (v, unit) => (typeof v === 'number' ? `${v.toFixed(1)} ${unit}` : 'n/a')
 
-export default function Panel({ trace, estimators }) {
+export default memo(function Panel({ trace, estimators }) {
   const vehicle = trace?.vehicles?.[0]
   if (!vehicle) return <aside className="panel"><p className="muted">Run a scenario to see results.</p></aside>
   const dur = vehicleDuration(vehicle)
@@ -33,4 +34,4 @@ export default function Panel({ trace, estimators }) {
       })}
     </aside>
   )
-}
+})

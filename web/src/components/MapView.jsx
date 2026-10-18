@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { interpAt } from '../lib/interp'
 import { roadPointAt } from '../lib/road'
 import { estimatorColor, TRUTH_COLOR } from '../colors'
-import { ExitLayer, RoadLayer } from './MapStatic'
+import { ExitLayer, RoadPaths } from './MapStatic'
 import MapDynamic from './MapDynamic'
+import ScaleBar from './ScaleBar'
 
 const HEIGHT = 360
 const FOLLOW_VIEW_M = 1000 // visible width when following the car
@@ -99,13 +100,16 @@ export default function MapView({ trace, estimators, t }) {
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
       >
-        <RoadLayer map={map} {...geom} />
+        <g transform={`translate(${w / 2} ${HEIGHT / 2}) scale(${scale} ${-scale}) translate(${-cx} ${-cy})`} fill="none" strokeLinejoin="round">
+          <RoadPaths map={map} />
+        </g>
         <ExitLayer map={map} {...geom} />
         <MapDynamic map={map} vehicle={vehicle} estimators={estimators} t={t} {...geom} />
       </svg>
       <label className="follow-toggle">
         <input type="checkbox" checked={follow} onChange={toggleFollow} disabled={car == null} /> Follow car
       </label>
+      <ScaleBar scale={scale} />
       <div className="legend">
         <span><i className="dot" style={{ background: TRUTH_COLOR }} /> Truth</span>
         {Object.keys(vehicle.estimates ?? {}).map((id) => (
