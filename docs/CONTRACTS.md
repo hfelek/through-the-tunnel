@@ -155,6 +155,6 @@ Consistency is measured inside tunnels only, because with GNSS every method is t
 | `GET /api/scenarios/{id}` | Scenario JSON |
 | `GET /api/estimators` | Methods in the registry |
 | `GET /api/presets` | Sensor presets |
-| `POST /api/simulate` | Body: `{ scenario, estimators, decimate_hz }` → trace |
+| `POST /api/simulate` | Body: `{ scenario, estimators: {id: params}, decimate_hz (default 10), callout_k (default 1.0) }` → trace |
 | `POST /api/montecarlo` | Body: `{ scenario, estimators, runs }` → metric distributions |
 | `GET /api/real` and `GET /api/real/{id}` | Converted real recordings (Phase 10, optional) |
