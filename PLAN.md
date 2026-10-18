@@ -229,7 +229,7 @@ The simulation output and the real-data loader output share the same format. Arr
 }
 ```
 
-Rules: a real recording has no `truth` or only partial truth; a missing sensor field is simply not written. If there is no GNSS fix at a second, that row does not exist (instead of writing an empty value). `mode` values: `gnss`, `dead_reckoning`, `recovering`. The API can decimate the IMU for the UI with the `decimate_hz` parameter; computation always runs at full rate. `h_acc` is the radial 68% horizontal accuracy in metres, as reported by Android and iOS.
+Rules: a real recording has no `truth` or only partial truth; a missing sensor field is simply not written. If there is no GNSS fix at a second, that row does not exist (instead of writing an empty value). `mode` values: `gnss`, `dead_reckoning`, `recovering`. The API can decimate the IMU, barometer, magnetometer and truth in the returned trace for the UI with the `decimate_hz` parameter; computation always runs at full rate. `h_acc` is the radial 68% horizontal accuracy in metres, as reported by Android and iOS.
 
 ### 3.4 Estimator interface
 
@@ -480,6 +480,7 @@ Every change that touches the contracts or the task list goes here, newest first
 
 | Date | Change | Affected |
 | --- | --- | --- |
+| 2026-10-18 | API decimation also applies to truth (UI needs ~10 Hz; truth was sent at the IMU rate) | Section 3.3, T6.1 |
 | 2026-10-18 | convoy_3_cars removed; multi-vehicle scenarios are out of scope (the T2.3 code stays). Traffic is represented by a single vehicle in stop_and_go_3km. The 3-vehicle demo item and the T7.2 "3 vehicles" criterion are removed | T4.2, T7.2, Section 6 |
 | 2026-10-18 | Plan translated to English | Whole document |
 | 2026-10-18 | Division of work and credit rules added; Claude.ai tasks tagged [claude.ai]; CLAUDE.md prepared | Section 1, T0.2, T0.3, T3.1, T4.2, T11.1–T11.3 |

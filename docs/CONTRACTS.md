@@ -115,7 +115,7 @@ The simulation output and the real-data loader output share the same format. Arr
 }
 ```
 
-Rules: a real recording has no `truth` or only partial truth; a missing sensor field is simply not written. If there is no GNSS fix at a second, that row does not exist (instead of writing an empty value). BLE rows come at the fixed 100 ms iBeacon advertising interval, not from `rates_hz`. `mode` values: `gnss`, `dead_reckoning`, `recovering`. The API can decimate the IMU for the UI with the `decimate_hz` parameter; computation always runs at full rate. `h_acc` is the radial 68% horizontal accuracy in metres, as reported by Android and iOS.
+Rules: a real recording has no `truth` or only partial truth; a missing sensor field is simply not written. If there is no GNSS fix at a second, that row does not exist (instead of writing an empty value). BLE rows come at the fixed 100 ms iBeacon advertising interval, not from `rates_hz`. `mode` values: `gnss`, `dead_reckoning`, `recovering`. The API can decimate the IMU, barometer, magnetometer and truth in the returned trace for the UI with the `decimate_hz` parameter; computation always runs at full rate. `h_acc` is the radial 68% horizontal accuracy in metres, as reported by Android and iOS.
 
 ### 3.4 Estimator interface
 

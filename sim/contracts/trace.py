@@ -139,14 +139,16 @@ def _decimate_columns(block: BaseModel, hz: float) -> BaseModel:
         if last is None or ti - last >= 1.0 / hz - 1e-9:
             keep.append(i)
             last = ti
-    data = {name: [col[i] for i in keep] for name, col in block}
+    data = {name: [col[i] for i in keep] if len(col) == len(t) else col for name, col in block}
     return type(block)(**data)
 
 
 def decimate(trace: Trace, hz: float) -> Trace:
-    """Return a copy with IMU, baro and mag reduced to at most `hz`; everything else untouched."""
+    """Return a copy with truth, IMU, baro and mag reduced to at most `hz`; everything else untouched."""
     out = trace.model_copy(deep=True)
     for veh in out.vehicles:
+        if veh.truth is not None:
+            veh.truth = _decimate_columns(veh.truth, hz)
         m = veh.measurements
         for name in ("imu", "baro", "mag"):
             block = getattr(m, name)

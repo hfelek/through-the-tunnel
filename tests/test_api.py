@@ -23,6 +23,8 @@ def test_simulate_returns_trace_with_decimated_imu() -> None:
     veh = r.json()["vehicles"][0]
     assert veh["id"] == "car1"
     assert "baseline" in veh["estimates"] and "baseline" in veh["callouts"] and "baseline" in veh["metrics"]
+    tt = veh["truth"]["t"]
+    assert 9 < (len(tt) - 1) / (tt[-1] - tt[0]) <= 10.5
     t = veh["measurements"]["imu"]["t"]
     assert 9 < (len(t) - 1) / (t[-1] - t[0]) <= 10.5
 

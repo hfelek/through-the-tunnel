@@ -33,11 +33,11 @@ def test_round_trip(tmp_path):
     assert read_trace(p) == tr
 
 
-def test_decimate_only_imu_baro_mag():
+def test_decimate_truth_imu_baro_mag():
     tr = _trace()
     out = decimate(tr, 10)
     m, m0 = out.vehicles[0].measurements, tr.vehicles[0].measurements
     assert len(m.imu.t) == 10 and len(m.baro.p_hpa) == 10
     assert m.mag is None and m.gnss == m0.gnss
-    assert out.vehicles[0].truth == tr.vehicles[0].truth
+    assert len(out.vehicles[0].truth.t) == 10 and len(tr.vehicles[0].truth.t) == 100
     assert len(m0.imu.t) == 100
