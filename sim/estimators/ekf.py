@@ -28,10 +28,12 @@ class EkfEstimator:
         "bias_rw": 5e-4, "v_rw": 0.3, "init_bias_sigma": 0.1, "sigma_v": 0.2, "lateral_k": 3.0, "gate_chi2": 13.8,
         "speed_limit_factor": 1.3, "v_prior_sigma": 2.0, "accel_trust_sigma_b": 0.05,
         "initial_sigma_s": 50.0, "initial_sigma_v": 5.0, "gnss_timeout_s": 1.5, "recover_fixes": 3,
+        "gate_reset_n": 5, "display_k": 0.5, "display_max_catchup": 10.0,  # T8.6, A31
     }
     constraints: ClassVar[dict[str, dict[str, object]]] = {
-        **{k: {"type": "float", "gt": 0} for k in default_params if k != "recover_fixes"},
+        **{k: {"type": "float", "gt": 0} for k in default_params if k not in ("recover_fixes", "gate_reset_n")},
         "recover_fixes": {"type": "int", "min": 1},
+        "gate_reset_n": {"type": "int", "min": 1},
     }
     zupt = False  # the subclass EkfZuptEstimator turns the stationary updates on
 
@@ -50,6 +52,9 @@ class EkfEstimator:
         self._t_acc: float | None = None  # time of the last accepted fix
         self._fix_mode: Mode = "gnss"
         self._recover_left = 0
+        self._gate_streak = 0  # consecutive on-road fixes rejected by the chi-square gate (T8.6)
+        self.gate_resets = 0  # counter, for inspection
+        self._display_s = 0.0  # the position shown on screen, never moves backwards (T8.6)
         if self.zupt:
             self._detector = StationaryDetector(self.zupt_acc_std, self.zupt_gyro_std)
             self._next_zupt = 0.0
@@ -138,11 +143,30 @@ class EkfEstimator:
             q[:2, :2] = self.v_rw**2 * np.array([[dt**3 / 3.0, dt**2 / 2.0], [dt**2 / 2.0, dt]])
         self.P = f @ self.P @ f.T + q
         self._clip()
+        self._advance_display(dt)
         lim = self._limit(float(self.x[0]))
         if lim is not None and self.x[1] > self.speed_limit_factor * lim:  # weak speed prior
             self._kalman(_H_V, np.array([lim]), np.array([[self.v_prior_sigma**2]]))
         if self.zupt:
             self._stationary_updates(m, a.valid, a.a_long)
+
+    def _advance_display(self, dt: float) -> None:
+        """display_s follows the speed and is pulled to s at display_k per second; rate in [0, v + max_catchup] (T8.6, A31)."""
+        v = float(self.x[1])
+        rate = v + self.display_k * (float(self.x[0]) - self._display_s)
+        # lower bound 0: never backwards, so a backward jump of s makes the display hold until the vehicle catches up;
+        # upper bound: a forward jump is absorbed within a few seconds without a visible leap
+        self._display_s += min(max(rate, 0.0), v + self.display_max_catchup) * dt
+        self._display_s = min(self._display_s, self.road.length_m)
+
+    def _reinit_from_fix(self, z: np.ndarray, r: np.ndarray) -> None:
+        """Gate safeguard: the filter is overconfident, so trust the fix. s and v from the fix, b and d_psi kept (T8.6)."""
+        self.x[0], self.x[1] = z
+        self.P[:2, :] = 0.0  # no correlation left between the new (s, v) and the kept states
+        self.P[:, :2] = 0.0
+        self.P[:2, :2] = r
+        self._clip()
+        self.gate_resets += 1
 
     def _speed_not_zero(self) -> bool:
         """Same chi-square test as the v = 0 gate: the EKF's speed and uncertainty cannot be explained by standing still."""
@@ -187,8 +211,13 @@ class EkfEstimator:
             self.x = np.array([s_meas, z[1], 0.0, 0.0])
             self.P = np.diag([r[0, 0], r[1, 1], self.init_bias_sigma**2, 0.1**2])
             self._have_fix = True
+            self._display_s = float(self.x[0])
         elif not self._kalman(_H_GNSS, z, r, gate=self.gate_chi2):
-            return
+            self._gate_streak += 1
+            if self._gate_streak < self.gate_reset_n:
+                return
+            self._reinit_from_fix(z, r)  # n fixes in a row on the road but far from the estimate: the estimate is wrong
+        self._gate_streak = 0
         if self._t_acc is not None and m.t - self._t_acc > self.gnss_timeout_s:
             self._recover_left = int(self.recover_fixes)  # first fix after an outage
         self._fix_mode = "recovering" if self._recover_left > 0 else "gnss"
@@ -200,7 +229,8 @@ class EkfEstimator:
         if self._t_acc is not None and t - self._t_acc <= self.gnss_timeout_s:
             mode = self._fix_mode
         return Estimate(t=t, s=float(self.x[0]), v=float(self.x[1]), sigma_s=float(np.sqrt(self.P[0, 0])),
-                        sigma_v=float(np.sqrt(self.P[1, 1])), mode=mode)
+                        sigma_v=float(np.sqrt(self.P[1, 1])), mode=mode,
+                        extras={"display_s": self._display_s})
 
 
 @register

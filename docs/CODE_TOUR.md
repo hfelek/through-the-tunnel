@@ -184,26 +184,31 @@ detects the phone being handled. One per estimator. Design: PLAN T8.1, assumptio
 
 State `[s, v, b, d_psi]`: position, speed, acceleration offset, remaining mount yaw error (a consider state).
 
-- Parameters and constraints: `:27-34`. `reset` (`:38`) creates one `Aligner`.
-- `_imu` (`:100`): passes its own position and speed to the aligner so grade leakage is removed at the EKF's position
-  (`:101`), inflates `P_bb` on a new mount (`:106`), then predicts. Aligned prediction (`:122`):
+- Parameters and constraints: `:27-37`. `reset` (`:40`) creates one `Aligner`.
+- `_imu` (`:105`): passes its own position and speed to the aligner so grade leakage is removed at the EKF's position
+  (`:106`), inflates `P_bb` on a new mount (`:111`), then predicts. Aligned prediction (`:127`):
   `acc = a.a_long - b - d * v * w` (acceleration minus offset minus the yaw error's share). Process noise uses only
   `sigma_base`; the yaw error is in `d_psi`, not counted twice.
-- Trust rule (`:120`): `if a.valid and (gnss_current or sqrt(P_bb) <= accel_trust_sigma_b)`: with a poorly known offset and
+- Trust rule (`:125`): `if a.valid and (gnss_current or sqrt(P_bb) <= accel_trust_sigma_b)`: with a poorly known offset and
   no GNSS, the constant-velocity branch is used instead.
-- `_kalman` (`:71`): generic update, chi-square gate (`:75`), Joseph form, and
-  `k[3, :] = 0.0` (`:78`): `d_psi` is a consider state, its mean is never updated.
-- `_gnss` (`:176`): map-match the fix, reject if its lateral distance is over `lateral_k` sigma (`:183`), update with
+- `_kalman` (`:76`): generic update, chi-square gate (`:80`), Joseph form, and
+  `k[3, :] = 0.0` (`:83`): `d_psi` is a consider state, its mean is never updated.
+- `_gnss` (`:200`): map-match the fix, reject if its lateral distance is over `lateral_k` sigma (`:208`), update with
   position and speed.
-- Weak speed prior (`:142`): pull `v` down if it is above `speed_limit_factor` × the limit.
-- `estimate` (`:198`) returns `s, v, sqrt(P)` and the mode (`gnss`, `recovering`, `dead_reckoning`).
-- `EkfZuptEstimator` (`:207`, id `ekf_zupt`, label "EKF + ZUPT"): the same class with `zupt = True` and four more parameters
+- Weak speed prior (`:148`): pull `v` down if it is above `speed_limit_factor` × the limit.
+- `estimate` (`:227`) returns `s, v, sqrt(P)` and the mode (`gnss`, `recovering`, `dead_reckoning`).
+- `EkfZuptEstimator` (`:237`, id `ekf_zupt`, label "EKF + ZUPT"): the same class with `zupt = True` and four more parameters
   (`zupt_acc_std`, `zupt_gyro_std`, `zupt_v_sigma`, `zupt_gate_chi2`). `ekf` stays without ZUPT so the two can be compared.
-  `_stationary_updates` (`:151`), called at the end of `_imu`: while the detector says stationary, `v = 0` every 0.1 s through
+  `_stationary_updates` (`:175`), called at the end of `_imu`: while the detector says stationary, `v = 0` every 0.1 s through
   `_kalman(..., gate=zupt_gate_chi2)` (a rejected update is counted in `zupt_gated`), and once per second the mean aligned
-  `a_long` as a measurement of `b` (`H = [0, 0, 1, 0]`, true acceleration is 0). `_speed_not_zero` (`:147`) is the same
+  `a_long` as a measurement of `b` (`H = [0, 0, 1, 0]`, true acceleration is 0). `_speed_not_zero` (`:171`) is the same
   chi-square test; a bias window that fails it is dropped, because the detector lags the departure by about 2 s and the
   window would hold real acceleration (A32).
+- Exit safeguard (T8.6): in `_gnss` (`:215`), a fix that passes the lateral check but fails the gate adds to `_gate_streak`;
+  at `gate_reset_n` (5) `_reinit_from_fix` (`:162`) takes `s` and `v` from the fix (keeps `b`, `d_psi`) and counts `gate_resets`.
+- Display smoothing (T8.6): `_advance_display` (`:153`), called every IMU step, moves `display_s` at
+  `clip(v + display_k * (s - display_s), 0, v + display_max_catchup)`; `estimate` passes it in `extras["display_s"]`
+  and the runner writes it to the `display_s` column (callouts still use `s`).
 
 ### `stationary.py`: the stationary detector (T8.3, A32)
 
@@ -286,7 +291,7 @@ Truth isolation (estimators never see truth):
 Causality (state changes only through `update(m)`, in time order):
 
 1. `_merged` sorts by time (`sim/runner.py:71`); `_run_estimators` feeds `stream[i].t <= t` before `estimate(t)` (`:108-110`).
-2. `estimate()` only reads state (`ekf.py:198`, `baseline.py:62`); `Aligner` state changes only in `process_gnss` /
+2. `estimate()` only reads state (`ekf.py:227`, `baseline.py:62`); `Aligner` state changes only in `process_gnss` /
    `process_imu`. The Aligner's delays (0.3 s staging, 0.2 s detection) are causal: it never looks ahead.
 3. All randomness comes from seeded generators passed in; no `np.random` global (`sim/runner.py:134-138`).
 
@@ -315,8 +320,8 @@ Causality (state changes only through `update(m)`, in time order):
    with approval), then read it in the sensor.
 
 ### ... add or change an estimator parameter
-1. In the estimator class: add it to `default_params` and `constraints` (`ekf.py:27-34`); read it in `reset`
-   (`setattr` loop, `ekf.py:38`), use it where needed. For the ZUPT parameters, the same in `EkfZuptEstimator` (`ekf.py:213`).
+1. In the estimator class: add it to `default_params` and `constraints` (`ekf.py:27-37`); read it in `reset`
+   (`setattr` loop, `ekf.py:40`), use it where needed. For the ZUPT parameters, the same in `EkfZuptEstimator` (`ekf.py:243`).
 2. Nothing else for the UI: `/api/estimators` returns it, `EstimatorPicker` shows an input with the right limits, `Run` sends it,
    `/api/simulate` validates it (`registry.validate_params`).
 3. Document the value and why in `docs/ASSUMPTIONS.md` (A31 for the EKF); `python -m pytest -q`.
@@ -362,7 +367,7 @@ Causality (state changes only through `update(m)`, in time order):
 | `test_estimators.py` | registry: register/list, removal, estimator types are slotted |
 | `test_baseline.py` | baseline: small exit error at constant speed, large on stop-and-go |
 | `test_alignment.py` | Aligner on noise-free data: mount yaw and gyro bias found, handling detected and re-aligned, no false detection |
-| `test_ekf.py` | EKF in-tunnel consistency on `curved_2km`; EKF+ZUPT in-tunnel consistency on `hard_brake_inside` (the 15 s standstill); the stationary detector never fires on the raw IMU of the constant-speed `curved_2km` and `beacons_5km` |
+| `test_ekf.py` | EKF in-tunnel consistency on `curved_2km`; EKF+ZUPT in-tunnel consistency on `hard_brake_inside` (the 15 s standstill); the stationary detector never fires on the raw IMU of the constant-speed `curved_2km` and `beacons_5km`; EKF+ZUPT `display_s` is non-decreasing, its max display jump is below the baseline's and recovery exists in `short_straight_500m`, `hard_brake_inside`, `stop_and_go_3km` (T8.6) |
 | `test_metrics.py` | RMSE, exit error, consistency, recovery time |
 | `test_callouts.py` | perfect estimate fires at the ideal time; larger k fires earlier; missed callouts |
 | `test_runner.py` | same seed is byte-identical (without the wall-clock `compute_us_per_measurement`); an estimator sees only time-ordered measurements, and no estimator module imports sensor, eval, runner or vehicle code (`ast` check); changing the GNSS preset keeps the IMU identical |

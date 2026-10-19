@@ -115,7 +115,7 @@ def _run_estimators(
                 cols.s.append(e.s)
                 cols.v.append(e.v)
                 cols.sigma_s.append(e.sigma_s)
-                cols.display_s.append(e.s)  # no smoothing yet (T8.6)
+                cols.display_s.append(e.extras.get("display_s", e.s))  # smoothed by the EKF (T8.6), else s
                 cols.mode.append(e.mode)
         except Exception as exc:
             raise EstimatorFailed(f"estimator {key} failed: {exc}") from exc

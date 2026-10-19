@@ -27,3 +27,13 @@ def test_no_stationary_detection_at_constant_speed():
         det = StationaryDetector(0.05, 0.004)  # the EKF+ZUPT defaults
         rows = zip(imu.t, imu.ax, imu.ay, imu.az, imu.gx, imu.gy, imu.gz)
         assert not any(det.update(*row) for row in rows), name
+
+
+def test_display_is_monotonic_and_the_filter_recovers():
+    for name in ("short_straight_500m", "hard_brake_inside", "stop_and_go_3km"):
+        v = run_scenario(load_scenario(f"scenarios/{name}.json"), {"baseline": {}, "ekf_zupt": {}}).vehicles[0]
+        e, base = v.estimates["ekf_zupt"], v.metrics["baseline"]
+        assert all(b >= a for a, b in zip(e.display_s, e.display_s[1:])), name
+        m = v.metrics["ekf_zupt"]
+        assert m["max_display_jump_m"] < base["max_display_jump_m"], name
+        assert all(r is not None for r in m["recovery_time_s"].values()), name  # the gate safeguard (T8.6)
