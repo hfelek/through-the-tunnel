@@ -233,16 +233,16 @@ State `[s, v, b, d_psi]`: position, speed, acceleration offset, remaining mount 
   The EKF stores its aligned sample in `ekf.aligned` (one line in `_imu`) so the PF can read the yaw rate.
 - Particles are `s`, `dv` (speed offset from the EKF speed) and weights `w`. `_redraw` (`:73`) re-samples them from the EKF's
   belief whenever the EKF accepted a GNSS fix or a beacon update (detected by a change of `ekf._t_acc` / `beacon_updates`).
-- Map matching runs only in the tunnel (`_in_tunnel`, `:65`: first fix done, EKF mode `dead_reckoning`). `_step` (`:105`) every
-  0.1 s: `_propagate` (`:119`) moves `s` by `(v_ekf + dv) * dt` and sums each particle's expected yaw rate `v * curvature(s)`;
+- Map matching runs only in the tunnel (`_in_tunnel`, `:65`: first fix done, EKF mode `dead_reckoning`). `_step` (`:104`) every
+  0.1 s: `_propagate` (`:121`) moves `s` by `(v_ekf + dv) * dt` and sums each particle's expected yaw rate `v * curvature(s)`;
   every 1 s `_weigh` (`:132`) first measures the spread of the particles' expected yaw rates; below `informative_ratio * sigma_yaw`
-  (e.g. a straight road) it does nothing (CR3; the recentring tried in CR3 was removed in CR4). CR5: all random draws are per particle; on straight tunnels (`speed_changes_3km`) pf is still worse than the EKF by a ~30 m offset whose cause is open, and `test_pf.py` only guards it with a 3x bound; otherwise
-  `_weigh_and_resample` (`:141`) multiplies the weights by the curvature likelihood and resamples when
+  (e.g. a straight road) it does nothing (CR3; the recentring tried in CR3 was removed in CR4). CR6: `_propagate` runs at every step, also while GNSS is current (before, the cloud stood still for the 1.5 s `gnss_timeout_s` after the last fix and started ~33 m behind on straight tunnels); weighting is tunnel-only); otherwise
+  `_weigh_and_resample` (`:142`) multiplies the weights by the curvature likelihood and resamples when
   N_eff < N/2 (`systematic_resample`, `:22`, plus jitter). CR2: there is no barometer matching (A34); the barometer stays a sensor
   and a chart only.
 - CR1: `_propagate` also adds `N(0, sqrt(max(0, ΔP_vv)))` to every `dv` (`_pvv_prev`); The `bool` constraint type (registry, `EstimatorPicker` checkbox) stays, although no estimator has a bool parameter now.
-- `estimate` (`:161`): in the tunnel the weighted mean and std of `s`, `v_ekf` + weighted mean `dv`; otherwise the EKF's.
-  `display_s` is the T8.6 rule applied to the particle mean (`_advance_display`, `:154`).
+- `estimate` (`:162`): in the tunnel the weighted mean and std of `s`, `v_ekf` + weighted mean `dv`; otherwise the EKF's.
+  `display_s` is the T8.6 rule applied to the particle mean (`_advance_display`, `:155`).
 - Recipe, a new PF parameter: add it to `_OWN` (`:16`) and, if it needs a constraint, to `constraints`; unknown names go to the EKF.
 
 ### `stationary.py`: the stationary detector (T8.3, A32)

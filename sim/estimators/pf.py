@@ -105,8 +105,11 @@ class PfEstimator:
         if not self._started:
             return
         v = float(self.ekf.x[1])
+        self._propagate(dt, v)  # always, also with a current fix: the cloud must not stand still between redraws (CR6)
         if self._in_tunnel(t):
-            self._propagate(t, dt, v)
+            if self._t_weigh is None:  # first tunnel step: the 1 s averages start here, not at the last GNSS fix
+                self._t_weigh = t
+                self._clear_averages()
             if t - self._t_weigh >= WEIGH_S:
                 self._weigh(t)
             target = self._mean_std()[0]
@@ -115,9 +118,7 @@ class PfEstimator:
             target = float(self.ekf.x[0])  # GNSS current: the particles are the EKF's belief
         self._advance_display(target, v, dt)
 
-    def _propagate(self, t: float, dt: float, v: float) -> None:
-        if self._t_weigh is None:
-            self._t_weigh = t
+    def _propagate(self, dt: float, v: float) -> None:
         self.dv += self.rng.normal(0.0, self.dv_rw * np.sqrt(dt), self.n)  # random walk of the speed offsets
         pvv = float(self.ekf.P[1, 1])
         grow = max(0.0, pvv - self._pvv_prev)  # CR1: the particles must grow their speed spread like the EKF's P_vv
