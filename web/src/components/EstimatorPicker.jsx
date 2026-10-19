@@ -38,6 +38,16 @@ function ParamInput({ name, value, constraint, onCommit }) {
   )
 }
 
+/** On/off parameter (constraint type "bool"): a checkbox that commits at once. */
+function BoolInput({ name, value, onCommit }) {
+  return (
+    <label className="param">
+      <span>{name}</span>
+      <input type="checkbox" checked={Boolean(value)} onChange={(e) => onCommit(e.target.checked)} />
+    </label>
+  )
+}
+
 export default memo(function EstimatorPicker({ estimators, selected, params, onToggle, onParam, onReset }) {
   return (
     <aside className="panel picker">
@@ -53,10 +63,13 @@ export default memo(function EstimatorPicker({ estimators, selected, params, onT
           {Object.keys(e.params).length > 0 && (
             <details>
               <summary>Params</summary>
-              {Object.keys(e.params).map((name) => (
-                <ParamInput key={name} name={name} value={params[e.id]?.[name] ?? e.params[name]} constraint={e.constraints?.[name]}
-                  onCommit={(v) => onParam(e.id, name, v)} />
-              ))}
+              {Object.keys(e.params).map((name) => {
+                const value = params[e.id]?.[name] ?? e.params[name]
+                const onCommit = (v) => onParam(e.id, name, v)
+                return e.constraints?.[name]?.type === 'bool'
+                  ? <BoolInput key={name} name={name} value={value} onCommit={onCommit} />
+                  : <ParamInput key={name} name={name} value={value} constraint={e.constraints?.[name]} onCommit={onCommit} />
+              })}
               <button className="link" onClick={() => onReset(e.id)}>Reset</button>
             </details>
           )}

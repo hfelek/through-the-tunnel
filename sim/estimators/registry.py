@@ -36,7 +36,7 @@ def _constraints(cls: type) -> dict[str, dict[str, Any]]:
 
 
 def list_estimators() -> list[dict[str, Any]]:
-    """Registry entries with default parameters and their constraints (`type`, optional `min` / `gt`)."""
+    """Registry entries with default parameters and their constraints (`type` int / float / bool, optional `min` / `gt`)."""
     return [
         {"id": k, "label": c.label, "params": _defaults(c), "constraints": _constraints(c)}
         for k, c in _REGISTRY.items()
@@ -51,6 +51,10 @@ def validate_params(key: str, params: dict[str, Any]) -> None:
         if name not in defaults:
             raise ValueError(f"estimator {key!r}: unknown parameter {name!r} (known: {sorted(defaults)})")
         c = cons.get(name, {})
+        if c.get("type") == "bool":  # on/off switch, e.g. pf use_baro
+            if not isinstance(value, bool):
+                raise TypeError(f"estimator {key!r}: parameter {name!r} must be true or false, got {value!r}")
+            continue
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             raise TypeError(f"estimator {key!r}: parameter {name!r} must be a number, got {value!r}")
         if c.get("type") == "int" and value != int(value):

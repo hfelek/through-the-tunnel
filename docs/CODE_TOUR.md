@@ -147,7 +147,7 @@ Estimators see only the map and time-ordered `Measurement`s (see section 11).
 
 - `@register` (`:13`) puts a class in `_REGISTRY` by its `id` (`:18`). `list_estimators` (`:38`) returns
   `{id, label, params, constraints}` for the API and the UI; `validate_params` (`:46`) rejects unknown names and out-of-range
-  values; `EstimatorFailed` (`:26`) turns a crash inside an estimator into an API 422.
+  values (a `bool` constraint accepts only true/false); `EstimatorFailed` (`:26`) turns a crash inside an estimator into an API 422.
 - A class declares `default_params` and `constraints` (`{"type": "int"|"float", "min"?, "gt"?}`); the UI builds its
   parameter inputs from them.
 
@@ -233,6 +233,7 @@ State `[s, v, b, d_psi]`: position, speed, acceleration offset, remaining mount 
   every 1 s `_weigh` (`:138`) multiplies the weights by the curvature and barometer likelihoods, then resamples when
   N_eff < N/2 (`systematic_resample`, `:28`, plus jitter). The barometer reference is taken at the first weighing 5 s after
   the stretch began (`_h_ref`, `_s_ref`); `altitude_m` (`:23`) is the inverse ISA formula.
+- CR1: `_propagate` also adds `N(0, sqrt(max(0, ΔP_vv)))` to every `dv` (`_pvv_prev`); `_weigh` weighs the barometer only every `baro_weight_interval_s` (`_t_baro`), and not at all when `use_baro` is false (a bool param: constraint `{"type": "bool"}`).
 - `estimate` (`:168`): in the tunnel the weighted mean and std of `s`, `v_ekf` + weighted mean `dv`; otherwise the EKF's.
   `display_s` is the T8.6 rule applied to the particle mean (`_advance_display`, `:161`).
 - Recipe, a new PF parameter: add it to `_OWN` (`:17`) and, if it needs a constraint, to `constraints`; unknown names go to the EKF.
@@ -293,7 +294,7 @@ Pattern to keep: data-heavy layers are memoized and drawn once per trace; only s
   (`bestRows`, `:39`).
 - Right panel: `Controls.jsx` (`Slider`, `:8`; the controls read their value from the scenario), `lib/scenarioEdits.js` (pure
   functions, each returns a new scenario: `setTunnelLength` `:34`, `extendRoad` `:22`, `addStopInTunnel` `:66`),
-  `EstimatorPicker.jsx` (`ParamInput`, `:14`), `JsonEditor.jsx` (`describe`, `:4`: JSON error with line and column),
+  `EstimatorPicker.jsx` (`ParamInput`, `:14`; `BoolInput` checkbox for `bool` constraints), `JsonEditor.jsx` (`describe`, `:4`: JSON error with line and column),
   `Panel.jsx` (results, "outdated" banner), `Toolbar.jsx`.
 - `ErrorBoundary.jsx` wraps each view so one crash does not blank the page (`getDerivedStateFromProps` resets it on a new
   trace, `:11`).

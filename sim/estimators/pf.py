@@ -14,9 +14,9 @@ STEP_S = 0.1  # particles move at 10 Hz
 WEIGH_S = 1.0  # weights use 1 s averages
 SEA_LEVEL_HPA = 1013.25  # ISA; only altitude differences are used, so the exact value hardly matters
 
-_OWN: dict[str, float] = {  # A34
+_OWN: dict[str, float | bool] = {  # A34
     "n": 500, "dv_rw": 0.05, "sigma_yaw": 0.005, "sigma_h": 1.0, "baro_ref_delay_s": 5.0,
-    "jitter_s": 1.0, "jitter_v": 0.05, "seed": 0,
+    "jitter_s": 1.0, "jitter_v": 0.05, "seed": 0, "baro_weight_interval_s": 10.0, "use_baro": True,
 }
 
 
@@ -36,12 +36,13 @@ def systematic_resample(w: np.ndarray, u: float) -> np.ndarray:
 class PfEstimator:
     id = "pf"
     label = "Particle filter (map matching)"
-    default_params: ClassVar[dict[str, float]] = {**_OWN, **EkfZuptEstimator.default_params}
+    default_params: ClassVar[dict[str, float | bool]] = {**_OWN, **EkfZuptEstimator.default_params}
     constraints: ClassVar[dict[str, dict[str, object]]] = {
         **EkfZuptEstimator.constraints,
-        **{k: {"type": "float", "gt": 0} for k in _OWN if k not in ("n", "seed")},
+        **{k: {"type": "float", "gt": 0} for k in _OWN if k not in ("n", "seed", "use_baro")},
         "n": {"type": "int", "min": 10},
         "seed": {"type": "int", "min": 0},
+        "use_baro": {"type": "bool"},
     }
 
     def reset(self, road: RoadMap, params: dict) -> None:
@@ -58,6 +59,8 @@ class PfEstimator:
         self._started = False
         self._t_prop: float | None = None  # last particle step
         self._t_weigh = 0.0
+        self._t_baro = 0.0  # last barometer weighting
+        self._pvv_prev = float(self.ekf.P[1, 1])  # EKF speed variance at the previous particle step
         self._t_enter: float | None = None  # first step of the current tunnel stretch
         self._h_ref: float | None = None  # barometric altitude at the reference time
         self._s_ref = self.s.copy()  # each particle's position at the reference time
@@ -84,6 +87,7 @@ class PfEstimator:
         self.s = np.clip(self.rng.normal(x[0], np.sqrt(p[0, 0]), self.n), 0.0, self.road.length_m)
         self.dv = self.rng.normal(0.0, np.sqrt(p[1, 1]), self.n)
         self.w = np.full(self.n, 1.0 / self.n)
+        self._pvv_prev = float(p[1, 1])
         self._t_enter, self._h_ref = None, None  # the barometer reference restarts after the next outage starts
         self._clear_averages()
         if not self._started:
@@ -130,6 +134,10 @@ class PfEstimator:
         if self._t_enter is None:
             self._t_enter, self._t_weigh = t, t
         self.dv += self.rng.normal(0.0, self.dv_rw * np.sqrt(dt), self.n)  # random walk of the speed offsets
+        pvv = float(self.ekf.P[1, 1])
+        grow = max(0.0, pvv - self._pvv_prev)  # CR1: the particles must grow their speed spread like the EKF's P_vv
+        self._pvv_prev = pvv
+        self.dv += self.rng.normal(0.0, np.sqrt(grow), self.n)
         v_i = v + self.dv
         self.s = np.clip(self.s + v_i * dt, 0.0, self.road.length_m)
         self._exp_sum += v_i * self.road.at(self.s)["curvature"]  # expected yaw rate of each particle
@@ -140,11 +148,14 @@ class PfEstimator:
         if self._yaw_n > 0:  # 1: measured yaw rate against v * curvature at the particle's position
             err = self._yaw_sum / self._yaw_n - self._exp_sum / max(self._exp_n, 1)
             self.w = self.w * np.exp(-0.5 * (err / self.sigma_yaw) ** 2)
-        if self._p_n > 0:
+        if self.use_baro and self._p_n > 0:
             h = altitude_m(self._p_sum / self._p_n)
             if self._h_ref is None and t - self._t_enter >= self.baro_ref_delay_s:
-                self._h_ref, self._s_ref = h, self.s.copy()  # after the portal pressure step has settled (A21)
-            elif self._h_ref is not None:  # 2: measured altitude change against the map's for each particle
+                self._h_ref, self._s_ref, self._t_baro = h, self.s.copy(), t  # after the portal pressure step has settled (A21)
+            elif self._h_ref is not None and t - self._t_baro >= self.baro_weight_interval_s:
+                # CR1: 1 s samples share the fan error (A22, 10 s correlation), so weigh the barometer once per interval
+                self._t_baro = t
+                # 2: measured altitude change against the map's for each particle
                 pred = self.road.at(self.s)["z"] - self.road.at(self._s_ref)["z"]
                 self.w = self.w * np.exp(-0.5 * ((h - self._h_ref - pred) / self.sigma_h) ** 2)
         total = self.w.sum()
