@@ -17,5 +17,5 @@ def test_every_scenario_validates_and_runs():
             run_scenario(sc)
         except Exception as e:  # noqa: BLE001 - collect every failure, assert once
             failures.append(f"{path.name}: {type(e).__name__}: {e}")
-    assert len(files) >= 13
+    assert len(files) >= 15
     assert not failures, "\n".join(failures)

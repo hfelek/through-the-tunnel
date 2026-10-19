@@ -73,13 +73,7 @@
       "start_t": 0,
       "initial_kmh": 70,
       "speed_jitter_kmh": 2,
-      "profile": [
-        {
-          "type": "cruise",
-          "kmh": 70,
-          "until_s": 6200
-        }
-      ],
+      "plan": [],
       "phone": {
         "preset": "flagship_2024",
         "mount": {

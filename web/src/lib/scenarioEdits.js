@@ -26,9 +26,6 @@ function extendRoad(sc, oldLen, newLen) {
   else sc.road.segments.push({ type: 'straight', length_m: extra, grade_pct: last.grade_pct ?? 0 })
   const limits = sc.road.speed_limits
   if (limits.length) limits[limits.length - 1].to_s = newLen
-  for (const v of sc.vehicles) {
-    for (const p of v.profile) if (p.type === 'cruise' && p.until_s === oldLen) p.until_s = newLen
-  }
 }
 
 export function setTunnelLength(sc, lengthM) {
@@ -53,40 +50,48 @@ export function setExitPos(sc, s) {
   return out
 }
 
-/** null when the 60 s stop can be added, otherwise the reason it cannot. */
-export function stopBlockedReason(sc) {
-  const p = car(sc).profile
-  if (p.length !== 1 || p[0].type !== 'cruise') return "car1's profile is not a single cruise"
-  const tun = sc.road.tunnels[0]
-  if (!tun) return 'the road has no tunnel'
-  if ((tun.start_s + tun.end_s) / 2 - 300 <= car(sc).start_s) return 'the tunnel midpoint is too close to the start'
-  return null
+export const MAX_JITTER_KMH = 6 // above this the fluctuation breaks the A11 jerk limit (2 m/s^3), see CODE_TOUR
+
+export const setInitialSpeed = (sc, kmh) => edit(sc, (o) => { car(o).initial_kmh = kmh })
+export const setSpeedJitter = (sc, kmh) => edit(sc, (o) => { car(o).speed_jitter_kmh = kmh })
+
+/** Where a plan point sits on the road (a traffic section counts from its start). */
+export const pointPos = (p) => (p.type === 'traffic' ? p.from_s : p.s)
+const pointEnd = (p) => (p.type === 'traffic' ? p.to_s : p.s)
+const sortPlan = (plan) => plan.sort((a, b) => pointPos(a) - pointPos(b)) // the server needs the points sorted
+
+/** Target speed (km/h) after the whole plan: new points start from it, so adding one never changes the speed by itself. */
+function lastTarget(plan, initial) {
+  const speeds = plan.filter((p) => p.type === 'speed')
+  return speeds.length ? speeds[speeds.length - 1].kmh : initial
 }
 
-export function addStopInTunnel(sc) {
-  if (stopBlockedReason(sc)) return sc
+/** New point 500 m after the last one (or in the middle of the first tunnel for an empty plan). */
+export function addPlanPoint(sc, type) {
   const out = clone(sc)
-  const { start_s, end_s } = out.road.tunnels[0]
-  const mid = (start_s + end_s) / 2
-  const kmh = car(out).profile[0].kmh
-  car(out).profile = [
-    { type: 'cruise', kmh, until_s: mid - 300 },
-    { type: 'stop', at_s: mid, decel_mps2: 1.5, dwell_s: 60 },
-    { type: 'ramp', to_kmh: kmh, accel_mps2: 1.2 },
-    { type: 'cruise', kmh, until_s: roadLength(out) },
-  ]
+  const plan = car(out).plan
+  const tun = out.road.tunnels[0]
+  const from = plan.length ? Math.max(...plan.map(pointEnd)) + 500 : tun ? Math.round((tun.start_s + tun.end_s) / 2) : 1000
+  const s = Math.min(from, roadLength(out))
+  if (type === 'speed') plan.push({ type, s, kmh: lastTarget(plan, car(out).initial_kmh) })
+  else if (type === 'stop') plan.push({ type, s, dwell_s: 10 })
+  else plan.push({ type, from_s: s, to_s: Math.min(s + 500, roadLength(out)), kmh: 30, stop_s: [5, 15], go_s: [10, 30] })
+  sortPlan(plan)
   return out
 }
 
-export const cruiseSpeed = (sc) => car(sc).initial_kmh
-
-export function setCruiseSpeed(sc, kmh) {
+export function editPlanPoint(sc, index, patch) {
   const out = clone(sc)
-  car(out).initial_kmh = kmh
-  for (const p of car(out).profile) {
-    if (p.type === 'cruise') p.kmh = kmh
-    else if (p.type === 'ramp') p.to_kmh = kmh
-  }
+  const plan = car(out).plan
+  Object.assign(plan[index], patch)
+  for (const k of Object.keys(patch)) if (patch[k] === undefined) delete plan[index][k] // an emptied optional rate falls back to its default
+  sortPlan(plan)
+  return out
+}
+
+export function deletePlanPoint(sc, index) {
+  const out = clone(sc)
+  car(out).plan.splice(index, 1)
   return out
 }
 

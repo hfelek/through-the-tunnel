@@ -17,7 +17,7 @@ def _raw() -> dict:
 def test_example_validates() -> None:
     sc = load_scenario(EXAMPLE)
     assert sc.road.length_m == 6600
-    assert sc.vehicles[0].profile[1].type == "stop"
+    assert sc.vehicles[0].plan[1].type == "stop"
 
 
 def test_tunnel_beyond_road_rejected() -> None:
@@ -34,8 +34,8 @@ def test_exit_off_road_rejected() -> None:
         Scenario.model_validate(raw)
 
 
-def test_unknown_profile_type_rejected() -> None:
+def test_unknown_plan_type_rejected() -> None:
     raw = _raw()
-    raw["vehicles"][0]["profile"][0]["type"] = "teleport"
+    raw["vehicles"][0]["plan"][0]["type"] = "teleport"
     with pytest.raises(ValidationError, match="teleport"):
         Scenario.model_validate(raw)

@@ -11,7 +11,7 @@ SCENARIO = Path(__file__).resolve().parents[1] / "scenarios" / "short_straight_5
 
 
 def test_get_endpoints() -> None:
-    assert len(client.get("/api/scenarios").json()) == 13
+    assert len(client.get("/api/scenarios").json()) == 15
     assert "baseline" in [e["id"] for e in client.get("/api/estimators").json()]
     assert {"budget", "flagship_2024"} <= set(client.get("/api/presets").json())
     assert client.get("/api/scenarios/short_straight_500m").json()["id"] == "short_straight_500m"

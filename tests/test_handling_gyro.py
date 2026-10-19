@@ -15,7 +15,7 @@ MOUNT, NEW = Mount(yaw_deg=4, pitch_deg=65, roll_deg=-2), Mount(yaw_deg=6, pitch
 def test_integrated_gyro_recovers_mount_change():
     veh = Vehicle.model_validate({
         "id": "v", "start_s": 0, "initial_kmh": 72, "phone": {"preset": "x", "mount": {}},
-        "profile": [{"type": "cruise", "kmh": 72, "until_s": 3000}],
+        "plan": [],
     })
     motion = simulate_vehicle(veh, RoadMap(ROAD), 100.0, np.random.default_rng(1))
     dt = float(motion.t[1] - motion.t[0])

@@ -19,9 +19,9 @@ MOUNT = Mount(yaw_deg=4, pitch_deg=65, roll_deg=-2)
 
 
 def _motion(initial_kmh=72.0):
-    profile = [{"type": "cruise", "kmh": initial_kmh, "until_s": 1100}] if initial_kmh else [{"type": "stop", "at_s": 0, "decel_mps2": 1.5, "dwell_s": 10}]
+    plan = [] if initial_kmh else [{"type": "stop", "s": 0, "dwell_s": 10}]
     veh = Vehicle.model_validate({
-        "id": "v", "start_s": 0, "initial_kmh": initial_kmh, "phone": {"preset": "x", "mount": {}}, "profile": profile,
+        "id": "v", "start_s": 0, "initial_kmh": initial_kmh, "phone": {"preset": "x", "mount": {}}, "plan": plan,
     })
     return simulate_vehicle(veh, RoadMap(ROAD), 100.0, np.random.default_rng(1))
 

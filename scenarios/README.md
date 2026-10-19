@@ -10,6 +10,8 @@ Each file is a scenario as defined in `docs/CONTRACTS.md` section 3.2; its `desc
 | `curved_5km_exit_inside` | 5 km, two curves, flat | Longest outage; callouts after 4+ min without GNSS |
 | `undersea_3km_dip` | 3 km straight, -4% / flat / +4% | Barometer as a map feature |
 | `stop_and_go_3km` | 3 km straight, flat, 2 km of traffic | Baseline failure; stop detection (ZUPT) |
+| `speed_changes_3km` | 3 km straight, flat, speed changes without stops | Speed changes inside the tunnel; the EKF follows them from the accelerometer (no ZUPT) |
+| `traffic_before_tunnel` | 3 km straight, flat, traffic before it | Traffic before the tunnel improves calibration (forward axis, bias) |
 | `hard_brake_inside` | 2 km straight, flat, 6 m/s² stop | Sudden speed change |
 | `phone_handled_mid_tunnel` | 3 km straight, flat | Handling detection and re-alignment |
 | `budget_phone_5km` | same as `curved_5km_exit_inside` | Effect of a budget phone (same seed, same true motion) |

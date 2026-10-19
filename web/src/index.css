@@ -110,6 +110,14 @@ body { margin: 0; }
 .ctl input[type=range] { width: 100%; margin: 0; }
 .ctl-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
 .seed { width: 90px; }
+.plan h3 { margin: 4px 0; font-size: 14px; }
+.plan { display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+.plan-table { border-collapse: collapse; width: 100%; }
+.plan-table th { text-align: left; font-weight: 600; color: var(--muted); }
+.plan-table td { padding: 2px 2px; vertical-align: top; }
+.plan-table .nowrap { white-space: nowrap; }
+.controls .plan-num { padding: 1px 2px; font-size: 12px; }
+.controls .plan-del { width: auto; padding: 0 6px; }
 .save-as { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
 .save-as input { flex: 1; min-width: 0; }
 .json-drawer {

@@ -1,0 +1,109 @@
+{
+  "schema_version": "1.0",
+  "id": "speed_changes_3km",
+  "description": "A 3 km straight, flat tunnel with speed changes inside it and no stops: 70 km/h entering, 90 km/h from km 2.0, 30 km/h at km 2.8, 60 km/h from km 3.5, with 4 km/h of driver speed fluctuation. The baseline keeps its entry speed; the EKF should follow the changes from the accelerometer; ZUPT is not involved.",
+  "seed": 114,
+  "rates_hz": {
+    "imu": 100,
+    "gnss": 1,
+    "baro": 10,
+    "mag": 50,
+    "output": 10
+  },
+  "road": {
+    "start_heading_deg": 90,
+    "segments": [
+      {
+        "type": "straight",
+        "length_m": 1500,
+        "grade_pct": 0
+      },
+      {
+        "type": "straight",
+        "length_m": 3000,
+        "grade_pct": 0
+      },
+      {
+        "type": "straight",
+        "length_m": 1500,
+        "grade_pct": 0
+      }
+    ],
+    "tunnels": [
+      {
+        "id": "T1",
+        "start_s": 1500,
+        "end_s": 4500
+      }
+    ],
+    "exits": [
+      {
+        "id": "E1",
+        "s": 4200,
+        "name": "Exit A"
+      }
+    ],
+    "speed_limits": [
+      {
+        "from_s": 0,
+        "to_s": 6000,
+        "kmh": 80
+      }
+    ]
+  },
+  "vehicles": [
+    {
+      "id": "car1",
+      "start_s": 0,
+      "start_t": 0,
+      "initial_kmh": 70,
+      "speed_jitter_kmh": 4,
+      "plan": [
+        {
+          "type": "speed",
+          "s": 2000,
+          "kmh": 90
+        },
+        {
+          "type": "speed",
+          "s": 2800,
+          "kmh": 30
+        },
+        {
+          "type": "speed",
+          "s": 3500,
+          "kmh": 60
+        }
+      ],
+      "phone": {
+        "preset": "flagship_2024",
+        "mount": {
+          "yaw_deg": 4,
+          "pitch_deg": 65,
+          "roll_deg": -2
+        },
+        "handling_events": []
+      }
+    }
+  ],
+  "gnss_env": {
+    "portal_degrade_m": 60,
+    "reacquire_delay_s": [
+      2,
+      6
+    ],
+    "bad_fixes_after_exit": 3,
+    "bad_fix_error_m": 25
+  },
+  "tunnel_env": {
+    "pressure_step_pa": 20,
+    "fan_pressure_noise_pa": 8,
+    "mag_disturbance_ut": 25
+  },
+  "beacons": {
+    "enabled": false,
+    "spacing_m": 400,
+    "tx_power_dbm": -59,
+    "path_loss_exp": 2.2
+  }
+}

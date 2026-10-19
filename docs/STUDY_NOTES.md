@@ -103,7 +103,8 @@ touch AI log notes or the project setup are grouped into one line.
 | `eb235f9` | T8.5: beacon pass detection and update; beacons became map knowledge (`RoadMap.beacons`). | `beacon_peak.py`, `ekf.py`, `road.py`, `trace.py` |
 | `8c78f46`, `705adfb` | T8.4: save the particle-filter design note, then `pf` (wraps `ekf_zupt`, map matching). | `estimators/pf.py` |
 | `8e3887f` | T8.4-CR1: particle speed spread follows EKF `P_vv`, barometer weighted every 10 s, `use_baro` switch with a checkbox in the UI and `bool` constraints. | `pf.py`, `registry.py`, `EstimatorPicker.jsx`, `CONTRACTS.md` |
-| (next) | T8.4-CR2: barometer matching removed from `pf` (curvature only); the barometer stays a sensor and chart. Reason: its benefit in tunnels is uncertain and single runs showed no clear gain. Hash: see `git log`. | `pf.py`, `test_pf.py` |
+| `1b14d6a` | T8.4-CR2: barometer matching removed from `pf` (curvature only); the barometer stays a sensor and chart. Reason: its benefit in tunnels is uncertain and single runs showed no clear gain. | `pf.py`, `test_pf.py` |
+| (this commit) | T2.2-CR1: the vehicle `profile` becomes a position-based driving `plan` (`speed`, `stop`, `traffic` points, like speed signs); plan table and "Speed fluctuation" slider in the UI; scenarios `speed_changes_3km` and `traffic_before_tunnel`. | `world/vehicle.py`, `world/speed_change.py`, `contracts/scenario.py`, `DrivingPlan.jsx` |
 
 Reading tip: `git show --stat <hash>` for one commit; the CR commits are the best place to see why a design decision changed.
 
@@ -292,8 +293,8 @@ Rating for the interview demo: **core** (the story breaks without it), **useful*
 | Save as… | Writes a new scenario file (never overwrites). | `Controls.jsx`, `api/main.py:save_scenario` | useful |
 | Tunnel length slider | Resizes the first tunnel and extends the road. | `Controls.jsx`, `scenarioEdits.js:setTunnelLength` | core |
 | Exit position slider | Moves the first exit. | `Controls.jsx` | core |
-| Cruise speed slider | Initial speed. | `Controls.jsx` | useful |
-| "Add 60 s stop in tunnel" | Adds a stop for the ZUPT story. | `scenarioEdits.js:addStopInTunnel` | useful |
+| Driving plan table | One row per speed point, stop or traffic section, with add and delete buttons and a start speed. | `DrivingPlan.jsx`, `scenarioEdits.js:addPlanPoint` | core |
+| Speed fluctuation slider | `speed_jitter_kmh`, 0-6 km/h (above 6 the jerk limit A11 is exceeded). | `Controls.jsx` | useful |
 | Phone preset select | Flagship vs budget phone. | `Controls.jsx` | useful |
 | Mount pitch slider | Phone tilt in the mount. | `Controls.jsx` | optional |
 | Fan pressure noise slider | Barometer disturbance (A22). | `Controls.jsx` | optional (it shows how noisy the barometer can be) |
@@ -385,7 +386,7 @@ step; do it before the next one (`git checkout -- <file>`).
 
 ### 3. Add a scenario from the UI and save it
 
-- **Steps:** select `curved_2km`; drag "Tunnel length" to 1.5 km, "Cruise speed" to 90 km/h; click **Save as…**, type
+- **Steps:** select `curved_2km`; drag "Tunnel length" to 1.5 km, "Start speed" (Driving plan) to 90 km/h; click **Save as…**, type
   `my_curved_90`, **Save**.
 - **File to read:** `web/src/components/Controls.jsx: SaveAs`, `sim/api/main.py: save_scenario` (`:59`), `web/src/lib/scenarioEdits.js`.
 - **Expected:** the picker now lists `my_curved_90`, the file `scenarios/my_curved_90.json` exists, saving it again says

@@ -1,0 +1,128 @@
+{
+  "schema_version": "1.0",
+  "id": "traffic_before_tunnel",
+  "description": "Stop-and-go traffic (30 km/h, stops of 3-10 s) and speed changes on the open road before a 3 km straight, flat tunnel, i.e. during calibration, then varying speed (90, 40, 70 km/h) inside it. Tests the claim that traffic before the tunnel improves calibration: the forward axis and the accelerometer bias become observable.",
+  "seed": 115,
+  "rates_hz": {
+    "imu": 100,
+    "gnss": 1,
+    "baro": 10,
+    "mag": 50,
+    "output": 10
+  },
+  "road": {
+    "start_heading_deg": 90,
+    "segments": [
+      {
+        "type": "straight",
+        "length_m": 2500,
+        "grade_pct": 0
+      },
+      {
+        "type": "straight",
+        "length_m": 3000,
+        "grade_pct": 0
+      },
+      {
+        "type": "straight",
+        "length_m": 1500,
+        "grade_pct": 0
+      }
+    ],
+    "tunnels": [
+      {
+        "id": "T1",
+        "start_s": 2500,
+        "end_s": 5500
+      }
+    ],
+    "exits": [
+      {
+        "id": "E1",
+        "s": 5200,
+        "name": "Exit A"
+      }
+    ],
+    "speed_limits": [
+      {
+        "from_s": 0,
+        "to_s": 7000,
+        "kmh": 80
+      }
+    ]
+  },
+  "vehicles": [
+    {
+      "id": "car1",
+      "start_s": 0,
+      "start_t": 0,
+      "initial_kmh": 50,
+      "speed_jitter_kmh": 6,
+      "plan": [
+        {
+          "type": "traffic",
+          "from_s": 300,
+          "to_s": 1800,
+          "kmh": 30,
+          "stop_s": [
+            3,
+            10
+          ],
+          "go_s": [
+            10,
+            30
+          ]
+        },
+        {
+          "type": "speed",
+          "s": 1900,
+          "kmh": 70
+        },
+        {
+          "type": "speed",
+          "s": 3000,
+          "kmh": 90
+        },
+        {
+          "type": "speed",
+          "s": 4000,
+          "kmh": 40
+        },
+        {
+          "type": "speed",
+          "s": 4800,
+          "kmh": 70
+        }
+      ],
+      "phone": {
+        "preset": "flagship_2024",
+        "mount": {
+          "yaw_deg": 4,
+          "pitch_deg": 65,
+          "roll_deg": -2
+        },
+        "handling_events": []
+      }
+    }
+  ],
+  "gnss_env": {
+    "portal_degrade_m": 60,
+    "reacquire_delay_s": [
+      2,
+      6
+    ],
+    "bad_fixes_after_exit": 3,
+    "bad_fix_error_m": 25
+  },
+  "tunnel_env": {
+    "pressure_step_pa": 20,
+    "fan_pressure_noise_pa": 8,
+    "mag_disturbance_ut": 25
+  },
+  "beacons": {
+    "enabled": false,
+    "spacing_m": 400,
+    "tx_power_dbm": -59,
+    "path_loss_exp": 2.2
+  }
+}

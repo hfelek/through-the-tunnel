@@ -48,11 +48,10 @@ A scenario defines the road, tunnels, exits, vehicles, phones and environment ef
       "start_t": 0,
       "initial_kmh": 70,
       "speed_jitter_kmh": 2,
-      "profile": [
-        { "type": "cruise", "kmh": 70, "until_s": 2800 },
-        { "type": "stop", "at_s": 3000, "decel_mps2": 1.5, "dwell_s": 30 },
-        { "type": "ramp", "to_kmh": 60, "accel_mps2": 1.2 },
-        { "type": "cruise", "kmh": 60, "until_s": 6600 }
+      "plan": [
+        { "type": "speed", "s": 2500, "kmh": 60, "rate_mps2": 1.5 },
+        { "type": "stop", "s": 3000, "dwell_s": 30, "decel_mps2": 1.5, "accel_mps2": 1.2 },
+        { "type": "traffic", "from_s": 4000, "to_s": 4800, "kmh": 30, "stop_s": [5, 20], "go_s": [10, 40] }
       ],
       "phone": {
         "preset": "flagship_2024",
@@ -76,7 +75,7 @@ A scenario defines the road, tunnels, exits, vehicles, phones and environment ef
 }
 ```
 
-Profile types: `cruise` (constant speed up to a position), `ramp` (speed change), `stop` (stop at a position and wait), `stop_and_go` (seeded random stop-and-go between `from_s` and `to_s`: `kmh` is the speed while moving, `stop_s` = [min, max] stop duration, `go_s` = [min, max] driving time between stops; both ranges are sampled with the scenario seed; example: `{ "type": "stop_and_go", "from_s": 500, "to_s": 1500, "kmh": 30, "stop_s": [5, 20], "go_s": [10, 40] }`). Transitions are jerk-limited. A `handling_events` item: `{ "t": 150, "duration_s": 4, "new_mount": {...} }`.
+Driving plan: `initial_kmh` is the first target speed; `plan` is a list of points sorted by position `s` (strictly increasing; a `traffic` section counts from `from_s`), read like speed signs. `{ "type": "speed", "s": m, "kmh": v, "rate_mps2": 1.5 }`: a lower speed is reached exactly at `s` (the car holds its speed and brakes as late as possible at `rate_mps2`), a higher speed starts at `s` (the car holds its speed until `s`, then accelerates at `rate_mps2`). `{ "type": "stop", "s": m, "dwell_s": d, "decel_mps2": 1.5, "accel_mps2": 1.5 }`: speed 0 exactly at `s`, wait `dwell_s`, accelerate to the current target speed. `{ "type": "traffic", "from_s": m, "to_s": m, "kmh": v, "stop_s": [min, max], "go_s": [min, max] }`: seeded random stop-and-go between `from_s` and `to_s` (`kmh` while moving, `stop_s` = stop duration, `go_s` = driving time between stops, both sampled with the scenario seed); afterwards the car returns to the current target speed. Rates default to 1.5 m/s² (A11). The last target speed holds to the road end. Transitions are jerk-limited (A11). `speed_jitter_kmh` is a fluctuation on top of the target speed while it is held; it is off during transitions, stops and traffic. A slowdown or stop that is too close to the previous point to brake at its rate is rejected with a message naming the point and the minimum distance. A `handling_events` item: `{ "t": 150, "duration_s": 4, "new_mount": {...} }`.
 
 `tunnel_env.pressure_step_pa` is positive when the pressure inside the tunnel is higher than outside (the barometer then reads a lower altitude).
 

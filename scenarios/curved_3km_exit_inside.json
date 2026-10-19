@@ -24,11 +24,9 @@
       "start_t": 0,
       "initial_kmh": 70,
       "speed_jitter_kmh": 2,
-      "profile": [
-        { "type": "cruise", "kmh": 70, "until_s": 2800 },
-        { "type": "stop", "at_s": 3000, "decel_mps2": 1.5, "dwell_s": 30 },
-        { "type": "ramp", "to_kmh": 60, "accel_mps2": 1.2 },
-        { "type": "cruise", "kmh": 60, "until_s": 6600 }
+      "plan": [
+        { "type": "speed", "s": 2800, "kmh": 60 },
+        { "type": "stop", "s": 3000, "dwell_s": 30, "decel_mps2": 1.5, "accel_mps2": 1.2 }
       ],
       "phone": {
         "preset": "flagship_2024",

@@ -1,5 +1,6 @@
 import { memo, useState } from 'react'
 import * as E from '../lib/scenarioEdits'
+import DrivingPlan from './DrivingPlan'
 
 const ID_RE = /^[a-z0-9_]+$/
 const COMMIT_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown']
@@ -55,7 +56,6 @@ export default memo(function Controls({ scenario, presets, calloutK, autoRun, on
   const car = scenario.vehicles[0]
   const L = E.roadLength(scenario)
   const maxTun = E.maxTunnelLength(scenario)
-  const blocked = E.stopBlockedReason(scenario)
   const presetIds = Object.keys(presets)
   if (!presetIds.includes(car.phone.preset)) presetIds.push(car.phone.preset)
   const live = (fn) => (v) => onEdit(fn(scenario, v), false)
@@ -77,11 +77,9 @@ export default memo(function Controls({ scenario, presets, calloutK, autoRun, on
       {scenario.road.exits[0] && (
         <Slider label="Exit position" value={E.exitPos(scenario)} unit=" m" min={0} max={L} step={10} onChange={live(E.setExitPos)} onCommit={onCommit} />
       )}
-      <Slider label="Cruise speed" value={E.cruiseSpeed(scenario)} unit=" km/h" min={30} max={120} step={5} onChange={live(E.setCruiseSpeed)} onCommit={onCommit} />
-      <button className="secondary" disabled={!!blocked} title={blocked ? `Unavailable: ${blocked}` : 'One 60 s stop at the middle of the first tunnel'}
-        onClick={() => onEdit(E.addStopInTunnel(scenario), true)}>
-        Add 60 s stop in tunnel
-      </button>
+      <DrivingPlan scenario={scenario} onEdit={onEdit} />
+      <Slider label="Speed fluctuation" value={car.speed_jitter_kmh} unit=" km/h" min={0} max={E.MAX_JITTER_KMH} step={0.5}
+        hint="(typical deviation from the target speed)" onChange={live(E.setSpeedJitter)} onCommit={onCommit} />
       <label className="ctl">
         <span>Phone preset</span>
         <select value={car.phone.preset} onChange={(e) => now(E.setPhonePreset)(e.target.value)}>

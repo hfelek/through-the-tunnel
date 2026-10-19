@@ -54,7 +54,7 @@ an estimator sees. Nothing here computes anything except validation.
 
 | File | What | Key items |
 | --- | --- | --- |
-| `scenario.py` | Scenario JSON → `Scenario` | `_Model` forbids unknown keys (`:10`, `extra="forbid"`, so a typo is an error); `Road._on_road` (`:76`) rejects tunnels/exits/limits off the road; `Scenario._vehicles_on_road` (`:198`); `load_scenario` (`:213`) |
+| `scenario.py` | Scenario JSON → `Scenario` | `_Model` forbids unknown keys (`:10`, `extra="forbid"`, so a typo is an error); `Road._on_road` (`:76`) rejects tunnels/exits/limits off the road; `_check_plan` (`:188`: plan sorted, on the road, room to brake); `Scenario._vehicles_on_road` (`:236`); `load_scenario` (`:245`) |
 | `preset.py` | `presets/*.json` → `Preset` | every physical value is a `Param` with `value`, `unit`, `source` (`:12`); `load_preset` (`:53`) |
 | `trace.py` | The output format, columnar (one list per field) | `VehicleTrace` (`:106`) holds `truth`, `measurements`, `events`, `estimates`, `callouts`, `metrics`; `decimate` (`:146`) thins truth/imu/baro/mag for the UI |
 | `estimation.py` | What estimators see | `Measurement(t, kind, data)` (`:15`), `Estimate(t, s, v, sigma_s, sigma_v, mode)` (`:24`), the `Estimator` protocol (`:34`: `reset`, `update`, `estimate`) |
@@ -80,14 +80,19 @@ A-numbers: A3 (mount), A4 (60 s of GNSS before a tunnel), A8 (no timestamp error
 
 ### `vehicle.py`: how the car drives
 
-- `simulate_vehicle` (`:175`) runs the scenario's `profile` (cruise, ramp, stop, stop_and_go) at the IMU rate and returns a
-  `VehicleMotion` (`:23`): `t, s, v` (m/s), `a` (m/s²), `yaw, yaw_rate, pitch, a_lat, a_vert`.
-- `_s_curve` (`:41`): jerk-limited speed change with zero acceleration at both ends (A11, 2 m/s³).
-- `_Run.step` (`:89`): the speed at every step is the profile speed plus a slow random "driver jitter" (A27, 4 cosines,
-  `:92`), capped by the gap to a leading vehicle (A10).
-- The physics that the IMU later relies on: `yaw_rate=v * pos["curvature"]` (`:206`) and `a_lat=v**2 * pos["curvature"]`
-  (`:208`); pitch follows the grade, blended over 40 m (`_road_pitch`, `:167`, A12).
-- `simulate_vehicles` (`:213`): several vehicles in one lane, each following the previous one.
+- `simulate_vehicle` (`:164`) walks the scenario's driving `plan` (`speed`, `stop`, `traffic` points, by position, like speed
+  signs) at the IMU rate and returns a `VehicleMotion` (`:22`): `t, s, v` (m/s), `a` (m/s²), `yaw, yaw_rate, pitch, a_lat, a_vert`.
+- One `_Run` method per plan point: `speed_point` (`:129`), `stop_point` (`:137`), `traffic` (`:142`). A lower speed or a stop
+  uses `brake_to` (`:107`): hold the speed, start braking as late as possible so the new speed is reached exactly at `s`
+  (distance = mean speed x duration of the S-curve). A higher speed uses `hold_until` (`:102`), then `change`.
+- `sim/world/speed_change.py`: `s_curve` (jerk-limited speed change with zero acceleration at both ends, A11, 2 m/s³) and
+  `s_curve_distance`; the same functions let the scenario validation (`_check_plan` in `contracts/scenario.py`, `:188`)
+  reject a slowdown that is too close to the previous point.
+- `_Run.step` (`:64`): the speed at every step is the target speed plus a slow random "driver jitter" (A27, 4 cosines,
+  `:52`), capped by the gap to a leading vehicle (A10). The jitter is on only while a speed is held.
+- The physics that the IMU later relies on: `yaw_rate=v * pos["curvature"]` and `a_lat=v**2 * pos["curvature"]`
+  (in `simulate_vehicle`); pitch follows the grade, blended over 40 m (`_road_pitch`, `:156`, A12).
+- `simulate_vehicles` (`:202`): several vehicles in one lane, each following the previous one.
 
 A-numbers: A10, A11, A12, A13, A27.
 
@@ -293,7 +298,8 @@ Pattern to keep: data-heavy layers are memoized and drawn once per trace; only s
 - `MetricsTable.jsx`: columns are generated from the metrics present (`buildColumns`, `:13`); best value per column
   (`bestRows`, `:39`).
 - Right panel: `Controls.jsx` (`Slider`, `:8`; the controls read their value from the scenario), `lib/scenarioEdits.js` (pure
-  functions, each returns a new scenario: `setTunnelLength` `:34`, `extendRoad` `:22`, `addStopInTunnel` `:66`),
+  functions, each returns a new scenario: `setTunnelLength`, `extendRoad`, `addPlanPoint`, `editPlanPoint`, `deletePlanPoint`),
+  `DrivingPlan.jsx` (the plan table; `Num` commits on Enter or blur),
   `EstimatorPicker.jsx` (`ParamInput`, `:14`; `BoolInput` checkbox for `bool` constraints), `JsonEditor.jsx` (`describe`, `:4`: JSON error with line and column),
   `Panel.jsx` (results, "outdated" banner), `Toolbar.jsx`.
 - `ErrorBoundary.jsx` wraps each view so one crash does not blank the page (`getDerivedStateFromProps` resets it on a new
@@ -324,6 +330,9 @@ Causality (state changes only through `update(m)`, in time order):
 3. All randomness comes from seeded generators passed in; no `np.random` global (`sim/runner.py:134-138`).
 
 ## 12. How do I change ...
+
+### ... change how the car drives
+Edit `vehicles[0].plan` in the scenario (`docs/CONTRACTS.md` 3.2) or use the "Driving plan" table in the UI. A new plan point type: model in `scenario.py`, a `_Run` method in `vehicle.py`, a branch in `simulate_vehicle` and `_check_plan`. The "Speed fluctuation" slider stops at 6 km/h: measured on 8 seeds at 70 km/h, 6 gives a peak jerk of 1.97 m/s³ (A11 limit 2.0), 10 gives 3.3 and 15 gives 4.9 (peak acceleration 5.2 m/s²).
 
 ### ... add a scenario
 1. Copy a file in `scenarios/` to `scenarios/<id>.json`; set `"id"` to the file name without `.json` (checked by
@@ -381,10 +390,10 @@ Causality (state changes only through `update(m)`, in time order):
 
 | Test file | Covers |
 | --- | --- |
-| `test_scenario.py` | scenario schema: example validates; tunnel/exit off the road and unknown profile types rejected |
+| `test_scenario.py` | scenario schema: example validates; tunnel/exit off the road and unknown plan types rejected |
 | `test_scenarios.py` | every file in `scenarios/` validates, id equals the file name, has a description, and runs |
 | `test_road.py` | length, grade, arc heading and map projection, `in_tunnel` |
-| `test_vehicle.py` | stop is exact and speed non-negative, same seed same result, lateral acceleration in a curve, follower keeps its gap |
+| `test_vehicle.py` | stop is exact and speed non-negative, same seed same result, lateral acceleration in a curve, follower keeps its gap, plan points met at their position (slowdown within 5 m, speed-up starts at its point, stop within 1 m with its dwell) |
 | `test_imu.py` | presets validate and need a source; at rest the acceleration norm ≈ g; gyro z = v·curvature; inverse transform returns the true acceleration |
 | `test_handling_gyro.py` | integrating the gyro over a 4 s and a 120 s handling event recovers the mount change (< 0.1°) |
 | `test_gnss.py` | no fixes inside tunnels, bad fixes after exit, open-sky error matches the preset |

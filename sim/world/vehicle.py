@@ -4,11 +4,10 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from sim.contracts.scenario import Cruise, Ramp, Stop, StopAndGo, Vehicle
+from sim.contracts.scenario import SpeedPoint, StopPoint, TrafficSection, Vehicle
 from sim.world.road import RoadMap
+from sim.world.speed_change import COMFORT_ACCEL_MPS2, JERK_MPS3, s_curve
 
-JERK_MPS3 = 2.0  # A11
-COMFORT_ACCEL_MPS2 = 1.5  # A11
 KMH = 1 / 3.6
 JITTER_FADE_S = 3.0  # jitter fades in/out linearly over this time
 JITTER_FREQ_HZ = (0.02, 0.1)  # A27: slow speed variation, 10-50 s periods
@@ -36,30 +35,6 @@ class VehicleMotion:
 
 class _RoadEnd(Exception):
     pass
-
-
-def _s_curve(v0: float, v1: float, accel: float) -> tuple[float, "callable"]:
-    """Jerk-limited speed change v0 -> v1 with zero acceleration at both ends: (duration, v(tau))."""
-    dv = abs(v1 - v0)
-    if dv == 0:
-        return 0.0, lambda tau: v0
-    sign = 1.0 if v1 > v0 else -1.0
-    a_pk = min(accel, math.sqrt(dv * JERK_MPS3))
-    t1 = a_pk / JERK_MPS3
-    t2 = dv / a_pk - t1
-    total = 2 * t1 + t2
-
-    def v(tau: float) -> float:
-        tau = min(tau, total)
-        if tau < t1:
-            d = JERK_MPS3 * tau**2 / 2
-        elif tau < t1 + t2:
-            d = JERK_MPS3 * t1**2 / 2 + a_pk * (tau - t1)
-        else:
-            d = dv - JERK_MPS3 * (total - tau) ** 2 / 2
-        return v0 + sign * d
-
-    return total, v
 
 
 class _Run:
@@ -115,7 +90,7 @@ class _Run:
         return max(min(v_lead + math.sqrt(2 * FOLLOW_DECEL_MPS2 * max(room - self.v_prev * self.dt, 0.0)), 2 * room / self.dt - self.v_prev), 0.0)
 
     def change(self, v1: float, accel: float) -> None:
-        total, f = _s_curve(self.vb, v1, accel)
+        total, f = s_curve(self.vb, v1, accel)
         for i in range(1, math.ceil(total / self.dt - 1e-9) + 1):
             self.step(f(i * self.dt), False)
         self.vb = v1
@@ -124,44 +99,58 @@ class _Run:
         for _ in range(round(seconds / self.dt)):
             self.step(self.vb, False)
 
-    def cruise(self, item: Cruise) -> None:
-        self.change(item.kmh * KMH, COMFORT_ACCEL_MPS2)
-        while self.s < item.until_s:
+    def hold_until(self, s_end: float) -> None:
+        """Keep the target speed (with jitter) until the position s_end."""
+        while self.s < s_end:
             self.step(self.vb, True)
 
-    def stop(self, item: Stop) -> None:
-        a_dec = item.decel_mps2
-        while self.vb > 0:
-            d = item.at_s - self.s
-            total, _ = _s_curve(self.vb, 0.0, a_dec)
-            dist = self.vb * total / 2  # the S-curve is point-symmetric: mean speed v0/2
+    def brake_to(self, v1: float, s_end: float, decel: float) -> None:
+        """Hold speed, then slow to v1 as late as possible so that v1 is reached exactly at s_end."""
+        if self.vb <= v1:
+            return
+        while True:
+            d = s_end - self.s
+            total, _ = s_curve(self.vb, v1, decel)
+            dist = (self.vb + v1) / 2 * total  # the S-curve is point-symmetric: mean speed (v0+v1)/2
             if d <= dist:
                 break
-            self.step(self.vb, d > dist + self.vb * JITTER_FADE_S)
-        if self.vb > 0:
-            self.g = 0.0
-            if d > 0:  # brake slightly harder so that the stop lands exactly on at_s
-                t_need = 2 * d / self.vb
-                disc = (t_need * JERK_MPS3) ** 2 - 4 * self.vb * JERK_MPS3
-                a_dec = math.sqrt(self.vb * JERK_MPS3) if disc < 0 else (t_need * JERK_MPS3 - math.sqrt(disc)) / 2
-            self.change(0.0, a_dec)
-            if abs(self.s - item.at_s) < 1.0:
-                self.s = item.at_s
-                self.rec[-1] = (self.rec[-1][0], self.s, 0.0)
-        self.wait(item.dwell_s)
+            self.step(self.vb, d > dist + self.vb * JITTER_FADE_S)  # jitter fades out before braking
+        self.g = 0.0
+        dv = self.vb - v1
+        if d > 0:  # brake slightly harder so that the change lands exactly on s_end
+            t_need = 2 * d / (self.vb + v1)
+            disc = (t_need * JERK_MPS3) ** 2 - 4 * dv * JERK_MPS3  # total = dv/a + a/J  ->  a^2/J - t*a + dv = 0
+            decel = math.sqrt(dv * JERK_MPS3) if disc < 0 else (t_need * JERK_MPS3 - math.sqrt(disc)) / 2
+        self.change(v1, decel)
+        if v1 == 0 and abs(self.s - s_end) < 1.0:  # a stop sits exactly on its point
+            self.s = s_end
+            self.rec[-1] = (self.rec[-1][0], self.s, 0.0)
 
-    def stop_and_go(self, item: StopAndGo) -> None:
-        while self.s < item.from_s:
-            self.step(self.vb, True)
-        while self.s < item.to_s:
-            self.change(item.kmh * KMH, COMFORT_ACCEL_MPS2)
-            t_end = self.t + self.rng.uniform(*item.go_s)
-            while self.s < item.to_s and self.t < t_end:
+    def speed_point(self, p: SpeedPoint, target: float) -> None:
+        v1 = p.kmh * KMH
+        if v1 < target:
+            self.brake_to(v1, p.s, p.rate_mps2)
+        else:
+            self.hold_until(p.s)
+            self.change(v1, p.rate_mps2)
+
+    def stop_point(self, p: StopPoint, target: float) -> None:
+        self.brake_to(0.0, p.s, p.decel_mps2)
+        self.wait(p.dwell_s)
+        self.change(target, p.accel_mps2)
+
+    def traffic(self, p: TrafficSection, target: float) -> None:
+        self.hold_until(p.from_s)
+        while self.s < p.to_s:
+            self.change(p.kmh * KMH, COMFORT_ACCEL_MPS2)
+            t_end = self.t + self.rng.uniform(*p.go_s)
+            while self.s < p.to_s and self.t < t_end:
                 self.step(self.vb, False)
-            if self.s >= item.to_s:
+            if self.s >= p.to_s:
                 break
             self.change(0.0, COMFORT_ACCEL_MPS2)
-            self.wait(self.rng.uniform(*item.stop_s))
+            self.wait(self.rng.uniform(*p.stop_s))
+        self.change(target, COMFORT_ACCEL_MPS2)
 
 
 def _road_pitch(road_map: RoadMap) -> tuple[np.ndarray, np.ndarray]:
@@ -176,22 +165,22 @@ def simulate_vehicle(
     vehicle: Vehicle, road_map: RoadMap, rate_hz: float, rng: np.random.Generator,
     leader: VehicleMotion | None = None, min_gap_m: float = MIN_GAP_M,
 ) -> VehicleMotion:
-    """Run the vehicle's profile on the road at `rate_hz` until it reaches the road end.
+    """Run the vehicle's driving plan on the road at `rate_hz` until it reaches the road end.
 
     With a `leader`, the vehicle slows down so it never gets closer than `min_gap_m` to it.
     """
     run = _Run(vehicle, road_map.length_m, 1.0 / rate_hz, rng, leader, min_gap_m)
     try:
-        for item in vehicle.profile:
-            if isinstance(item, Cruise):
-                run.cruise(item)
-            elif isinstance(item, Ramp):
-                run.change(item.to_kmh * KMH, item.accel_mps2)
-            elif isinstance(item, Stop):
-                run.stop(item)
-            elif isinstance(item, StopAndGo):
-                run.stop_and_go(item)
-        while run.vb > 0:  # keep the last profile speed to the road end
+        target = run.vb  # the speed the car returns to after a stop or traffic section
+        for p in vehicle.plan:
+            if isinstance(p, SpeedPoint):
+                run.speed_point(p, target)
+                target = p.kmh * KMH
+            elif isinstance(p, StopPoint):
+                run.stop_point(p, target)
+            else:
+                run.traffic(p, target)
+        while run.vb > 0:  # keep the last target speed to the road end
             run.step(run.vb, True)
     except _RoadEnd:
         run.rec[-1] = (run.rec[-1][0], road_map.length_m, run.rec[-1][2])
