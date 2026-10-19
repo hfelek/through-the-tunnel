@@ -222,6 +222,21 @@ State `[s, v, b, d_psi]`: position, speed, acceleration offset, remaining mount 
   packets. `_finish` returns the time of the maximum, or the middle of the plateau (within 1 dB of the maximum for more than
   3 s) when the car stopped next to the beacon. After a pass it stays disarmed until the average falls below `min_dbm`.
 
+### `pf.py`: the particle filter (T8.4, `docs/design/T8.4_pf.md`, A34)
+
+- `PfEstimator` (`:36`, id `pf`) wraps an `EkfZuptEstimator` (`self.ekf`): `update` passes every measurement to the EKF first.
+  The EKF stores its aligned sample in `ekf.aligned` (one line in `_imu`) so the PF can read the yaw rate.
+- Particles are `s`, `dv` (speed offset from the EKF speed) and weights `w`. `_redraw` (`:81`) re-samples them from the EKF's
+  belief whenever the EKF accepted a GNSS fix or a beacon update (detected by a change of `ekf._t_acc` / `beacon_updates`).
+- Map matching runs only in the tunnel (`_in_tunnel`, `:73`: first fix done, EKF mode `dead_reckoning`). `_step` (`:115`) every
+  0.1 s: `_propagate` (`:129`) moves `s` by `(v_ekf + dv) * dt` and sums each particle's expected yaw rate `v * curvature(s)`;
+  every 1 s `_weigh` (`:138`) multiplies the weights by the curvature and barometer likelihoods, then resamples when
+  N_eff < N/2 (`systematic_resample`, `:28`, plus jitter). The barometer reference is taken at the first weighing 5 s after
+  the stretch began (`_h_ref`, `_s_ref`); `altitude_m` (`:23`) is the inverse ISA formula.
+- `estimate` (`:168`): in the tunnel the weighted mean and std of `s`, `v_ekf` + weighted mean `dv`; otherwise the EKF's.
+  `display_s` is the T8.6 rule applied to the particle mean (`_advance_display`, `:161`).
+- Recipe, a new PF parameter: add it to `_OWN` (`:17`) and, if it needs a constraint, to `constraints`; unknown names go to the EKF.
+
 ### `stationary.py`: the stationary detector (T8.3, A32)
 
 `StationaryDetector.update(t, ax, ay, az, gx, gy, gz)` returns True while the std of `|accelerometer|` and `|gyro|` over the
@@ -379,6 +394,7 @@ Causality (state changes only through `update(m)`, in time order):
 | `test_estimators.py` | registry: register/list, removal, estimator types are slotted |
 | `test_baseline.py` | baseline: small exit error at constant speed, large on stop-and-go |
 | `test_alignment.py` | Aligner on noise-free data: mount yaw and gyro bias found, handling detected and re-aligned, no false detection |
+| `test_pf.py` | particle filter: `curved_5km_exit_inside` in-tunnel RMSE below `ekf_zupt`; `undersea_3km_dip` exit error bounded |
 | `test_ekf.py` | EKF in-tunnel consistency on `curved_2km`; EKF+ZUPT in-tunnel consistency on `hard_brake_inside`; beacons bound the `beacons_5km` error (RMSE < 20 m) and change nothing without beacons (the 15 s standstill); the stationary detector never fires on the raw IMU of the constant-speed `curved_2km` and `beacons_5km`; EKF+ZUPT `display_s` is non-decreasing, its max display jump is below the baseline's and recovery exists in `short_straight_500m`, `hard_brake_inside`, `stop_and_go_3km` (T8.6) |
 | `test_metrics.py` | RMSE, exit error, consistency, recovery time |
 | `test_callouts.py` | perfect estimate fires at the ideal time; larger k fires earlier; missed callouts |

@@ -60,6 +60,7 @@ class EkfEstimator:
         self._recover_left = 0
         self._gate_streak = 0  # consecutive on-road fixes rejected by the chi-square gate (T8.6)
         self.gate_resets = 0  # counter, for inspection
+        self.aligned = None
         self._display_s = 0.0  # the position shown on screen, never moves backwards (T8.6)
         self._beacon_s = dict(road.beacons)  # map knowledge: beacon id -> s (T8.5)
         self._peaks: dict[str, PeakDetector] = {}
@@ -116,6 +117,7 @@ class EkfEstimator:
 
     def _imu(self, m: Measurement) -> None:
         a = self.aligner.process_imu(m, float(self.x[0]), float(self.x[1]))  # the EKF's own position for the grade
+        self.aligned = a  # kept for the particle filter, which needs the yaw rate (T8.4)
         dt = 0.0 if self._t_imu is None else m.t - self._t_imu
         self._t_imu = m.t
         if dt <= 0.0:

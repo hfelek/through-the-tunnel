@@ -1,0 +1,174 @@
+"""Particle filter with map matching (T8.4, docs/design/T8.4_pf.md, A34): an EKF+ZUPT plus curvature and barometer matching."""
+from __future__ import annotations
+
+from typing import ClassVar
+
+import numpy as np
+
+from sim.contracts.estimation import Estimate, Measurement
+from sim.estimators.ekf import EkfZuptEstimator
+from sim.estimators.registry import register
+from sim.world.road import RoadMap
+
+STEP_S = 0.1  # particles move at 10 Hz
+WEIGH_S = 1.0  # weights use 1 s averages
+SEA_LEVEL_HPA = 1013.25  # ISA; only altitude differences are used, so the exact value hardly matters
+
+_OWN: dict[str, float] = {  # A34
+    "n": 500, "dv_rw": 0.05, "sigma_yaw": 0.005, "sigma_h": 1.0, "baro_ref_delay_s": 5.0,
+    "jitter_s": 1.0, "jitter_v": 0.05, "seed": 0,
+}
+
+
+def altitude_m(p_hpa: float) -> float:
+    """Inverse of the ISA troposphere formula p = p0 (1 - 2.25577e-5 h)^5.25588 (ICAO Doc 7488)."""
+    return (1.0 - (p_hpa / SEA_LEVEL_HPA) ** (1.0 / 5.25588)) / 2.25577e-5
+
+
+def systematic_resample(w: np.ndarray, u: float) -> np.ndarray:
+    """Indices drawn at the evenly spaced points (u + k) / n of the cumulative weights; one random number only."""
+    n = len(w)
+    idx = np.searchsorted(np.cumsum(w), (u + np.arange(n)) / n)
+    return np.minimum(idx, n - 1)  # rounding can push the last point just past 1.0
+
+
+@register
+class PfEstimator:
+    id = "pf"
+    label = "Particle filter (map matching)"
+    default_params: ClassVar[dict[str, float]] = {**_OWN, **EkfZuptEstimator.default_params}
+    constraints: ClassVar[dict[str, dict[str, object]]] = {
+        **EkfZuptEstimator.constraints,
+        **{k: {"type": "float", "gt": 0} for k in _OWN if k not in ("n", "seed")},
+        "n": {"type": "int", "min": 10},
+        "seed": {"type": "int", "min": 0},
+    }
+
+    def reset(self, road: RoadMap, params: dict) -> None:
+        p = {**self.default_params, **params}
+        for k in _OWN:
+            setattr(self, k, p[k])
+        self.n = int(self.n)
+        self.road = road
+        self.ekf = EkfZuptEstimator()
+        self.ekf.reset(road, {k: v for k, v in params.items() if k not in _OWN})
+        self.rng = np.random.default_rng(int(self.seed))  # all randomness comes from here
+        self.s, self.dv, self.w = np.zeros(self.n), np.zeros(self.n), np.full(self.n, 1.0 / self.n)
+        self._seen = (None, 0)  # (last accepted fix time, beacon updates) of the EKF: a change means a new absolute fix
+        self._started = False
+        self._t_prop: float | None = None  # last particle step
+        self._t_weigh = 0.0
+        self._t_enter: float | None = None  # first step of the current tunnel stretch
+        self._h_ref: float | None = None  # barometric altitude at the reference time
+        self._s_ref = self.s.copy()  # each particle's position at the reference time
+        self._clear_averages()
+        self._display_s = 0.0
+
+    # -- helpers ----------------------------------------------------------------------------------------------------
+    def _clear_averages(self) -> None:
+        self._yaw_sum, self._yaw_n = 0.0, 0
+        self._exp_sum, self._exp_n = np.zeros(self.n), 0
+        self._p_sum, self._p_n = 0.0, 0
+
+    def _in_tunnel(self, t: float) -> bool:
+        """No current GNSS fix after the first one: map matching is on (design note)."""
+        return self.ekf._have_fix and self.ekf.estimate(t).mode == "dead_reckoning"
+
+    def _mean_std(self) -> tuple[float, float]:
+        mean = float(self.w @ self.s)
+        return mean, float(np.sqrt(self.w @ (self.s - mean) ** 2))
+
+    def _redraw(self) -> None:
+        """A new absolute fix (GNSS or beacon): particles are a fresh sample of the EKF's belief."""
+        x, p = self.ekf.x, self.ekf.P
+        self.s = np.clip(self.rng.normal(x[0], np.sqrt(p[0, 0]), self.n), 0.0, self.road.length_m)
+        self.dv = self.rng.normal(0.0, np.sqrt(p[1, 1]), self.n)
+        self.w = np.full(self.n, 1.0 / self.n)
+        self._t_enter, self._h_ref = None, None  # the barometer reference restarts after the next outage starts
+        self._clear_averages()
+        if not self._started:
+            self._started, self._display_s = True, float(x[0])
+
+    # -- Estimator interface ----------------------------------------------------------------------------------------
+    def update(self, m: Measurement) -> None:
+        self.ekf.update(m)  # the EKF sees everything and keeps its own GNSS, ZUPT and beacon logic
+        if m.kind == "imu":
+            self._imu(m)
+        elif m.kind == "baro":
+            self._p_sum += float(m.data["p_hpa"])
+            self._p_n += 1
+        elif (self.ekf._t_acc, self.ekf.beacon_updates) != self._seen:
+            self._seen = (self.ekf._t_acc, self.ekf.beacon_updates)
+            self._redraw()
+
+    def _imu(self, m: Measurement) -> None:
+        a = self.ekf.aligned
+        if a is not None and a.valid:  # the gyro is only meaningful once the phone is aligned
+            self._yaw_sum += a.yaw_rate
+            self._yaw_n += 1
+        if self._t_prop is None:
+            self._t_prop = m.t
+        elif m.t - self._t_prop >= STEP_S:
+            dt, self._t_prop = m.t - self._t_prop, m.t
+            self._step(m.t, dt)
+
+    def _step(self, t: float, dt: float) -> None:
+        if not self._started:
+            return
+        v = float(self.ekf.x[1])
+        if self._in_tunnel(t):
+            self._propagate(t, dt, v)
+            if t - self._t_weigh >= WEIGH_S:
+                self._weigh(t)
+            target = self._mean_std()[0]
+        else:
+            self._t_enter, self._t_weigh = None, t
+            target = float(self.ekf.x[0])  # GNSS current: the particles are the EKF's belief
+        self._advance_display(target, v, dt)
+
+    def _propagate(self, t: float, dt: float, v: float) -> None:
+        if self._t_enter is None:
+            self._t_enter, self._t_weigh = t, t
+        self.dv += self.rng.normal(0.0, self.dv_rw * np.sqrt(dt), self.n)  # random walk of the speed offsets
+        v_i = v + self.dv
+        self.s = np.clip(self.s + v_i * dt, 0.0, self.road.length_m)
+        self._exp_sum += v_i * self.road.at(self.s)["curvature"]  # expected yaw rate of each particle
+        self._exp_n += 1
+
+    def _weigh(self, t: float) -> None:
+        """Multiply the weights by the curvature and barometer likelihoods, then resample if needed."""
+        if self._yaw_n > 0:  # 1: measured yaw rate against v * curvature at the particle's position
+            err = self._yaw_sum / self._yaw_n - self._exp_sum / max(self._exp_n, 1)
+            self.w = self.w * np.exp(-0.5 * (err / self.sigma_yaw) ** 2)
+        if self._p_n > 0:
+            h = altitude_m(self._p_sum / self._p_n)
+            if self._h_ref is None and t - self._t_enter >= self.baro_ref_delay_s:
+                self._h_ref, self._s_ref = h, self.s.copy()  # after the portal pressure step has settled (A21)
+            elif self._h_ref is not None:  # 2: measured altitude change against the map's for each particle
+                pred = self.road.at(self.s)["z"] - self.road.at(self._s_ref)["z"]
+                self.w = self.w * np.exp(-0.5 * ((h - self._h_ref - pred) / self.sigma_h) ** 2)
+        total = self.w.sum()
+        self.w = self.w / total if total > 1e-300 else np.full(self.n, 1.0 / self.n)  # all weights vanished: start over
+        if 1.0 / float(self.w @ self.w) < self.n / 2:  # N_eff
+            idx = systematic_resample(self.w, float(self.rng.random()))
+            self.s, self.dv, self._s_ref = self.s[idx], self.dv[idx], self._s_ref[idx]
+            self.w = np.full(self.n, 1.0 / self.n)
+            self.s = np.clip(self.s + self.rng.normal(0.0, self.jitter_s, self.n), 0.0, self.road.length_m)
+            self.dv = self.dv + self.rng.normal(0.0, self.jitter_v, self.n)  # jitter: no collapse onto copies
+        self._t_weigh = t
+        self._clear_averages()
+
+    def _advance_display(self, target: float, v: float, dt: float) -> None:
+        """The T8.6 rule on the particle position: never backwards, catches up at most display_max_catchup faster."""
+        e = self.ekf
+        rate = v + e.display_k * (target - self._display_s)
+        self._display_s += min(max(rate, 0.0), v + e.display_max_catchup) * dt
+        self._display_s = min(self._display_s, self.road.length_m)
+
+    def estimate(self, t: float) -> Estimate:
+        e = self.ekf.estimate(t)
+        if self._started and self._in_tunnel(t):
+            mean, std = self._mean_std()
+            e = Estimate(t=t, s=mean, v=e.v + float(self.w @ self.dv), sigma_s=std, sigma_v=e.sigma_v, mode=e.mode)
+        e.extras = {"display_s": self._display_s}
+        return e
