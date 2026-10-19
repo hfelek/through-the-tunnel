@@ -4,7 +4,7 @@ from pydantic import ValidationError
 
 from sim.contracts.preset import PRESET_DIR, Preset, load_preset
 from sim.contracts.scenario import HandlingEvent, Mount, Road, Vehicle
-from sim.sensors.imu import G, generate_imu, imu_to_vehicle_accel
+from sim.sensors.imu import G, MountPath, generate_imu, imu_to_vehicle_accel
 from sim.world.road import RoadMap
 from sim.world.vehicle import simulate_vehicle
 
@@ -54,6 +54,7 @@ def test_noise_free_inverse_returns_true_acceleration():
     preset, rng = load_preset("flagship_2024"), np.random.default_rng(0)
     m = _motion()
     ev = [HandlingEvent(t=5, duration_s=4, new_mount=Mount(pitch_deg=20))]
-    imu = generate_imu(m, MOUNT, ev, preset, rng, noise_free=True)
-    a = imu_to_vehicle_accel(imu, m, MOUNT, ev)
+    path = MountPath(MOUNT, ev, rng)
+    imu = generate_imu(m, MOUNT, ev, preset, rng, noise_free=True, path=path)
+    a = imu_to_vehicle_accel(imu, m, path)
     np.testing.assert_allclose(a, np.stack([m.a, m.a_lat, m.a_vert], axis=1), atol=1e-9)

@@ -26,7 +26,7 @@ from sim.eval.metrics import compute_metrics
 from sim.sensors.baro import generate_baro
 from sim.sensors.ble import generate_ble
 from sim.sensors.gnss import generate_gnss
-from sim.sensors.imu import generate_imu
+from sim.sensors.imu import MountPath, generate_imu
 from sim.sensors.mag import generate_mag
 from sim.world.road import RoadMap
 from sim.world.vehicle import VehicleMotion, simulate_vehicles
@@ -127,12 +127,14 @@ def run_scenario(
     for veh, motion, ss in zip(scenario.vehicles, motions, vehicle_ss):
         r_imu, r_gnss, r_baro, r_mag, r_ble = (np.random.default_rng(c) for c in ss.spawn(len(KINDS)))
         preset, ph = load_preset(veh.phone.preset), veh.phone
+        mount_path = MountPath(ph.mount, ph.handling_events, r_imu)  # shared by IMU and magnetometer
         sensors = {
-            "imu": generate_imu(motion, ph.mount, ph.handling_events, preset, r_imu),
+            "imu": generate_imu(motion, ph.mount, ph.handling_events, preset, r_imu, path=mount_path),
             "gnss": generate_gnss(motion, road_map, scenario.gnss_env, preset, rates.gnss, r_gnss),
             "baro": generate_baro(motion, road_map, scenario.tunnel_env, preset, rates.baro, r_baro),
             "mag": generate_mag(
-                motion, road_map, scenario.tunnel_env, preset, ph.mount, ph.handling_events, rates.mag, r_mag
+                motion, road_map, scenario.tunnel_env, preset, ph.mount, ph.handling_events, rates.mag, r_mag,
+                path=mount_path,
             ),
             "ble": generate_ble(motion, road_map, scenario.beacons, r_ble),
         }

@@ -3,7 +3,7 @@ import numpy as np
 
 from sim.contracts.preset import Preset
 from sim.contracts.scenario import HandlingEvent, Mount, TunnelEnv
-from sim.sensors.imu import _rot, _to_phone, mount_rotations
+from sim.sensors.imu import MountPath, _rot, _to_phone
 from sim.world.road import RESOLUTION_M, RoadMap
 from sim.world.vehicle import VehicleMotion
 
@@ -27,6 +27,7 @@ def _tunnel_field(road_map: RoadMap, sigma_ut: float, w: np.ndarray) -> np.ndarr
 def generate_mag(
     motion: VehicleMotion, road_map: RoadMap, env: TunnelEnv, preset: Preset, mount: Mount,
     handling_events: list[HandlingEvent], rate_hz: float, rng: np.random.Generator, tunnel_effects: bool = True,
+    path: MountPath | None = None,
 ) -> dict[str, np.ndarray]:
     """Magnetometer columns (t, mx, my, mz) in uT on a regular grid; white noise is always on."""
     dt = 1.0 / rate_hz
@@ -44,6 +45,6 @@ def generate_mag(
         b_world = b_world + dist * road_map.in_tunnel(s)[:, None]  # the 1 m grid interpolation must not leak past a portal
     vehicle_to_world = _rot("z", yaw) @ _rot("y", -pitch)  # forward axis = (cos y cos p, sin y cos p, sin p), roll 0
     b_vehicle = np.einsum("nji,nj->ni", vehicle_to_world, b_world)
-    rot, _ = mount_rotations(t, mount, handling_events)
+    rot, _ = (path or MountPath(mount, handling_events, rng)).rotations(t)
     b_phone = _to_phone(b_vehicle, rot) + white
     return {"t": t, "mx": b_phone[:, 0], "my": b_phone[:, 1], "mz": b_phone[:, 2]}

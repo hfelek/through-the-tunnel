@@ -2,7 +2,7 @@ import numpy as np
 
 from sim.contracts.preset import load_preset
 from sim.contracts.scenario import Mount, Road, TunnelEnv
-from sim.sensors.imu import _VEHICLE_TO_FLAT, _to_phone, mount_rotations
+from sim.sensors.imu import _VEHICLE_TO_FLAT, MountPath, _to_phone
 from sim.sensors.mag import B_WORLD_UT, generate_mag
 from sim.world.road import RoadMap
 from sim.world.vehicle import VehicleMotion
@@ -20,9 +20,9 @@ def _motion(road_map, length_m, rate=50):
     return VehicleMotion(t=t, s=s, v=z + V, a=z, yaw=yaw, yaw_rate=z, pitch=z + np.arctan(0.04), a_lat=z, a_vert=z)
 
 
-def mag_yaw(mag, motion, mount, events=()):
+def mag_yaw(mag, motion, mount):
     """Yaw from the magnetometer, tilt-compensated with the true gravity direction in the phone frame."""
-    rot, _ = mount_rotations(motion.t, mount, list(events))
+    rot, _ = MountPath(mount, [], np.random.default_rng(0)).rotations(motion.t)
     up_v = np.stack([np.sin(motion.pitch), np.zeros_like(motion.t), np.cos(motion.pitch)], axis=1)
     g_phone = _to_phone(up_v, rot)  # same helper the IMU uses
     to_vehicle = lambda p: np.einsum("nij,nj->ni", rot, p) @ _VEHICLE_TO_FLAT

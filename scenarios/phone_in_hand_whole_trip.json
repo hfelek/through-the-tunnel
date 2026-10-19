@@ -1,0 +1,133 @@
+{
+  "schema_version": "1.0",
+  "id": "phone_in_hand_whole_trip",
+  "description": "Same road as curved_5km_exit_inside, but the phone is in the driver's hand for the whole trip, before, inside and after the tunnel, and is moved around freely while navigation runs. The phone is never attached to the car, so no alignment is possible: the estimators cannot use the accelerometer for the car's motion and must rely on GNSS, the last speed, the barometer and the map. This is the hardest honest case.",
+  "seed": 113,
+  "rates_hz": {
+    "imu": 100,
+    "gnss": 1,
+    "baro": 10,
+    "mag": 50,
+    "output": 10
+  },
+  "road": {
+    "start_heading_deg": 90,
+    "segments": [
+      {
+        "type": "straight",
+        "length_m": 1500,
+        "grade_pct": 0
+      },
+      {
+        "type": "straight",
+        "length_m": 1000,
+        "grade_pct": 0
+      },
+      {
+        "type": "arc",
+        "length_m": 800,
+        "radius_m": 1000,
+        "turn": "left",
+        "grade_pct": 0
+      },
+      {
+        "type": "straight",
+        "length_m": 1200,
+        "grade_pct": 0
+      },
+      {
+        "type": "arc",
+        "length_m": 700,
+        "radius_m": 700,
+        "turn": "right",
+        "grade_pct": 0
+      },
+      {
+        "type": "straight",
+        "length_m": 1300,
+        "grade_pct": 0
+      },
+      {
+        "type": "straight",
+        "length_m": 1500,
+        "grade_pct": 0
+      }
+    ],
+    "tunnels": [
+      {
+        "id": "T1",
+        "start_s": 1500,
+        "end_s": 6500
+      }
+    ],
+    "exits": [
+      {
+        "id": "E1",
+        "s": 5900,
+        "name": "Exit A"
+      }
+    ],
+    "speed_limits": [
+      {
+        "from_s": 0,
+        "to_s": 8000,
+        "kmh": 80
+      }
+    ]
+  },
+  "vehicles": [
+    {
+      "id": "car1",
+      "start_s": 0,
+      "start_t": 0,
+      "initial_kmh": 70,
+      "speed_jitter_kmh": 2,
+      "profile": [
+        {
+          "type": "cruise",
+          "kmh": 70,
+          "until_s": 8000
+        }
+      ],
+      "phone": {
+        "preset": "flagship_2024",
+        "mount": {
+          "yaw_deg": 4,
+          "pitch_deg": 65,
+          "roll_deg": -2
+        },
+        "handling_events": [
+          {
+            "t": 0,
+            "duration_s": 1000,
+            "new_mount": {
+              "yaw_deg": 4,
+              "pitch_deg": 65,
+              "roll_deg": -2
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "gnss_env": {
+    "portal_degrade_m": 60,
+    "reacquire_delay_s": [
+      2,
+      6
+    ],
+    "bad_fixes_after_exit": 3,
+    "bad_fix_error_m": 25
+  },
+  "tunnel_env": {
+    "pressure_step_pa": 20,
+    "fan_pressure_noise_pa": 8,
+    "mag_disturbance_ut": 25
+  },
+  "beacons": {
+    "enabled": false,
+    "spacing_m": 400,
+    "tx_power_dbm": -59,
+    "path_loss_exp": 2.2
+  }
+}

@@ -15,3 +15,5 @@ Each file is a scenario as defined in `docs/CONTRACTS.md` section 3.2; its `desc
 | `budget_phone_5km` | same as `curved_5km_exit_inside` | Effect of a budget phone (same seed, same true motion) |
 | `twin_tunnels_short_gap` | 2 × 1.5 km, 200 m gap | Short GNSS window with bad fixes |
 | `beacons_5km` | 5 km straight, flat, beacons every 400 m | Beacon fixes; with beacons off, the no-map-feature honest failure |
+| `phone_in_hand_2min` | same as `curved_5km_exit_inside` | Phone in hand for 2 min mid-tunnel (from t = 100 s), then put back at a new angle; in-hand mode and re-alignment |
+| `phone_in_hand_whole_trip` | same as `curved_5km_exit_inside` | Phone in hand for the whole trip; no alignment possible, the hardest honest case |

@@ -1,0 +1,133 @@
+{
+  "schema_version": "1.0",
+  "id": "phone_in_hand_2min",
+  "description": "Same road as curved_5km_exit_inside, but the phone is picked up in the middle of the tunnel and held in the hand for 2 minutes (from t = 100 s), with the user re-orienting it now and then, then put back at a slightly different angle. Tests the in-hand mode: a phone not attached to the car cannot measure the car's acceleration, so the estimators must stop integrating acceleration and stop detection while it is in hand, and their uncertainty must grow honestly; after it is put back, the new mount must be found from the gyro.",
+  "seed": 112,
+  "rates_hz": {
+    "imu": 100,
+    "gnss": 1,
+    "baro": 10,
+    "mag": 50,
+    "output": 10
+  },
+  "road": {
+    "start_heading_deg": 90,
+    "segments": [
+      {
+        "type": "straight",
+        "length_m": 1500,
+        "grade_pct": 0
+      },
+      {
+        "type": "straight",
+        "length_m": 1000,
+        "grade_pct": 0
+      },
+      {
+        "type": "arc",
+        "length_m": 800,
+        "radius_m": 1000,
+        "turn": "left",
+        "grade_pct": 0
+      },
+      {
+        "type": "straight",
+        "length_m": 1200,
+        "grade_pct": 0
+      },
+      {
+        "type": "arc",
+        "length_m": 700,
+        "radius_m": 700,
+        "turn": "right",
+        "grade_pct": 0
+      },
+      {
+        "type": "straight",
+        "length_m": 1300,
+        "grade_pct": 0
+      },
+      {
+        "type": "straight",
+        "length_m": 1500,
+        "grade_pct": 0
+      }
+    ],
+    "tunnels": [
+      {
+        "id": "T1",
+        "start_s": 1500,
+        "end_s": 6500
+      }
+    ],
+    "exits": [
+      {
+        "id": "E1",
+        "s": 5900,
+        "name": "Exit A"
+      }
+    ],
+    "speed_limits": [
+      {
+        "from_s": 0,
+        "to_s": 8000,
+        "kmh": 80
+      }
+    ]
+  },
+  "vehicles": [
+    {
+      "id": "car1",
+      "start_s": 0,
+      "start_t": 0,
+      "initial_kmh": 70,
+      "speed_jitter_kmh": 2,
+      "profile": [
+        {
+          "type": "cruise",
+          "kmh": 70,
+          "until_s": 8000
+        }
+      ],
+      "phone": {
+        "preset": "flagship_2024",
+        "mount": {
+          "yaw_deg": 4,
+          "pitch_deg": 65,
+          "roll_deg": -2
+        },
+        "handling_events": [
+          {
+            "t": 100,
+            "duration_s": 120,
+            "new_mount": {
+              "yaw_deg": 6,
+              "pitch_deg": 60,
+              "roll_deg": 0
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "gnss_env": {
+    "portal_degrade_m": 60,
+    "reacquire_delay_s": [
+      2,
+      6
+    ],
+    "bad_fixes_after_exit": 3,
+    "bad_fix_error_m": 25
+  },
+  "tunnel_env": {
+    "pressure_step_pa": 20,
+    "fan_pressure_noise_pa": 8,
+    "mag_disturbance_ut": 25
+  },
+  "beacons": {
+    "enabled": false,
+    "spacing_m": 400,
+    "tx_power_dbm": -59,
+    "path_loss_exp": 2.2
+  }
+}
