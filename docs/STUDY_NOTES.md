@@ -103,6 +103,7 @@ touch AI log notes or the project setup are grouped into one line.
 | `eb235f9` | T8.5: beacon pass detection and update; beacons became map knowledge (`RoadMap.beacons`). | `beacon_peak.py`, `ekf.py`, `road.py`, `trace.py` |
 | `8c78f46`, `705adfb` | T8.4: save the particle-filter design note, then `pf` (wraps `ekf_zupt`, map matching). | `estimators/pf.py` |
 | `8e3887f` | T8.4-CR1: particle speed spread follows EKF `P_vv`, barometer weighted every 10 s, `use_baro` switch with a checkbox in the UI and `bool` constraints. | `pf.py`, `registry.py`, `EstimatorPicker.jsx`, `CONTRACTS.md` |
+| (next) | T8.4-CR2: barometer matching removed from `pf` (curvature only); the barometer stays a sensor and chart. Reason: its benefit in tunnels is uncertain and single runs showed no clear gain. Hash: see `git log`. | `pf.py`, `test_pf.py` |
 
 Reading tip: `git show --stat <hash>` for one commit; the CR commits are the best place to see why a design decision changed.
 
@@ -274,7 +275,7 @@ Rating for the interview demo: **core** (the story breaks without it), **useful*
 | Map (SVG) | Road, tunnels, exits, truth car, each estimator with ±2σ bar, recent GNSS fixes. | `MapView.jsx`, `MapStatic.jsx`, `MapDynamic.jsx` | core |
 | Map pan, wheel zoom, scale bar | Navigation of the map. | `MapView.jsx`, `ScaleBar.jsx` | optional |
 | Map "Follow car" checkbox | Keeps the car centered (1 km window). | `MapView.jsx` | useful |
-| Elevation profile | Road height with markers; shows why the barometer helps (undersea dip). | `ElevationProfile.jsx` | useful |
+| Elevation profile | Road height with markers; the barometer's view of the dip; no estimator uses the barometer since T8.4-CR2. | `ElevationProfile.jsx` | useful |
 | Metrics table | Per estimator: in-tunnel RMSE, exit errors, consistency, callout timing, compute time; best per column. | `MetricsTable.jsx` | core |
 | Error chart | Signed error vs time, ±2σ band, callout fire times and ideal lines. | `ErrorChart.jsx` | core |
 | Error chart range select (auto, ±50 m, ±200 m) | Y scale. | `ErrorChart.jsx` | optional |
@@ -295,12 +296,12 @@ Rating for the interview demo: **core** (the story breaks without it), **useful*
 | "Add 60 s stop in tunnel" | Adds a stop for the ZUPT story. | `scenarioEdits.js:addStopInTunnel` | useful |
 | Phone preset select | Flagship vs budget phone. | `Controls.jsx` | useful |
 | Mount pitch slider | Phone tilt in the mount. | `Controls.jsx` | optional |
-| Fan pressure noise slider | Barometer disturbance (A22). | `Controls.jsx` | optional (but it explains `use_baro`) |
+| Fan pressure noise slider | Barometer disturbance (A22). | `Controls.jsx` | optional (it shows how noisy the barometer can be) |
 | Beacons checkbox, beacon spacing slider | BLE beacons in the tunnel. | `Controls.jsx` | useful (spacing: optional) |
 | Seed input, New seed | Different noise realization. | `Controls.jsx` | useful |
 | Callout k slider | How early callouts fire (`s + k*sigma`). | `Controls.jsx` | useful |
 | Methods list: checkbox per estimator | Which estimators run. | `EstimatorPicker.jsx` | core |
-| Params (number inputs, bool checkbox, Reset) | Edit estimator parameters. | `EstimatorPicker.jsx` | useful (the demo of `use_baro` and ZUPT threshold needs it) |
+| Params (number inputs, bool checkbox, Reset) | Edit estimator parameters. | `EstimatorPicker.jsx` | useful (the ZUPT threshold demo needss it) |
 | Results panel | Duration, RMSE and exit error per estimator, "Outdated" banner. | `Panel.jsx` | useful (repeats the metrics table) |
 
 ### Features you could drop
@@ -373,16 +374,14 @@ step; do it before the next one (`git checkout -- <file>`).
   So on this scenario the default ZUPT costs about 8 m; a good interview question to prepare an answer for.
 - **Revert:** press Reset in the Params box.
 
-### 2. Toggle `use_baro` on `undersea_3km_dip`
+### 2. Why the particle filter does not use the barometer
 
-- **Steps:** select `undersea_3km_dip`, make sure "Particle filter (map matching)" is checked, open its Params, untick
-  `use_baro`. Compare the tunnel exit error in the metrics table before and after.
-- **File to read:** `sim/estimators/pf.py: _weigh` (`:146`, the `if self.use_baro` branch), `docs/design/T8.4_pf.md` addendum.
-- **Expected (measured with the final code):** `pf` with the barometer: in-tunnel RMSE 38.6 m, exit error +48.7 m,
-  consistency 28.6%. Without: RMSE 23.0 m, exit error +17.2 m, consistency 64.4%. For comparison `ekf_zupt` has RMSE 17.3 m and
-  exit error +42.8 m. The barometer does not help here with the current `sigma_h` (the note explains why it should: 580 Pa
-  of dip against 8 Pa of fan noise); on the two curved scenarios the toggle changes nothing because the road is flat.
-- **Also try:** set "Fan pressure noise" to 0 and compare again.
+- **Steps:** select `undersea_3km_dip`, Run, and look at the barometer chart in the sensor charts: the pressure step at the
+  tunnel entry and the slow change over the dip. Then drag "Fan pressure noise" from 8 to 50 Pa and look again.
+- **File to read:** `docs/design/T8.4_pf.md` addendum "Barometer removed", `sim/sensors/baro.py` (the model, A21, A22).
+- **Expected:** the dip is visible in the pressure trace, and the fan noise at 50 Pa buries a good part of it. Real ventilation
+  and passing vehicles are unknown and could be that large, which is why the estimators no longer use the barometer
+  (T8.4-CR2). Nothing in the metrics changes with this slider, because no estimator reads the barometer.
 
 ### 3. Add a scenario from the UI and save it
 

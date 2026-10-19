@@ -1,4 +1,4 @@
-"""Particle filter with map matching (T8.4, docs/design/T8.4_pf.md, A34): an EKF+ZUPT plus curvature and barometer matching."""
+"""Particle filter with map matching (T8.4, docs/design/T8.4_pf.md, A34): an EKF+ZUPT plus curvature matching (CR2: no barometer)."""
 from __future__ import annotations
 
 from typing import ClassVar
@@ -12,17 +12,10 @@ from sim.world.road import RoadMap
 
 STEP_S = 0.1  # particles move at 10 Hz
 WEIGH_S = 1.0  # weights use 1 s averages
-SEA_LEVEL_HPA = 1013.25  # ISA; only altitude differences are used, so the exact value hardly matters
 
-_OWN: dict[str, float | bool] = {  # A34
-    "n": 500, "dv_rw": 0.05, "sigma_yaw": 0.005, "sigma_h": 1.0, "baro_ref_delay_s": 5.0,
-    "jitter_s": 1.0, "jitter_v": 0.05, "seed": 0, "baro_weight_interval_s": 10.0, "use_baro": True,
+_OWN: dict[str, float] = {  # A34
+    "n": 500, "dv_rw": 0.05, "sigma_yaw": 0.005, "jitter_s": 1.0, "jitter_v": 0.05, "seed": 0,
 }
-
-
-def altitude_m(p_hpa: float) -> float:
-    """Inverse of the ISA troposphere formula p = p0 (1 - 2.25577e-5 h)^5.25588 (ICAO Doc 7488)."""
-    return (1.0 - (p_hpa / SEA_LEVEL_HPA) ** (1.0 / 5.25588)) / 2.25577e-5
 
 
 def systematic_resample(w: np.ndarray, u: float) -> np.ndarray:
@@ -36,13 +29,12 @@ def systematic_resample(w: np.ndarray, u: float) -> np.ndarray:
 class PfEstimator:
     id = "pf"
     label = "Particle filter (map matching)"
-    default_params: ClassVar[dict[str, float | bool]] = {**_OWN, **EkfZuptEstimator.default_params}
+    default_params: ClassVar[dict[str, float]] = {**_OWN, **EkfZuptEstimator.default_params}
     constraints: ClassVar[dict[str, dict[str, object]]] = {
         **EkfZuptEstimator.constraints,
-        **{k: {"type": "float", "gt": 0} for k in _OWN if k not in ("n", "seed", "use_baro")},
+        **{k: {"type": "float", "gt": 0} for k in _OWN if k not in ("n", "seed")},
         "n": {"type": "int", "min": 10},
         "seed": {"type": "int", "min": 0},
-        "use_baro": {"type": "bool"},
     }
 
     def reset(self, road: RoadMap, params: dict) -> None:
@@ -58,12 +50,8 @@ class PfEstimator:
         self._seen = (None, 0)  # (last accepted fix time, beacon updates) of the EKF: a change means a new absolute fix
         self._started = False
         self._t_prop: float | None = None  # last particle step
-        self._t_weigh = 0.0
-        self._t_baro = 0.0  # last barometer weighting
+        self._t_weigh: float | None = None  # last weighing; None until the tunnel stretch has taken its first step
         self._pvv_prev = float(self.ekf.P[1, 1])  # EKF speed variance at the previous particle step
-        self._t_enter: float | None = None  # first step of the current tunnel stretch
-        self._h_ref: float | None = None  # barometric altitude at the reference time
-        self._s_ref = self.s.copy()  # each particle's position at the reference time
         self._clear_averages()
         self._display_s = 0.0
 
@@ -71,7 +59,6 @@ class PfEstimator:
     def _clear_averages(self) -> None:
         self._yaw_sum, self._yaw_n = 0.0, 0
         self._exp_sum, self._exp_n = np.zeros(self.n), 0
-        self._p_sum, self._p_n = 0.0, 0
 
     def _in_tunnel(self, t: float) -> bool:
         """No current GNSS fix after the first one: map matching is on (design note)."""
@@ -88,7 +75,7 @@ class PfEstimator:
         self.dv = self.rng.normal(0.0, np.sqrt(p[1, 1]), self.n)
         self.w = np.full(self.n, 1.0 / self.n)
         self._pvv_prev = float(p[1, 1])
-        self._t_enter, self._h_ref = None, None  # the barometer reference restarts after the next outage starts
+        self._t_weigh = None  # the weighing clock restarts with the next tunnel step
         self._clear_averages()
         if not self._started:
             self._started, self._display_s = True, float(x[0])
@@ -98,9 +85,6 @@ class PfEstimator:
         self.ekf.update(m)  # the EKF sees everything and keeps its own GNSS, ZUPT and beacon logic
         if m.kind == "imu":
             self._imu(m)
-        elif m.kind == "baro":
-            self._p_sum += float(m.data["p_hpa"])
-            self._p_n += 1
         elif (self.ekf._t_acc, self.ekf.beacon_updates) != self._seen:
             self._seen = (self.ekf._t_acc, self.ekf.beacon_updates)
             self._redraw()
@@ -126,13 +110,13 @@ class PfEstimator:
                 self._weigh(t)
             target = self._mean_std()[0]
         else:
-            self._t_enter, self._t_weigh = None, t
+            self._t_weigh = None  # GNSS current: the next tunnel stretch starts its own clock
             target = float(self.ekf.x[0])  # GNSS current: the particles are the EKF's belief
         self._advance_display(target, v, dt)
 
     def _propagate(self, t: float, dt: float, v: float) -> None:
-        if self._t_enter is None:
-            self._t_enter, self._t_weigh = t, t
+        if self._t_weigh is None:
+            self._t_weigh = t
         self.dv += self.rng.normal(0.0, self.dv_rw * np.sqrt(dt), self.n)  # random walk of the speed offsets
         pvv = float(self.ekf.P[1, 1])
         grow = max(0.0, pvv - self._pvv_prev)  # CR1: the particles must grow their speed spread like the EKF's P_vv
@@ -144,25 +128,15 @@ class PfEstimator:
         self._exp_n += 1
 
     def _weigh(self, t: float) -> None:
-        """Multiply the weights by the curvature and barometer likelihoods, then resample if needed."""
-        if self._yaw_n > 0:  # 1: measured yaw rate against v * curvature at the particle's position
+        """Multiply the weights by the curvature likelihood, then resample if needed."""
+        if self._yaw_n > 0:  # measured yaw rate against v * curvature at the particle's position
             err = self._yaw_sum / self._yaw_n - self._exp_sum / max(self._exp_n, 1)
             self.w = self.w * np.exp(-0.5 * (err / self.sigma_yaw) ** 2)
-        if self.use_baro and self._p_n > 0:
-            h = altitude_m(self._p_sum / self._p_n)
-            if self._h_ref is None and t - self._t_enter >= self.baro_ref_delay_s:
-                self._h_ref, self._s_ref, self._t_baro = h, self.s.copy(), t  # after the portal pressure step has settled (A21)
-            elif self._h_ref is not None and t - self._t_baro >= self.baro_weight_interval_s:
-                # CR1: 1 s samples share the fan error (A22, 10 s correlation), so weigh the barometer once per interval
-                self._t_baro = t
-                # 2: measured altitude change against the map's for each particle
-                pred = self.road.at(self.s)["z"] - self.road.at(self._s_ref)["z"]
-                self.w = self.w * np.exp(-0.5 * ((h - self._h_ref - pred) / self.sigma_h) ** 2)
         total = self.w.sum()
         self.w = self.w / total if total > 1e-300 else np.full(self.n, 1.0 / self.n)  # all weights vanished: start over
         if 1.0 / float(self.w @ self.w) < self.n / 2:  # N_eff
             idx = systematic_resample(self.w, float(self.rng.random()))
-            self.s, self.dv, self._s_ref = self.s[idx], self.dv[idx], self._s_ref[idx]
+            self.s, self.dv = self.s[idx], self.dv[idx]
             self.w = np.full(self.n, 1.0 / self.n)
             self.s = np.clip(self.s + self.rng.normal(0.0, self.jitter_s, self.n), 0.0, self.road.length_m)
             self.dv = self.dv + self.rng.normal(0.0, self.jitter_v, self.n)  # jitter: no collapse onto copies

@@ -51,7 +51,7 @@ def validate_params(key: str, params: dict[str, Any]) -> None:
         if name not in defaults:
             raise ValueError(f"estimator {key!r}: unknown parameter {name!r} (known: {sorted(defaults)})")
         c = cons.get(name, {})
-        if c.get("type") == "bool":  # on/off switch, e.g. pf use_baro
+        if c.get("type") == "bool":  # on/off switch (no estimator has one since T8.4-CR2)
             if not isinstance(value, bool):
                 raise TypeError(f"estimator {key!r}: parameter {name!r} must be true or false, got {value!r}")
             continue
