@@ -236,7 +236,7 @@ State `[s, v, b, d_psi]`: position, speed, acceleration offset, remaining mount 
 - Map matching runs only in the tunnel (`_in_tunnel`, `:65`: first fix done, EKF mode `dead_reckoning`). `_step` (`:105`) every
   0.1 s: `_propagate` (`:119`) moves `s` by `(v_ekf + dv) * dt` and sums each particle's expected yaw rate `v * curvature(s)`;
   every 1 s `_weigh` (`:132`) first measures the spread of the particles' expected yaw rates; below `informative_ratio * sigma_yaw`
-  (e.g. a straight road) it does nothing (CR3; the recentring tried in CR3 was removed in CR4); otherwise
+  (e.g. a straight road) it does nothing (CR3; the recentring tried in CR3 was removed in CR4). CR5: all random draws are per particle; on straight tunnels (`speed_changes_3km`) pf is still worse than the EKF by a ~30 m offset whose cause is open, and `test_pf.py` only guards it with a 3x bound; otherwise
   `_weigh_and_resample` (`:141`) multiplies the weights by the curvature likelihood and resamples when
   N_eff < N/2 (`systematic_resample`, `:22`, plus jitter). CR2: there is no barometer matching (A34); the barometer stays a sensor
   and a chart only.
