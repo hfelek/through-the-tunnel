@@ -15,7 +15,7 @@ WEIGH_S = 1.0  # weights use 1 s averages
 
 _OWN: dict[str, float] = {  # A34
     "n": 500, "dv_rw": 0.05, "sigma_yaw": 0.005, "jitter_s": 1.0, "jitter_v": 0.05, "seed": 0,
-    "informative_ratio": 0.5, "no_info_s": 10.0,  # CR3
+    "informative_ratio": 0.5,  # CR3
 }
 
 
@@ -52,7 +52,6 @@ class PfEstimator:
         self._started = False
         self._t_prop: float | None = None  # last particle step
         self._t_weigh: float | None = None  # last weighing; None until the tunnel stretch has taken its first step
-        self._t_info = 0.0  # last time the map actually weighted the particles (CR3)
         self._pvv_prev = float(self.ekf.P[1, 1])  # EKF speed variance at the previous particle step
         self._clear_averages()
         self._display_s = 0.0
@@ -118,7 +117,7 @@ class PfEstimator:
 
     def _propagate(self, t: float, dt: float, v: float) -> None:
         if self._t_weigh is None:
-            self._t_weigh = self._t_info = t
+            self._t_weigh = t
         self.dv += self.rng.normal(0.0, self.dv_rw * np.sqrt(dt), self.n)  # random walk of the speed offsets
         pvv = float(self.ekf.P[1, 1])
         grow = max(0.0, pvv - self._pvv_prev)  # CR1: the particles must grow their speed spread like the EKF's P_vv
@@ -134,20 +133,12 @@ class PfEstimator:
         expected = self._exp_sum / max(self._exp_n, 1)  # each particle's mean yaw rate over the second
         mean_exp = float(self.w @ expected)
         spread = float(np.sqrt(self.w @ (expected - mean_exp) ** 2))
-        if spread < self.informative_ratio * self.sigma_yaw:  # e.g. a straight road: all particles predict the same yaw rate
-            self._skip_weighing(t)
-        else:
-            self._weigh_and_resample(t, expected)
+        if spread >= self.informative_ratio * self.sigma_yaw:  # else e.g. a straight road: all particles predict the same yaw rate, keep them
+            self._weigh_and_resample(expected)
         self._t_weigh = t
         self._clear_averages()
 
-    def _skip_weighing(self, t: float) -> None:
-        """No information: keep weights and particles (resampling would only add noise); after no_info_s follow the EKF."""
-        if t - self._t_info >= self.no_info_s:
-            shift = float(self.ekf.x[0]) - self._mean_std()[0]  # moves the whole cloud, its spread stays
-            self.s = np.clip(self.s + shift, 0.0, self.road.length_m)
-
-    def _weigh_and_resample(self, t: float, expected: np.ndarray) -> None:
+    def _weigh_and_resample(self, expected: np.ndarray) -> None:
         if self._yaw_n > 0:  # measured yaw rate against v * curvature at the particle's position
             err = self._yaw_sum / self._yaw_n - expected
             self.w = self.w * np.exp(-0.5 * (err / self.sigma_yaw) ** 2)
@@ -159,7 +150,6 @@ class PfEstimator:
             self.w = np.full(self.n, 1.0 / self.n)
             self.s = np.clip(self.s + self.rng.normal(0.0, self.jitter_s, self.n), 0.0, self.road.length_m)
             self.dv = self.dv + self.rng.normal(0.0, self.jitter_v, self.n)  # jitter: no collapse onto copies
-        self._t_info = t
 
     def _advance_display(self, target: float, v: float, dt: float) -> None:
         """The T8.6 rule on the particle position: never backwards, catches up at most display_max_catchup faster."""
