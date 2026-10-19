@@ -13,11 +13,22 @@ def _short():
     return load_scenario(SCENARIO)
 
 
+def _stable_json(trace):
+    """Trace as JSON text without the wall-clock compute time, the only machine-dependent value."""
+    data = trace.model_dump(mode="json", exclude_none=True)
+    for veh in data["vehicles"]:
+        for m in veh["metrics"].values():
+            m.pop("compute_us_per_measurement", None)
+    return json.dumps(data)
+
+
 def test_same_seed_is_byte_identical():
     sc = _short()
-    a, b = run_scenario(sc).model_dump_json(exclude_none=True), run_scenario(sc).model_dump_json(exclude_none=True)
+    ests = {"baseline": {}, "ekf": {}}
+    a, b = _stable_json(run_scenario(sc, ests)), _stable_json(run_scenario(sc, ests))
     assert a == b
     assert json.loads(a)["vehicles"][0]["measurements"]["imu"]["t"]
+    assert "ekf" in json.loads(a)["vehicles"][0]["estimates"]
 
 
 def test_estimator_sees_only_measurements_in_time_order():

@@ -144,6 +144,7 @@ The runner merges all sensor streams by time, calls `update` in order and sample
 | Recovery time | Time after GNSS returns until abs(error) < 10 m and stays there |
 | Maximum display jump | Largest change of `display_s` in one output step minus true progress |
 | Consistency | Percentage of time with abs(error) < 2σ. Ideal ≈ 95% |
+| Compute time | `compute_us_per_measurement`: mean wall-clock time of one `update` call (µs). It depends on the machine, so unlike every other value it is not reproducible bit for bit; determinism checks must drop it |
 
 Consistency is measured inside tunnels only, because with GNSS every method is trivially consistent. Exit error and recovery time are computed per tunnel. Undefined metrics are omitted from the trace rather than written as null, so a missing key means undefined. `missed_callouts` is a list of `{ exit, distance_m }` for callouts the true vehicle reached (an ideal time exists) that the estimator never fired; the key is omitted when none were missed. Callouts fire when `ŝ + k·σ ≥ exit_s − d`; `callout_k` is a navigation-layer parameter applied equally to all estimators.
 

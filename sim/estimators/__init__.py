@@ -1,4 +1,4 @@
-from sim.estimators import baseline  # noqa: F401  (registers "baseline")
+from sim.estimators import baseline, ekf  # noqa: F401  (registers "baseline" and "ekf")
 from sim.estimators.registry import (
     EstimatorFailed,
     get_estimator,

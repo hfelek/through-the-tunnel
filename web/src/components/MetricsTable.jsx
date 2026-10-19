@@ -20,6 +20,7 @@ function buildColumns(metrics) {
     ...tunnels.map((t) => ({ key: `exit${t}`, label: `Exit error ${t} (m)`, get: (m) => m.exit_error_m?.[t], fmt: signed, score: absScore })),
     ...tunnels.map((t) => ({ key: `rec${t}`, label: `Recovery ${t} (s)`, get: (m) => m.recovery_time_s?.[t], fmt: plain, score: absScore })),
     { key: 'jump', label: 'Max display jump (m)', get: (m) => m.max_display_jump_m, fmt: plain, score: absScore },
+    { key: 'compute', label: 'Compute (µs / measurement)', get: (m) => m.compute_us_per_measurement, fmt: plain, score: absScore },
     { key: 'cons', label: 'Consistency (%)', get: (m) => m.consistency_pct, fmt: plain, score: consistencyScore },
   ]
   for (const e of exits) {

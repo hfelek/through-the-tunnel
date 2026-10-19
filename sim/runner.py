@@ -1,6 +1,8 @@
 """Scenario runner (docs/CONTRACTS.md 3.3-3.4): sensors -> trace, estimators fed measurements only."""
 from __future__ import annotations
 
+import time
+
 import numpy as np
 
 from sim.contracts.estimation import Estimator, Measurement
@@ -86,20 +88,27 @@ def _merged(sensors: dict[str, dict[str, np.ndarray]]) -> list[Measurement]:
 def _run_estimators(
     road_map: RoadMap, sensors: dict[str, dict[str, np.ndarray]], t0: float, t1: float, rate_hz: float,
     estimators: dict[str, dict],
-) -> dict[str, EstimateColumns]:
-    """Feed measurements with m.t <= t_out, then sample estimate(t_out); truth is never passed."""
+) -> tuple[dict[str, EstimateColumns], dict[str, float]]:
+    """Feed measurements with m.t <= t_out, then sample estimate(t_out); truth is never passed.
+
+    Also returns the mean wall-clock time of one update call per estimator, in microseconds.
+    """
     stream = _merged(sensors)
     t_out = t0 + np.arange(int(np.floor((t1 - t0) * rate_hz + 1e-9)) + 1) / rate_hz
     result: dict[str, EstimateColumns] = {}
+    compute_us: dict[str, float] = {}
     for key, params in estimators.items():
         cols = EstimateColumns()
+        spent_ns = 0
         try:
             est: Estimator = get_estimator(key)()
             est.reset(road_map, params)
             i = 0
             for t in t_out.tolist():
                 while i < len(stream) and stream[i].t <= t:
+                    t_start = time.perf_counter_ns()
                     est.update(stream[i])
+                    spent_ns += time.perf_counter_ns() - t_start
                     i += 1
                 e = est.estimate(t)
                 cols.t.append(t)
@@ -111,7 +120,8 @@ def _run_estimators(
         except Exception as exc:
             raise EstimatorFailed(f"estimator {key} failed: {exc}") from exc
         result[key] = cols
-    return result
+        compute_us[key] = spent_ns / 1e3 / max(i, 1)
+    return result, compute_us
 
 
 def run_scenario(
@@ -140,9 +150,9 @@ def run_scenario(
         }
         sensors = {k: v for k, v in sensors.items() if len(v["t"]) > 0}
         meas = Measurements(**{k: _MODELS[k](**{c: a.tolist() for c, a in v.items()}) for k, v in sensors.items()})
-        est = (
+        est, compute_us = (
             _run_estimators(road_map, sensors, float(motion.t[0]), float(motion.t[-1]), rates.output, estimators)
-            if estimators else {}
+            if estimators else ({}, {})
         )
         truth = _truth(motion, road_map)
         tunnels = [(tn.id, tn.start_s, tn.end_s) for tn in road_map.tunnels]
@@ -155,6 +165,8 @@ def run_scenario(
             key: compute_metrics(e.t, e.s, e.sigma_s, e.display_s, truth.t, truth.s, tunnels, fix_t, callouts[key])
             for key, e in est.items()
         }
+        for key in est:
+            metrics[key]["compute_us_per_measurement"] = compute_us[key]
         ideal = ideal_times(truth.t, truth.s, exits)
         for key in est:
             if missed := missed_callouts(callouts[key], ideal):
