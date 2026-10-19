@@ -351,7 +351,7 @@ Edit `vehicles[0].plan` in the scenario (`docs/CONTRACTS.md` 3.2) or use the "Dr
 3. Update the matching A-number in `docs/ASSUMPTIONS.md`; run `python -m pytest -q` (`tests/test_imu.py`, `test_gnss.py`, ...).
 
 ### ... change a tunnel effect
-1. Strengths are scenario fields: `tunnel_env.pressure_step_pa`, `fan_pressure_noise_pa`, `mag_disturbance_ut`, and
+1. Strengths are scenario fields: `tunnel_env.pressure_step_pa`, `fan_pressure_noise_pa` (no UI control since T7.7-CR1: no estimator reads the barometer; edit it in Edit JSON), `mag_disturbance_ut`, and
    `gnss_env.*` (portal degradation, reacquire delay, bad fixes). Edit in the scenario JSON, or in the UI.
 2. Shapes and time constants: pressure step `baro.py:21` (`TAU_STEP_S`, `:10`, A21), fan `baro.py:38` (`TAU_FAN_S`, `:11`,
    A22), magnetic field `mag.py:16` (`CORR_LENGTH_M`, `:13`, A23), GNSS portal growth `gnss.py:15` (`PORTAL_GROWTH`, `:10`, A19).

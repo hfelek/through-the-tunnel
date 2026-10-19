@@ -103,6 +103,5 @@ function edit(sc, fn) {
 
 export const setPhonePreset = (sc, preset) => edit(sc, (o) => { car(o).phone.preset = preset })
 export const setMountPitch = (sc, deg) => edit(sc, (o) => { car(o).phone.mount.pitch_deg = deg })
-export const setFanNoise = (sc, pa) => edit(sc, (o) => { o.tunnel_env.fan_pressure_noise_pa = pa })
 export const setBeacons = (sc, patch) => edit(sc, (o) => { Object.assign(o.beacons, patch) })
 export const setSeed = (sc, seed) => edit(sc, (o) => { o.seed = seed })

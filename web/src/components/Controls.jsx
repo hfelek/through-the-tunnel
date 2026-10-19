@@ -87,7 +87,6 @@ export default memo(function Controls({ scenario, presets, calloutK, autoRun, on
         </select>
       </label>
       <Slider label="Mount pitch" value={car.phone.mount.pitch_deg} unit="°" min={0} max={90} step={1} onChange={live(E.setMountPitch)} onCommit={onCommit} />
-      <Slider label="Fan pressure noise" value={scenario.tunnel_env.fan_pressure_noise_pa} unit=" Pa" min={0} max={50} step={1} onChange={live(E.setFanNoise)} onCommit={onCommit} />
       <label className="ctl-row">
         <input type="checkbox" checked={scenario.beacons.enabled} onChange={(e) => onEdit(E.setBeacons(scenario, { enabled: e.target.checked }), true)} /> Beacons
       </label>

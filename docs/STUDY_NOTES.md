@@ -297,7 +297,6 @@ Rating for the interview demo: **core** (the story breaks without it), **useful*
 | Speed fluctuation slider | `speed_jitter_kmh`, 0-6 km/h (above 6 the jerk limit A11 is exceeded). | `Controls.jsx` | useful |
 | Phone preset select | Flagship vs budget phone. | `Controls.jsx` | useful |
 | Mount pitch slider | Phone tilt in the mount. | `Controls.jsx` | optional |
-| Fan pressure noise slider | Barometer disturbance (A22). | `Controls.jsx` | optional (it shows how noisy the barometer can be) |
 | Beacons checkbox, beacon spacing slider | BLE beacons in the tunnel. | `Controls.jsx` | useful (spacing: optional) |
 | Seed input, New seed | Different noise realization. | `Controls.jsx` | useful |
 | Callout k slider | How early callouts fire (`s + k*sigma`). | `Controls.jsx` | useful |
@@ -378,11 +377,12 @@ step; do it before the next one (`git checkout -- <file>`).
 ### 2. Why the particle filter does not use the barometer
 
 - **Steps:** select `undersea_3km_dip`, Run, and look at the barometer chart in the sensor charts: the pressure step at the
-  tunnel entry and the slow change over the dip. Then drag "Fan pressure noise" from 8 to 50 Pa and look again.
+  tunnel entry and the slow change over the dip. Click **Edit JSON**, change `tunnel_env.fan_pressure_noise_pa` from 8 to 50,
+  Apply, and look again (there is no slider for it since T7.7-CR1).
 - **File to read:** `docs/design/T8.4_pf.md` addendum "Barometer removed", `sim/sensors/baro.py` (the model, A21, A22).
 - **Expected:** the dip is visible in the pressure trace, and the fan noise at 50 Pa buries a good part of it. Real ventilation
   and passing vehicles are unknown and could be that large, which is why the estimators no longer use the barometer
-  (T8.4-CR2). Nothing in the metrics changes with this slider, because no estimator reads the barometer.
+  (T8.4-CR2). Only the barometer chart changes; the metrics table stays identical, because no estimator reads the barometer.
 
 ### 3. Add a scenario from the UI and save it
 
