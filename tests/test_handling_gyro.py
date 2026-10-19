@@ -2,7 +2,9 @@ import numpy as np
 
 from sim.contracts.preset import load_preset
 from sim.contracts.scenario import HandlingEvent, Mount, Road, Vehicle
-from sim.sensors.imu import MountPath, _exp, _log, _mount_matrix, generate_imu
+from sim.geometry.so3 import exp_so3 as _exp
+from sim.geometry.so3 import log_so3 as _log
+from sim.sensors.imu import MountPath, _mount_matrix, generate_imu
 from sim.world.road import RoadMap
 from sim.world.vehicle import simulate_vehicle
 
