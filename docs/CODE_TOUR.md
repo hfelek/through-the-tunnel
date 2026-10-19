@@ -75,6 +75,7 @@ A-numbers: A3 (mount), A4 (60 s of GNSS before a tunnel), A8 (no timestamp error
 - `RoadMap.at(s)` (`:82`): x, y, z, heading interpolated; curvature and grade are piecewise constant, taken at the sample
   at or before `s` (`:86-90`).
 - `RoadMap.project(x, y)` (`:93`): nearest point on the centerline → `s`. This is how GNSS positions become map positions.
+- `RoadMap.beacons` (set by the runner when beacons are enabled): `[(beacon_id, s)]`, map knowledge like `exits` (T8.5).
 - `RoadMap.in_tunnel(s)` (`:110`). Estimators may use the whole `RoadMap` (A2: the map is accurate).
 
 ### `vehicle.py`: how the car drives
@@ -130,8 +131,8 @@ columns with a time array `t`.
 ### `ble.py` (A24, A25, A26)
 
 - `generate_ble` (`:25`) → `t, beacon_id, rssi` (dBm), every 100 ms per beacon in range. The model is
-  `rssi = tx_power - 10 n log10(d) + noise` (`:35`); packets below -90 dBm are dropped. `beacon_positions` (`:14`) is also
-  map knowledge for estimators.
+  `rssi = tx_power - 10 n log10(d) + noise` (`:35`); packets below -90 dBm are dropped. `beacon_positions` (`:14`) is called by the
+  runner, which stores the result in `RoadMap.beacons` (and in the trace `map.beacons`) for estimators.
 
 ## 5. `sim/geometry`
 
@@ -197,18 +198,29 @@ State `[s, v, b, d_psi]`: position, speed, acceleration offset, remaining mount 
   position and speed.
 - Weak speed prior (`:148`): pull `v` down if it is above `speed_limit_factor` × the limit.
 - `estimate` (`:227`) returns `s, v, sqrt(P)` and the mode (`gnss`, `recovering`, `dead_reckoning`).
-- `EkfZuptEstimator` (`:237`, id `ekf_zupt`, label "EKF + ZUPT"): the same class with `zupt = True` and four more parameters
+- `EkfZuptEstimator` (`:274`, id `ekf_zupt`, label "EKF + ZUPT"): the same class with `zupt = True` and four more parameters
   (`zupt_acc_std`, `zupt_gyro_std`, `zupt_v_sigma`, `zupt_gate_chi2`). `ekf` stays without ZUPT so the two can be compared.
-  `_stationary_updates` (`:175`), called at the end of `_imu`: while the detector says stationary, `v = 0` every 0.1 s through
+  `_stationary_updates` (`:187`), called at the end of `_imu`: while the detector says stationary, `v = 0` every 0.1 s through
   `_kalman(..., gate=zupt_gate_chi2)` (a rejected update is counted in `zupt_gated`), and once per second the mean aligned
-  `a_long` as a measurement of `b` (`H = [0, 0, 1, 0]`, true acceleration is 0). `_speed_not_zero` (`:171`) is the same
+  `a_long` as a measurement of `b` (`H = [0, 0, 1, 0]`, true acceleration is 0). `_speed_not_zero` (`:183`) is the same
   chi-square test; a bias window that fails it is dropped, because the detector lags the departure by about 2 s and the
   window would hold real acceleration (A32).
-- Exit safeguard (T8.6): in `_gnss` (`:215`), a fix that passes the lateral check but fails the gate adds to `_gate_streak`;
-  at `gate_reset_n` (5) `_reinit_from_fix` (`:162`) takes `s` and `v` from the fix (keeps `b`, `d_psi`) and counts `gate_resets`.
-- Display smoothing (T8.6): `_advance_display` (`:153`), called every IMU step, moves `display_s` at
+- Exit safeguard (T8.6): in `_gnss` (`:212`), a fix that passes the lateral check but fails the gate adds to `_gate_streak`;
+  at `gate_reset_n` (5) `_reinit_from_fix` (`:174`) takes `s` and `v` from the fix (keeps `b`, `d_psi`) and counts `gate_resets`.
+- Display smoothing (T8.6): `_advance_display` (`:165`), called every IMU step, moves `display_s` at
   `clip(v + display_k * (s - display_s), 0, v + display_max_catchup)`; `estimate` passes it in `extras["display_s"]`
   and the runner writes it to the `display_s` column (callouts still use `s`).
+- Beacon update (T8.5, A33): `_ble` (`:239`) feeds each packet of a beacon the map knows (`road.beacons`) to that beacon's
+  `PeakDetector` (`beacon_peak.py`); `_beacon_silence` (`:248`), called every IMU step, ends a pass after 1 s of silence.
+  `_beacon_update` (`:255`): `z = s_b + v * (t_det - t_peak)`, variance `beacon_sigma^2 + (age * sigma_v)^2`, `H = [1, 0, 0, 0]`,
+  1-dof gate; it never touches `_gate_streak`. `beacon_updates` counts accepted updates. Without beacons `road.beacons` is empty.
+
+### `beacon_peak.py`: the beacon pass detector (T8.5, A33)
+
+- `PeakDetector` (one per beacon): `add(t, rssi)` keeps a 1 s moving average; once it passes `min_dbm` it records the smoothed
+  values and reports a pass when the value drops `drop_db` below its maximum. `poll(t)` reports a pass after 1 s without
+  packets. `_finish` returns the time of the maximum, or the middle of the plateau (within 1 dB of the maximum for more than
+  3 s) when the car stopped next to the beacon. After a pass it stays disarmed until the average falls below `min_dbm`.
 
 ### `stationary.py`: the stationary detector (T8.3, A32)
 
@@ -291,7 +303,7 @@ Truth isolation (estimators never see truth):
 Causality (state changes only through `update(m)`, in time order):
 
 1. `_merged` sorts by time (`sim/runner.py:71`); `_run_estimators` feeds `stream[i].t <= t` before `estimate(t)` (`:108-110`).
-2. `estimate()` only reads state (`ekf.py:227`, `baseline.py:62`); `Aligner` state changes only in `process_gnss` /
+2. `estimate()` only reads state (`ekf.py:264`, `baseline.py:62`); `Aligner` state changes only in `process_gnss` /
    `process_imu`. The Aligner's delays (0.3 s staging, 0.2 s detection) are causal: it never looks ahead.
 3. All randomness comes from seeded generators passed in; no `np.random` global (`sim/runner.py:134-138`).
 
@@ -320,8 +332,8 @@ Causality (state changes only through `update(m)`, in time order):
    with approval), then read it in the sensor.
 
 ### ... add or change an estimator parameter
-1. In the estimator class: add it to `default_params` and `constraints` (`ekf.py:27-37`); read it in `reset`
-   (`setattr` loop, `ekf.py:40`), use it where needed. For the ZUPT parameters, the same in `EkfZuptEstimator` (`ekf.py:243`).
+1. In the estimator class: add it to `default_params` and `constraints` (`ekf.py:30-44`); read it in `reset`
+   (`setattr` loop, `ekf.py:47`), use it where needed. For the ZUPT parameters, the same in `EkfZuptEstimator` (`ekf.py:280`).
 2. Nothing else for the UI: `/api/estimators` returns it, `EstimatorPicker` shows an input with the right limits, `Run` sends it,
    `/api/simulate` validates it (`registry.validate_params`).
 3. Document the value and why in `docs/ASSUMPTIONS.md` (A31 for the EKF); `python -m pytest -q`.
@@ -367,7 +379,7 @@ Causality (state changes only through `update(m)`, in time order):
 | `test_estimators.py` | registry: register/list, removal, estimator types are slotted |
 | `test_baseline.py` | baseline: small exit error at constant speed, large on stop-and-go |
 | `test_alignment.py` | Aligner on noise-free data: mount yaw and gyro bias found, handling detected and re-aligned, no false detection |
-| `test_ekf.py` | EKF in-tunnel consistency on `curved_2km`; EKF+ZUPT in-tunnel consistency on `hard_brake_inside` (the 15 s standstill); the stationary detector never fires on the raw IMU of the constant-speed `curved_2km` and `beacons_5km`; EKF+ZUPT `display_s` is non-decreasing, its max display jump is below the baseline's and recovery exists in `short_straight_500m`, `hard_brake_inside`, `stop_and_go_3km` (T8.6) |
+| `test_ekf.py` | EKF in-tunnel consistency on `curved_2km`; EKF+ZUPT in-tunnel consistency on `hard_brake_inside`; beacons bound the `beacons_5km` error (RMSE < 20 m) and change nothing without beacons (the 15 s standstill); the stationary detector never fires on the raw IMU of the constant-speed `curved_2km` and `beacons_5km`; EKF+ZUPT `display_s` is non-decreasing, its max display jump is below the baseline's and recovery exists in `short_straight_500m`, `hard_brake_inside`, `stop_and_go_3km` (T8.6) |
 | `test_metrics.py` | RMSE, exit error, consistency, recovery time |
 | `test_callouts.py` | perfect estimate fires at the ideal time; larger k fires earlier; missed callouts |
 | `test_runner.py` | same seed is byte-identical (without the wall-clock `compute_us_per_measurement`); an estimator sees only time-ordered measurements, and no estimator module imports sensor, eval, runner or vehicle code (`ast` check); changing the GNSS preset keeps the IMU identical |

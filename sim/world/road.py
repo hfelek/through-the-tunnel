@@ -78,6 +78,7 @@ class RoadMap:
         self.tunnels: list[Tunnel] = road.tunnels
         self.exits: list[Exit] = road.exits
         self.speed_limits: list[SpeedLimit] = road.speed_limits
+        self.beacons: list[tuple[str, float]] = []  # (beacon id, s); set by the runner when beacons are enabled (T8.5)
 
     def at(self, s: float | np.ndarray) -> dict[str, np.ndarray]:
         """Interpolate x, y, z, heading, curvature, grade at arc length s (clamped to the road)."""

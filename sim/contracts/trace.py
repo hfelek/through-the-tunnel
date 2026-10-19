@@ -20,6 +20,7 @@ class MapColumns(_Model):
     tunnels: list[dict[str, Any]] = []
     exits: list[dict[str, Any]] = []
     speed_limits: list[dict[str, Any]] = []
+    beacons: list[dict[str, Any]] | None = None  # [{id, s}]; omitted when beacons are disabled
 
 
 class Truth(_Model):

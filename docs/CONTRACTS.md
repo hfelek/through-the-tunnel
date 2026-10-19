@@ -19,7 +19,7 @@ The formats in this section are turned into code in Phase 1 and afterwards chang
 
 ### 3.2 Scenario JSON
 
-A scenario defines the road, tunnels, exits, vehicles, phones and environment effects. An exit is the point where navigation makes its callout; the vehicle's planned route is known from the map.
+A scenario defines the road, tunnels, exits, vehicles, phones and environment effects. An exit is the point where navigation makes its callout; the vehicle's planned route is known from the map. Beacon positions are map knowledge too: when `beacons.enabled`, the map carries `beacons` = `[{id, s}]` (RoadMap.beacons and trace `map.beacons`, omitted when disabled); the runner derives it from the beacon spacing and the tunnels.
 
 ```json
 {
@@ -91,7 +91,8 @@ The simulation output and the real-data loader output share the same format. Arr
   "scenario_id": "curved_3km_exit_inside",
   "map": {
     "s": [], "x": [], "y": [], "z": [], "heading": [], "curvature": [], "grade": [],
-    "tunnels": [], "exits": [], "speed_limits": []
+    "tunnels": [], "exits": [], "speed_limits": [],
+    "beacons": [ { "id": "T1-B1", "s": 2400 } ]
   },
   "vehicles": [
     {

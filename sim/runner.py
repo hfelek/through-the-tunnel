@@ -26,7 +26,7 @@ from sim.estimators.registry import EstimatorFailed, get_estimator
 from sim.eval.callouts import compute_callouts, ideal_times, missed_callouts
 from sim.eval.metrics import compute_metrics
 from sim.sensors.baro import generate_baro
-from sim.sensors.ble import generate_ble
+from sim.sensors.ble import beacon_positions, generate_ble
 from sim.sensors.gnss import generate_gnss
 from sim.sensors.imu import MountPath, generate_imu
 from sim.sensors.mag import generate_mag
@@ -46,6 +46,7 @@ def _map_columns(road_map: RoadMap) -> MapColumns:
         tunnels=[t.model_dump() for t in road_map.tunnels],
         exits=[e.model_dump() for e in road_map.exits],
         speed_limits=[s.model_dump() for s in road_map.speed_limits],
+        beacons=[{"id": b, "s": s} for b, s in road_map.beacons] or None,  # omitted when disabled
     )
 
 
@@ -131,6 +132,8 @@ def run_scenario(
     estimators = estimators or {}
     rates, n_veh = scenario.rates_hz, len(scenario.vehicles)
     road_map = RoadMap(scenario.road)
+    if scenario.beacons.enabled:
+        road_map.beacons = beacon_positions(road_map, scenario.beacons)  # map knowledge, like exits (T8.5)
     motion_ss, *vehicle_ss = np.random.SeedSequence(scenario.seed).spawn(1 + n_veh)
     motions = simulate_vehicles(scenario.vehicles, road_map, rates.imu, np.random.default_rng(motion_ss))
     vehicles: list[VehicleTrace] = []

@@ -480,6 +480,7 @@ Every change that touches the contracts or the task list goes here, newest first
 
 | Date | Change | Affected |
 | --- | --- | --- |
+| 2026-10-19 | Beacon positions are part of the map (RoadMap.beacons, trace map.beacons), like exits | Section 3, T8.5 |
 | 2026-10-18 | API decimation also applies to truth (UI needs ~10 Hz; truth was sent at the IMU rate) | Section 3.3, T6.1 |
 | 2026-10-18 | convoy_3_cars removed; multi-vehicle scenarios are out of scope (the T2.3 code stays). Traffic is represented by a single vehicle in stop_and_go_3km. The 3-vehicle demo item and the T7.2 "3 vehicles" criterion are removed | T4.2, T7.2, Section 6 |
 | 2026-10-18 | Plan translated to English | Whole document |

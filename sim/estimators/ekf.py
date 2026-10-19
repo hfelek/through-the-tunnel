@@ -7,6 +7,7 @@ import numpy as np
 
 from sim.contracts.estimation import Estimate, Measurement, Mode
 from sim.estimators.alignment import Aligner, G
+from sim.estimators.beacon_peak import PeakDetector
 from sim.estimators.registry import register
 from sim.estimators.stationary import StationaryDetector
 from sim.world.road import RoadMap
@@ -14,9 +15,11 @@ from sim.world.road import RoadMap
 R68_TO_AXIS = 1.5096  # h_acc is the radial 68% value; for a 2-D Gaussian R68 = 1.5096 * sigma_axis
 _I4 = np.eye(4)
 _H_GNSS = np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]])
+_H_S = np.array([[1.0, 0.0, 0.0, 0.0]])
 _H_V = np.array([[0.0, 1.0, 0.0, 0.0]])
 _H_B = np.array([[0.0, 0.0, 1.0, 0.0]])
 ZUPT_PERIOD_S = 0.1  # zero-velocity update rate while stationary (10 Hz)
+BEACON_GATE_CHI2 = 10.8  # chi-square, 1 dof, 99.9% (the beacon measures s only)
 BIAS_PERIOD_S = 1.0  # bias update rate while stationary
 
 
@@ -29,9 +32,12 @@ class EkfEstimator:
         "speed_limit_factor": 1.3, "v_prior_sigma": 2.0, "accel_trust_sigma_b": 0.05,
         "initial_sigma_s": 50.0, "initial_sigma_v": 5.0, "gnss_timeout_s": 1.5, "recover_fixes": 3,
         "gate_reset_n": 5, "display_k": 0.5, "display_max_catchup": 10.0,  # T8.6, A31
+        "beacon_min_dbm": -85.0, "beacon_drop_db": 3.0, "beacon_sigma": 5.0,  # T8.5, A33
     }
     constraints: ClassVar[dict[str, dict[str, object]]] = {
-        **{k: {"type": "float", "gt": 0} for k in default_params if k not in ("recover_fixes", "gate_reset_n")},
+        **{k: {"type": "float", "gt": 0} for k in default_params
+           if k not in ("recover_fixes", "gate_reset_n", "beacon_min_dbm")},
+        "beacon_min_dbm": {"type": "float", "min": -100.0, "max": -40.0},  # RSSI of a nearby beacon, dBm
         "recover_fixes": {"type": "int", "min": 1},
         "gate_reset_n": {"type": "int", "min": 1},
     }
@@ -55,6 +61,9 @@ class EkfEstimator:
         self._gate_streak = 0  # consecutive on-road fixes rejected by the chi-square gate (T8.6)
         self.gate_resets = 0  # counter, for inspection
         self._display_s = 0.0  # the position shown on screen, never moves backwards (T8.6)
+        self._beacon_s = dict(road.beacons)  # map knowledge: beacon id -> s (T8.5)
+        self._peaks: dict[str, PeakDetector] = {}
+        self.beacon_updates = 0  # accepted beacon updates, for inspection
         if self.zupt:
             self._detector = StationaryDetector(self.zupt_acc_std, self.zupt_gyro_std)
             self._next_zupt = 0.0
@@ -91,6 +100,9 @@ class EkfEstimator:
     def update(self, m: Measurement) -> None:
         if m.kind == "imu":
             self._imu(m)
+            self._beacon_silence(m.t)
+        elif m.kind == "ble":
+            self._ble(m)
         elif m.kind == "gnss":
             self.aligner.process_gnss(m)
             self._gnss(m)
@@ -223,6 +235,31 @@ class EkfEstimator:
         self._fix_mode = "recovering" if self._recover_left > 0 else "gnss"
         self._recover_left = max(self._recover_left - 1, 0)
         self._t_acc = m.t
+
+    def _ble(self, m: Measurement) -> None:
+        bid = m.data["beacon_id"]
+        if bid not in self._beacon_s:
+            return  # a beacon the map does not know
+        det = self._peaks.setdefault(bid, PeakDetector(self.beacon_min_dbm, self.beacon_drop_db))
+        t_peak = det.add(m.t, float(m.data["rssi"]))
+        if t_peak is not None:
+            self._beacon_update(bid, m.t, t_peak)
+
+    def _beacon_silence(self, t: float) -> None:
+        """Check every IMU step: a beacon that went quiet is detected without waiting for another packet."""
+        for bid, det in self._peaks.items():
+            t_peak = det.poll(t)
+            if t_peak is not None:
+                self._beacon_update(bid, t, t_peak)
+
+    def _beacon_update(self, bid: str, t_det: float, t_peak: float) -> None:
+        """The car was at s_b at t_peak, so it is at s_b + v * (t_det - t_peak) now (A33)."""
+        age = t_det - t_peak
+        z = np.array([self._beacon_s[bid] + float(self.x[1]) * age])
+        # peak-time error (beacon_sigma) plus the speed error accumulated over the age; no effect on the GNSS gate streak
+        var = self.beacon_sigma**2 + (age * float(np.sqrt(self.P[1, 1]))) ** 2
+        if self._kalman(_H_S, z, np.array([[var]]), gate=BEACON_GATE_CHI2):
+            self.beacon_updates += 1
 
     def estimate(self, t: float) -> Estimate:
         mode: Mode = "dead_reckoning"

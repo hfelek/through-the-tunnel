@@ -37,3 +37,12 @@ def test_display_is_monotonic_and_the_filter_recovers():
         m = v.metrics["ekf_zupt"]
         assert m["max_display_jump_m"] < base["max_display_jump_m"], name
         assert all(r is not None for r in m["recovery_time_s"].values()), name  # the gate safeguard (T8.6)
+
+
+def test_beacons_bound_the_error_and_change_nothing_without_beacons():
+    on = run_scenario(load_scenario("scenarios/beacons_5km.json"), {"ekf_zupt": {}}).vehicles[0]
+    assert on.metrics["ekf_zupt"]["rmse_in_tunnel_m"] < 20.0  # A33: a beacon every 400 m bounds the drift
+    sc = load_scenario("scenarios/curved_2km.json")
+    assert not sc.beacons.enabled  # no beacons: the map has none, so the beacon code never runs (T8.5)
+    est = run_scenario(sc, {"ekf_zupt": {}}).vehicles[0].estimates["ekf_zupt"]
+    assert run_scenario(sc, {"ekf_zupt": {"beacon_sigma": 1.0}}).vehicles[0].estimates["ekf_zupt"].s == est.s
