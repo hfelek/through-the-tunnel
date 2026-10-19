@@ -8,12 +8,16 @@ import numpy as np
 from sim.contracts.estimation import Estimate, Measurement, Mode
 from sim.estimators.alignment import Aligner, G
 from sim.estimators.registry import register
+from sim.estimators.stationary import StationaryDetector
 from sim.world.road import RoadMap
 
 R68_TO_AXIS = 1.5096  # h_acc is the radial 68% value; for a 2-D Gaussian R68 = 1.5096 * sigma_axis
 _I4 = np.eye(4)
 _H_GNSS = np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]])
 _H_V = np.array([[0.0, 1.0, 0.0, 0.0]])
+_H_B = np.array([[0.0, 0.0, 1.0, 0.0]])
+ZUPT_PERIOD_S = 0.1  # zero-velocity update rate while stationary (10 Hz)
+BIAS_PERIOD_S = 1.0  # bias update rate while stationary
 
 
 @register
@@ -29,6 +33,7 @@ class EkfEstimator:
         **{k: {"type": "float", "gt": 0} for k in default_params if k != "recover_fixes"},
         "recover_fixes": {"type": "int", "min": 1},
     }
+    zupt = False  # the subclass EkfZuptEstimator turns the stationary updates on
 
     def reset(self, road: RoadMap, params: dict) -> None:
         for k, v in {**self.default_params, **params}.items():
@@ -45,6 +50,12 @@ class EkfEstimator:
         self._t_acc: float | None = None  # time of the last accepted fix
         self._fix_mode: Mode = "gnss"
         self._recover_left = 0
+        if self.zupt:
+            self._detector = StationaryDetector(self.zupt_acc_std, self.zupt_gyro_std)
+            self._next_zupt = 0.0
+            self._bias_t0: float | None = None
+            self._bias_sum, self._bias_n = 0.0, 0
+            self.zupt_applied = self.zupt_gated = self.bias_updates = 0  # counters, for inspection
 
     # -- helpers ----------------------------------------------------------------------------------------------------
     def _limit(self, s: float) -> float | None:
@@ -130,6 +141,37 @@ class EkfEstimator:
         lim = self._limit(float(self.x[0]))
         if lim is not None and self.x[1] > self.speed_limit_factor * lim:  # weak speed prior
             self._kalman(_H_V, np.array([lim]), np.array([[self.v_prior_sigma**2]]))
+        if self.zupt:
+            self._stationary_updates(m, a.valid, a.a_long)
+
+    def _speed_not_zero(self) -> bool:
+        """Same chi-square test as the v = 0 gate: the EKF's speed and uncertainty cannot be explained by standing still."""
+        return self.x[1] ** 2 / (self.P[1, 1] + self.zupt_v_sigma**2) > self.zupt_gate_chi2
+
+    def _stationary_updates(self, m: Measurement, aligned: bool, a_long: float) -> None:
+        """While the detector says stationary: v = 0 at 10 Hz (gated) and the mean a_long as a bias measurement at 1 Hz."""
+        d = m.data
+        if not self._detector.update(m.t, d["ax"], d["ay"], d["az"], d["gx"], d["gy"], d["gz"]):
+            self._bias_t0, self._bias_sum, self._bias_n = None, 0.0, 0  # leaving a stop: restart the bias window
+            return
+        if m.t >= self._next_zupt:
+            self._next_zupt = m.t + ZUPT_PERIOD_S
+            # gate: if the EKF's own speed and uncertainty cannot be explained by v = 0 (slow crawl, false detection), skip
+            ok = self._kalman(_H_V, np.array([0.0]), np.array([[self.zupt_v_sigma**2]]), gate=self.zupt_gate_chi2)
+            self.zupt_applied, self.zupt_gated = self.zupt_applied + ok, self.zupt_gated + (not ok)
+        if self._bias_t0 is None:
+            self._bias_t0 = m.t
+        if aligned:
+            self._bias_sum, self._bias_n = self._bias_sum + a_long, self._bias_n + 1
+        if m.t - self._bias_t0 >= BIAS_PERIOD_S and self._bias_n > 0:
+            if self._speed_not_zero():  # the car is pulling away: the detector lags, so this window holds real acceleration
+                self._bias_t0, self._bias_sum, self._bias_n = m.t, 0.0, 0
+                return
+            # standing still the true acceleration is 0, so the mean of a_long measures the offset b (sigma_base is per sample)
+            r = self.aligner.sigma_base**2 / self._bias_n
+            self._kalman(_H_B, np.array([self._bias_sum / self._bias_n]), np.array([[r]]))
+            self.bias_updates += 1
+            self._bias_t0, self._bias_sum, self._bias_n = m.t, 0.0, 0
 
     def _gnss(self, m: Measurement) -> None:
         d = m.data
@@ -159,3 +201,20 @@ class EkfEstimator:
             mode = self._fix_mode
         return Estimate(t=t, s=float(self.x[0]), v=float(self.x[1]), sigma_s=float(np.sqrt(self.P[0, 0])),
                         sigma_v=float(np.sqrt(self.P[1, 1])), mode=mode)
+
+
+@register
+class EkfZuptEstimator(EkfEstimator):
+    """The EKF plus zero-velocity and bias updates while the detector says the vehicle is stationary (T8.3, A32)."""
+
+    id = "ekf_zupt"
+    label = "EKF + ZUPT"
+    zupt = True
+    default_params: ClassVar[dict[str, float]] = {
+        **EkfEstimator.default_params,
+        "zupt_acc_std": 0.05, "zupt_gyro_std": 0.004, "zupt_v_sigma": 0.02, "zupt_gate_chi2": 10.8,
+    }
+    constraints: ClassVar[dict[str, dict[str, object]]] = {
+        **EkfEstimator.constraints,
+        **{k: {"type": "float", "gt": 0} for k in ("zupt_acc_std", "zupt_gyro_std", "zupt_v_sigma", "zupt_gate_chi2")},
+    }

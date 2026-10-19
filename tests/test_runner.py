@@ -1,3 +1,4 @@
+import ast
 import json
 from pathlib import Path
 
@@ -79,3 +80,15 @@ def test_changing_gnss_preset_keeps_imu_identical(monkeypatch):
     other = run_scenario(sc).vehicles[0].measurements
     assert other.imu == base.imu and other.baro == base.baro and other.mag == base.mag
     assert other.gnss != base.gnss
+
+    # truth isolation: no estimator module imports sensor, eval, runner or vehicle code (parsed, so comments and strings do not count)
+    banned = ("sim.sensors", "sim.eval", "sim.runner", "sim.world.vehicle")
+    for path in (Path(__file__).resolve().parents[1] / "sim" / "estimators").glob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.Import):
+                imported = [a.name for a in node.names]
+            elif isinstance(node, ast.ImportFrom):
+                imported = [node.module or ""] + [f"{node.module}.{a.name}" for a in node.names]  # "from sim import sensors"
+            else:
+                continue
+            assert not [i for i in imported if any(i == b or i.startswith(b + ".") for b in banned)], f"{path.name} imports {imported}"
