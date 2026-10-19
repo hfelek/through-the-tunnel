@@ -34,6 +34,8 @@ class AlignedSample:
     yaw_rate: float
     valid: bool
     mode: AlignMode
+    sigma_tilt: float = float("inf")  # rad, uncertainty of the pitch / roll of the mount (per axis)
+    mount_changed: bool = False  # first valid sample after a put-back: the EKF should inflate its bias covariance
 
 
 @dataclass(slots=True)
@@ -43,6 +45,7 @@ class _Alignment:
     u: np.ndarray
     sigma_psi: float
     source: Literal["calibrated", "realigned"]
+    sigma_tilt: float = 0.1
 
     @property
     def m(self) -> np.ndarray:
@@ -81,6 +84,10 @@ class Aligner:
         "gravity_avg_s": 2.0,
         "realign_speed_rel_sigma": 0.05,  # speed error enters the vehicle yaw change through the map curvature
         "gyro_bias_rw": 1e-4,  # rad/s/sqrt(s): bias drift while integrating through the hand event
+        "tilt_gyro_c0_deg": 0.2,  # A30: tilt uncertainty of the gyro-propagated mount after put-back is c0 + c1 * T_hand
+        "tilt_gyro_c1_deg_per_s": 0.02,
+        "acc_unknown_mps2": 0.2,  # A30: vehicle acceleration unknown in the gravity window (no GNSS)
+        "acc_unknown_gnss_mps2": 0.05,  # A30: GNSS dv/dt subtracted in the gravity window
     }
     constraints: ClassVar[dict[str, dict[str, object]]] = {k: {"type": "float", "gt": 0} for k in default_params}
 
@@ -114,6 +121,7 @@ class Aligner:
         self._calm_t: float | None = None
         self._pre: _Alignment | None = None
         self._grav: dict | None = None
+        self._mount_changed = False
 
     # -- map lookups ------------------------------------------------------------------------------------------------
     def _i(self, s: float) -> int:
@@ -139,6 +147,9 @@ class Aligner:
         clean = not self._buf_bad and not self.in_hand and self._exceed_t is None
         if prev is not None and clean and 0 < m.t - prev[0] <= self.gnss_current_s:
             self._close_interval(prev, (m.t, s, v))
+        if self._grav is not None:  # gravity window running: remember the sums at each fix, for the GNSS dv/dt
+            gr = self._grav
+            gr["snaps"].append((m.t, v, gr["n"], gr["a"].copy(), gr["al"], gr["gs"]))
         self._fix = (m.t, s, v)
         self._buf, self._buf_bad = [], False
 
@@ -208,7 +219,14 @@ class Aligner:
         c, s = np.cos(psi), np.sin(psi)
         resid = m - np.stack([p[:, 0] * c - p[:, 1] * s, p[:, 0] * s + p[:, 1] * c], axis=1)
         sigma = float(np.sqrt(np.sum(resid * resid) / (len(p) - 1)) / np.sqrt(pp))
-        return _Alignment(f=f, l=np.cross(u, f), u=u, sigma_psi=sigma, source="calibrated")
+        lat = np.cross(u, f)
+        flat = [r for r in self._recs if r[5]]
+        tilt = 0.1  # rad, fallback when there are too few flat intervals
+        if len(flat) >= 3:  # statistical error of the mean "up" direction from the per-interval residuals
+            res = np.array([r[0] - f * (r[3] + r[4]) - lat * (r[1] @ u - (b @ u) * r[2]) for r in flat])
+            perp = (res - (res @ u)[:, None] * u) / (G * np.array([r[6] for r in flat]))[:, None]
+            tilt = float(np.sqrt(np.mean(np.sum(perp * perp, axis=1)) / 2.0 / len(flat)))
+        return _Alignment(f=f, l=lat, u=u, sigma_psi=sigma, source="calibrated", sigma_tilt=tilt)
 
     def _try_update(self) -> None:
         cal = self._solve()
@@ -259,11 +277,19 @@ class Aligner:
         dur = t - self._t_int0
         sigma = float(np.hypot.reduce([pre.sigma_psi, self.realign_speed_rel_sigma * self._habs,
                                        self.gyro_bias_rw * dur**1.5 / np.sqrt(3.0)]))
-        self.active = _Alignment(f=m1[0], l=m1[1], u=m1[2], sigma_psi=sigma, source="realigned")
-        self._grav = {"t0": t, "n": 0, "a": np.zeros(3), "al": 0.0, "gs": 0.0, "v0": None, "v1": 0.0}
+        t_hand = t - self.hand_log[-1][0]
+        tilt_gyro = np.radians(self.tilt_gyro_c0_deg + self.tilt_gyro_c1_deg_per_s * t_hand)
+        self.active = _Alignment(f=m1[0], l=m1[1], u=m1[2], sigma_psi=sigma, source="realigned", sigma_tilt=float(tilt_gyro))
+        self._mount_changed = True
+        self._grav = {"t0": t, "n": 0, "a": np.zeros(3), "al": 0.0, "gs": 0.0, "v0": None, "v1": 0.0, "snaps": []}
 
     def _gravity_step(self, t: float, a: np.ndarray, s_est: float, v_est: float, vk: float) -> None:
-        """Pitch / roll refinement from gravity, over `gravity_avg_s` after put-back; yaw stays from the gyro."""
+        """Fuse the gyro-propagated tilt with the gravity tilt (inverse-variance weights per axis); yaw stays gyro-only.
+
+        Gravity tilt: the mean specific force over `gravity_avg_s` minus the vehicle's own acceleration. With current
+        GNSS the mean is taken between the first and last fix in the window and the acceleration is the GNSS dv/dt
+        (sigma 0.05 m/s^2); otherwise the estimator's own speed change is used (sigma 0.2 m/s^2, A30).
+        """
         gr = self._grav
         if gr["v0"] is None:
             gr["v0"] = v_est
@@ -275,11 +301,26 @@ class Aligner:
         if t - gr["t0"] < self.gravity_avg_s:
             return
         self._grav, al = None, self.active
-        n, span = gr["n"], t - gr["t0"]
-        u = _unit(gr["a"] / n - al.f * ((gr["v1"] - gr["v0"]) / span + gr["gs"] / n) - al.l * gr["al"] / n)
-        if np.degrees(np.arccos(np.clip(u @ al.u, -1.0, 1.0))) < 15.0:
-            f = _unit(al.f - (al.f @ u) * u)
-            self.active = _Alignment(f=f, l=np.cross(u, f), u=u, sigma_psi=al.sigma_psi, source="realigned")
+        snaps = gr["snaps"]
+        if len(snaps) >= 2 and snaps[-1][0] - snaps[0][0] >= 0.8 and self._fix is not None and t - self._fix[0] <= self.gnss_current_s:
+            (t0, v0, n0, a0, l0, g0), (t1, v1, n1, a1, l1, g1) = snaps[0], snaps[-1]
+            n, mean_a, a_f = n1 - n0, (a1 - a0) / (n1 - n0), (v1 - v0) / (t1 - t0)
+            mean_al, mean_gs, sigma_acc = (l1 - l0) / n, (g1 - g0) / n, self.acc_unknown_gnss_mps2
+        else:
+            n, span = gr["n"], t - gr["t0"]
+            mean_a, a_f = gr["a"] / n, (gr["v1"] - gr["v0"]) / span
+            mean_al, mean_gs, sigma_acc = gr["al"] / n, gr["gs"] / n, self.acc_unknown_mps2
+        u_meas = _unit(mean_a - al.f * (a_f + mean_gs) - al.l * mean_al)
+        angle = float(np.arccos(np.clip(u_meas @ al.u, -1.0, 1.0)))
+        if np.degrees(angle) >= 15.0:
+            return  # implausible: keep the gyro-propagated tilt
+        sg, sa = al.sigma_tilt, sigma_acc / G
+        w = sg**2 / (sg**2 + sa**2)  # weight of the gravity tilt, same for pitch and roll
+        cross = np.cross(al.u, u_meas)
+        r = cross * (angle / np.linalg.norm(cross)) if np.linalg.norm(cross) > 1e-12 else np.zeros(3)
+        rot = exp_so3(w * ((r @ al.f) * al.f + (r @ al.l) * al.l))
+        self.active = _Alignment(f=rot @ al.f, l=rot @ al.l, u=rot @ al.u, sigma_psi=al.sigma_psi, source="realigned",
+                                 sigma_tilt=float(1.0 / np.sqrt(1.0 / sg**2 + 1.0 / sa**2)))
 
     # -- IMU --------------------------------------------------------------------------------------------------------
     def process_imu(self, m: Measurement, s_est: float, v_est: float) -> AlignedSample:
@@ -345,4 +386,5 @@ class Aligner:
         yaw_rate = float((g - b) @ al.u)
         a_long = float(al.f @ a - G * np.sin(np.arctan(self._grade[self._i(s_est)])))
         sigma = float(np.hypot(self.sigma_base, al.sigma_psi * abs(v_est * yaw_rate)))
-        return AlignedSample(t, a_long, sigma, yaw_rate, True, self.mode)
+        changed, self._mount_changed = self._mount_changed, False
+        return AlignedSample(t, a_long, sigma, yaw_rate, True, self.mode, al.sigma_tilt, changed)
