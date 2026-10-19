@@ -33,6 +33,9 @@ Everything in English: replies, code, comments, commit messages, docs.
 - If the same error survives 2 fix attempts: stop, summarize in max 5 lines, ask.
 - No dependencies beyond those listed in task T0.1 without asking.
 - Final reply per task: max 10 lines (what changed, test result, suggestions).
+- Acceptance thresholds are targets. When one is missed, report the numbers with one
+  diagnosis and stop. Do not run extra experiments or try alternative fixes unless asked.
+  One-off tables only on the scenarios named in the task. Keep reports short.
 
 ## Tasks done outside Claude Code
 
