@@ -13,6 +13,8 @@ Everything in English: replies, code, comments, commit messages, docs.
 - Fresh cloud environment: run `pip install -q -e '.[dev]'` once at session start.
   Always run tests as `python -m pytest -q`.
 - `docs/ASSUMPTIONS.md`: numbered assumptions (A1, A2, ...). Read when the task mentions one.
+- `docs/CODE_TOUR.md`: where every part of the code lives, how data flows, and recipes for
+  common changes. Read only the section of the module you touch.
 
 ## Budget rules (credit is limited)
 
@@ -66,6 +68,10 @@ If asked to, reply "This task is tagged [claude.ai]." and stop.
 
 - Python 3.11+, type hints, Pydantic v2 for contracts, NumPy vectorized where it matters.
   Small pure functions. One-line docstrings unless the math needs more.
+- Explainability: the user must be able to explain and change every line in an interview.
+  Prefer straightforward code over clever code. Short functions with one job.
+  A short comment explaining WHY on every non-obvious line; formulas cite the design
+  note or the A-number. No new abstraction unless it removes real duplication.
 - JavaScript only (no TypeScript). React function components + hooks.
   CSS modules or inline styles. Charts with Recharts. No other UI framework.
 - Tests stay light: per task 1–3 short smoke tests in one file (runs, right
@@ -77,7 +83,9 @@ If asked to, reply "This task is tagged [claude.ai]." and stop.
 
 1. Acceptance criteria met; `python -m pytest -q` green; `ruff check -q` clean.
 2. One commit: `T2.1: short description` (task ID first).
-3. End your final reply with one line: `AI log: <what you generated>`.
+3. Update the relevant section of `docs/CODE_TOUR.md` in the same commit (new or moved
+   functions, changed line references, new recipes or tests).
+4. End your final reply with one line: `AI log: <what you generated>`.
 
 ## Git
 - Push the task commit to your working branch. Never open a pull request;
