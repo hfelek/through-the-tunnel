@@ -1,6 +1,7 @@
 import { memo, useMemo } from 'react'
 import { lowerBound } from '../lib/interp'
 import { roadPointAt } from '../lib/road'
+import { project } from '../lib/mapProjection'
 
 const STEP_M = 5 // drawing resolution of the centerline
 
@@ -32,18 +33,20 @@ export const RoadPaths = memo(function RoadPaths({ map }) {
 })
 
 /** Exit ticks and names in screen coordinates, so text and ticks never scale with zoom. */
-export const ExitLayer = memo(function ExitLayer({ map, cx, cy, scale, w, h }) {
+export const ExitLayer = memo(function ExitLayer({ map, cx, cy, scale, w, h, rot }) {
+  const to = (p) => project({ cx, cy, scale, w, h, rot }, p.x, p.y)
   return (
     <g>
       {map.exits.map((e) => {
         const p = roadPointAt(map, e.s)
         const a = roadPointAt(map, e.s - 2)
         const b = roadPointAt(map, e.s + 2)
-        const px = w / 2 + (p.x - cx) * scale
-        const py = h / 2 - (p.y - cy) * scale
-        // screen-space unit normal to the road tangent (y is flipped)
-        const tx = b.x - a.x
-        const ty = -(b.y - a.y)
+        const [px, py] = to(p)
+        const [ax, ay] = to(a)
+        const [bx, by] = to(b)
+        // screen-space unit normal to the road tangent (projected, so the rotation is included)
+        const tx = bx - ax
+        const ty = by - ay
         const len = Math.hypot(tx, ty) || 1
         const nx = -ty / len
         const ny = tx / len

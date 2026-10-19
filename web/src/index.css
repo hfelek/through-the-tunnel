@@ -66,6 +66,8 @@ body { margin: 0; }
 .map-view svg:active { cursor: grabbing; }
 .exit-label { font-size: 12px; fill: #b91c1c; font-weight: 600; pointer-events: none; }
 .follow-toggle { position: absolute; top: 8px; right: 10px; font-size: 13px; background: rgba(255,255,255,0.9); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border); }
+.north-box { position: absolute; left: 8px; top: 6px; display: flex; align-items: center; gap: 4px; font-size: 13px; }
+.north-box label { background: rgba(255,255,255,0.9); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border); }
 .legend { position: absolute; left: 10px; bottom: 8px; display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; background: rgba(255,255,255,0.9); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }

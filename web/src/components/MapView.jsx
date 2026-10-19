@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { interpAt } from '../lib/interp'
 import { roadPointAt } from '../lib/road'
+import { roadRotation, screenToWorldOffset } from '../lib/mapProjection'
 import { estimatorColor, TRUTH_COLOR } from '../colors'
 import { ExitLayer, RoadPaths } from './MapStatic'
 import MapDynamic from './MapDynamic'
 import ScaleBar from './ScaleBar'
+import NorthArrow from './NorthArrow'
 
 const HEIGHT = 360
 const FOLLOW_VIEW_M = 1000 // visible width when following the car
@@ -18,6 +20,7 @@ export default function MapView({ trace, estimators, t }) {
   const [w, setW] = useState(800)
   // scale null = default (FOLLOW_VIEW_M across the width)
   const [view, setView] = useState({ cx: 0, cy: 0, scale: null, follow: true })
+  const [northUp, setNorthUp] = useState(false) // false: the road runs left to right
 
   useEffect(() => {
     if (!wrapEl) return
@@ -30,6 +33,7 @@ export default function MapView({ trace, estimators, t }) {
   const map = trace?.map
   const sTrue = vehicle?.truth?.t?.length ? interpAt(vehicle.truth.t, vehicle.truth.s, t) : null
   const car = map && sTrue != null ? roadPointAt(map, sTrue) : null
+  const rot = map && !northUp ? roadRotation(map) : 0 // view rotation only; no data changes
   const scale = view.scale ?? w / FOLLOW_VIEW_M
   const follow = view.follow && car != null
   const cx = follow ? car.x : view.cx
@@ -38,7 +42,7 @@ export default function MapView({ trace, estimators, t }) {
   // the wheel listener must be non-passive to stop page scrolling
   const latest = useRef()
   useEffect(() => {
-    latest.current = { w, cx, cy, scale, follow }
+    latest.current = { w, cx, cy, scale, follow, rot }
   })
   useEffect(() => {
     const svg = svgEl
@@ -52,9 +56,10 @@ export default function MapView({ trace, estimators, t }) {
       const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, L.scale * Math.exp(-ev.deltaY * 0.0015)))
       setView((v) => {
         if (L.follow) return { ...v, scale: next } // car stays centered
-        const wx = L.cx + (px - L.w / 2) / L.scale
-        const wy = L.cy - (py - HEIGHT / 2) / L.scale
-        return { ...v, scale: next, cx: wx - (px - L.w / 2) / next, cy: wy + (py - HEIGHT / 2) / next }
+        // keep the world point under the cursor fixed: its offset from the centre shrinks or grows with the scale
+        const [ox, oy] = screenToWorldOffset(px - L.w / 2, py - HEIGHT / 2, L.scale, L.rot)
+        const [nx, ny] = screenToWorldOffset(px - L.w / 2, py - HEIGHT / 2, next, L.rot)
+        return { ...v, scale: next, cx: L.cx + ox - nx, cy: L.cy + oy - ny }
       })
     }
     svg.addEventListener('wheel', onWheel, { passive: false })
@@ -73,14 +78,15 @@ export default function MapView({ trace, estimators, t }) {
     drag.current = { x: ev.clientX, y: ev.clientY }
     if (dx === 0 && dy === 0) return
     const L = latest.current
-    setView((v) => ({ ...v, follow: false, scale: L.scale, cx: L.cx - dx / L.scale, cy: L.cy + dy / L.scale }))
+    const [wx, wy] = screenToWorldOffset(dx, dy, L.scale, L.rot) // the map follows the pointer, so the centre moves the other way
+    setView((v) => ({ ...v, follow: false, scale: L.scale, cx: L.cx - wx, cy: L.cy - wy }))
   }
   const onPointerUp = () => { drag.current = null }
 
   const toggleFollow = () =>
     setView((v) => (v.follow ? { ...v, follow: false, cx, cy, scale } : { ...v, follow: true, scale: null }))
 
-  const geom = { cx, cy, scale, w, h: HEIGHT }
+  const geom = { cx, cy, scale, w, h: HEIGHT, rot }
   if (!map || !vehicle) {
     return (
       <section className="map-view empty" ref={setWrapEl} style={{ height: HEIGHT }}>
@@ -100,7 +106,7 @@ export default function MapView({ trace, estimators, t }) {
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
       >
-        <g transform={`translate(${w / 2} ${HEIGHT / 2}) scale(${scale} ${-scale}) translate(${-cx} ${-cy})`} fill="none" strokeLinejoin="round">
+        <g transform={`translate(${w / 2} ${HEIGHT / 2}) scale(${scale} ${-scale}) rotate(${(rot * 180) / Math.PI}) translate(${-cx} ${-cy})`} fill="none" strokeLinejoin="round">
           <RoadPaths map={map} />
         </g>
         <ExitLayer map={map} {...geom} />
@@ -109,6 +115,10 @@ export default function MapView({ trace, estimators, t }) {
       <label className="follow-toggle">
         <input type="checkbox" checked={follow} onChange={toggleFollow} disabled={car == null} /> Follow car
       </label>
+      <div className="north-box">
+        <NorthArrow rot={rot} />
+        <label><input type="checkbox" checked={northUp} onChange={(e) => setNorthUp(e.target.checked)} /> North up</label>
+      </div>
       <ScaleBar scale={scale} />
       <div className="legend">
         <span><i className="dot" style={{ background: TRUTH_COLOR }} /> Truth</span>

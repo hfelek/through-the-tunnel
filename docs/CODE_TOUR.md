@@ -287,6 +287,7 @@ Pattern to keep: data-heavy layers are memoized and drawn once per trace; only s
 - `state.js: reducer` (`:18`): scenario (single source of truth), trace, selected estimators and params, `outdated` flag
   (`edit_scenario`, `:48`: an edit keeps the old trace on screen marked outdated).
 - `api.js`: one function per endpoint; `simulate` (`:37`).
+- Map view rotation (T7.2-CR3): `lib/mapProjection.js` (`roadRotation`: angle that turns the road's first-to-last-point line left to right; `project`: world to screen pixels; `screenToWorldOffset`: the inverse for pan and wheel zoom). `MapView` holds `northUp` (default off, `rot = 0` when on) and passes `rot` to `RoadPaths` (an SVG `rotate` in the view transform), `ExitLayer` and `MapDynamic` (they project positions, so markers, labels and bars stay upright and keep their pixel sizes). `NorthArrow.jsx` points to world north on screen. Data and traces are not changed.
 - Map: `MapView.jsx`, `MapStatic.jsx` (memoized `RoadPaths`, `ExitLayer`), `MapDynamic.jsx` (`:10`, car and estimate markers
   that depend on `t`: the marker sits at `display_s`, the ±2σ bar around `s`, and a thin second ring at `s` only when the two differ by more than 5 m, `estimateAt` in `lib/trace.js`), `ScaleBar.jsx`. `ElevationProfile.jsx`: `ProfileStatic` (`:37`, memoized) and markers (same display_s / raw s rule as the map).
 - Playback: `lib/usePlayback.js` (`:7`): `t`, play/pause, speed, seek, keyboard shortcuts; the `requestAnimationFrame` loop is

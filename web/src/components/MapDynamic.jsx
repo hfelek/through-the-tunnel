@@ -1,5 +1,6 @@
 import { lowerBound, interpAt } from '../lib/interp'
 import { roadPointAt } from '../lib/road'
+import { project } from '../lib/mapProjection'
 import { estimateAt } from '../lib/trace'
 import { estimatorColor, TRUTH_COLOR } from '../colors'
 
@@ -8,9 +9,8 @@ const MIN_BAR_PX = 3 // display-only: keeps a tiny 2*sigma bar visible; not a da
 const BAR_SAMPLES = 24
 
 /** Truth, estimates, ±2σ bars and recent GNSS fixes; the only map layer that depends on t. */
-export default function MapDynamic({ map, vehicle, estimators, t, cx, cy, scale, w, h }) {
-  const sx = (x) => w / 2 + (x - cx) * scale
-  const sy = (y) => h / 2 - (y - cy) * scale
+export default function MapDynamic({ map, vehicle, estimators, t, cx, cy, scale, w, h, rot }) {
+  const to = (p) => project({ cx, cy, scale, w, h, rot }, p.x, p.y) // [px, py]; markers stay upright, only positions rotate
   const road0 = map.s[0]
   const road1 = map.s[map.s.length - 1]
   const truth = vehicle.truth
@@ -23,7 +23,7 @@ export default function MapDynamic({ map, vehicle, estimators, t, cx, cy, scale,
     const pts = []
     for (let k = 0; k <= BAR_SAMPLES; k++) {
       const p = roadPointAt(map, a + ((b - a) * k) / BAR_SAMPLES)
-      pts.push(`${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`)
+      pts.push(to(p).map((c) => c.toFixed(1)).join(','))
     }
     return pts.join(' ')
   }
@@ -33,7 +33,7 @@ export default function MapDynamic({ map, vehicle, estimators, t, cx, cy, scale,
   if (gnss?.t?.length) {
     const end = lowerBound(gnss.t, t + 1e-9)
     for (let i = lowerBound(gnss.t, t - GNSS_WINDOW_S); i < end; i++) {
-      dots.push(<circle key={i} cx={sx(gnss.x[i])} cy={sy(gnss.y[i])} r={2.5} fill="#6b7280" fillOpacity={0.6} />)
+      dots.push(<circle key={i} cx={to({ x: gnss.x[i], y: gnss.y[i] })[0]} cy={to({ x: gnss.x[i], y: gnss.y[i] })[1]} r={2.5} fill="#6b7280" fillOpacity={0.6} />)
     }
   }
 
@@ -54,13 +54,14 @@ export default function MapDynamic({ map, vehicle, estimators, t, cx, cy, scale,
       ))}
       {sTrue != null && (() => {
         const p = roadPointAt(map, sTrue)
-        return <circle cx={sx(p.x)} cy={sy(p.y)} r={6} fill={TRUTH_COLOR} />
+        const [px, py] = to(p)
+        return <circle cx={px} cy={py} r={6} fill={TRUTH_COLOR} />
       })()}
       {est.map((e) => e.raw && (
-        <circle key={`raw-${e.id}`} cx={sx(e.raw.x)} cy={sy(e.raw.y)} r={9} fill="none" stroke={e.color} strokeOpacity={0.6} strokeWidth={1} />
+        <circle key={`raw-${e.id}`} cx={to(e.raw)[0]} cy={to(e.raw)[1]} r={9} fill="none" stroke={e.color} strokeOpacity={0.6} strokeWidth={1} />
       ))}
       {est.map((e) => (
-        <circle key={e.id} cx={sx(e.p.x)} cy={sy(e.p.y)} r={9} fill="none" stroke={e.color} strokeWidth={2.5} />
+        <circle key={e.id} cx={to(e.p)[0]} cy={to(e.p)[1]} r={9} fill="none" stroke={e.color} strokeWidth={2.5} />
       ))}
     </g>
   )

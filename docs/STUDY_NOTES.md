@@ -275,6 +275,7 @@ Rating for the interview demo: **core** (the story breaks without it), **useful*
 |---|---|---|---|
 | Map (SVG) | Road, tunnels, exits, truth car, each estimator with ±2σ bar, recent GNSS fixes. | `MapView.jsx`, `MapStatic.jsx`, `MapDynamic.jsx` | core |
 | Map pan, wheel zoom, scale bar | Navigation of the map. | `MapView.jsx`, `ScaleBar.jsx` | optional |
+| Map rotation, north arrow, "North up" checkbox | The road runs left to right by default (view rotation only, no data change); the arrow shows north; the checkbox restores north up. | `MapView.jsx`, `NorthArrow.jsx`, `lib/mapProjection.js` | useful |
 | Map "Follow car" checkbox | Keeps the car centered (1 km window). | `MapView.jsx` | useful |
 | Elevation profile | Road height with markers; the barometer's view of the dip; no estimator uses the barometer since T8.4-CR2. | `ElevationProfile.jsx` | useful |
 | Metrics table | Per estimator: in-tunnel RMSE, exit errors, consistency, callout timing, compute time; best per column. | `MetricsTable.jsx` | core |
