@@ -286,7 +286,7 @@ Pattern to keep: data-heavy layers are memoized and drawn once per trace; only s
   (`edit_scenario`, `:48`: an edit keeps the old trace on screen marked outdated).
 - `api.js`: one function per endpoint; `simulate` (`:37`).
 - Map: `MapView.jsx`, `MapStatic.jsx` (memoized `RoadPaths`, `ExitLayer`), `MapDynamic.jsx` (`:10`, car and estimate markers
-  that depend on `t`), `ScaleBar.jsx`. `ElevationProfile.jsx`: `ProfileStatic` (`:37`, memoized) and markers.
+  that depend on `t`: the marker sits at `display_s`, the ±2σ bar around `s`, and a thin second ring at `s` only when the two differ by more than 5 m, `estimateAt` in `lib/trace.js`), `ScaleBar.jsx`. `ElevationProfile.jsx`: `ProfileStatic` (`:37`, memoized) and markers (same display_s / raw s rule as the map).
 - Playback: `lib/usePlayback.js` (`:7`): `t`, play/pause, speed, seek, keyboard shortcuts; the `requestAnimationFrame` loop is
   `tick` (`:41`). `Timeline.jsx`: slider, tunnel bands, event jumps. `lib/interp.js: interpAt` (`:14`) reads a column at
   time `t`.

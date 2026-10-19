@@ -1,5 +1,6 @@
 import { lowerBound, interpAt } from '../lib/interp'
 import { roadPointAt } from '../lib/road'
+import { estimateAt } from '../lib/trace'
 import { estimatorColor, TRUTH_COLOR } from '../colors'
 
 const GNSS_WINDOW_S = 10
@@ -37,11 +38,12 @@ export default function MapDynamic({ map, vehicle, estimators, t, cx, cy, scale,
   }
 
   const est = Object.entries(vehicle.estimates ?? {}).map(([id, e]) => {
-    const s = interpAt(e.t, e.s, t)
+    const { s, shown, held } = estimateAt(e, t)
     const sigma = interpAt(e.t, e.sigma_s, t)
-    const p = roadPointAt(map, s)
+    const p = roadPointAt(map, shown) // the marker is the displayed position; the bar stays centred on s
+    const raw = held ? roadPointAt(map, s) : null
     const color = estimatorColor(estimators, id)
-    return { id, color, s, sigma, p }
+    return { id, color, s, sigma, p, raw }
   })
 
   return (
@@ -54,6 +56,9 @@ export default function MapDynamic({ map, vehicle, estimators, t, cx, cy, scale,
         const p = roadPointAt(map, sTrue)
         return <circle cx={sx(p.x)} cy={sy(p.y)} r={6} fill={TRUTH_COLOR} />
       })()}
+      {est.map((e) => e.raw && (
+        <circle key={`raw-${e.id}`} cx={sx(e.raw.x)} cy={sy(e.raw.y)} r={9} fill="none" stroke={e.color} strokeOpacity={0.6} strokeWidth={1} />
+      ))}
       {est.map((e) => (
         <circle key={e.id} cx={sx(e.p.x)} cy={sy(e.p.y)} r={9} fill="none" stroke={e.color} strokeWidth={2.5} />
       ))}
