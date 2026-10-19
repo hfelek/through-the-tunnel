@@ -22,7 +22,7 @@ class EkfEstimator:
     label = "EKF (IMU + GNSS)"
     default_params: ClassVar[dict[str, float]] = {  # A31
         "bias_rw": 5e-4, "v_rw": 0.3, "init_bias_sigma": 0.1, "sigma_v": 0.2, "lateral_k": 3.0, "gate_chi2": 13.8,
-        "speed_limit_factor": 1.3, "v_prior_sigma": 2.0,
+        "speed_limit_factor": 1.3, "v_prior_sigma": 2.0, "accel_trust_sigma_b": 0.05,
         "initial_sigma_s": 50.0, "initial_sigma_v": 5.0, "gnss_timeout_s": 1.5, "recover_fixes": 3,
     }
     constraints: ClassVar[dict[str, dict[str, object]]] = {
@@ -64,6 +64,7 @@ class EkfEstimator:
         if gate is not None and float(y @ np.linalg.solve(s_mat, y)) > gate:
             return False
         k = self.P @ h.T @ np.linalg.inv(s_mat)
+        k[3, :] = 0.0  # consider state: d_psi's uncertainty is propagated, its mean is never updated (Joseph form holds for any gain)
         self.x = self.x + k @ y
         ikh = _I4 - k @ h
         self.P = ikh @ self.P @ ikh.T + k @ r @ k.T
@@ -101,6 +102,11 @@ class EkfEstimator:
                 self._reset_psi(al.sigma_psi)  # first aligned sample, a new mount, or a fresh calibration after a put-back
                 d = 0.0
             self._d_ready, self._was_realigned = True, realigned
+        # acceleration trust rule: with a poorly known offset, constant speed beats integrating acceleration. It applies
+        # when no fix is current: with GNSS the offset can be re-learned, which needs the IMU prediction (in the
+        # constant-velocity branch b is not coupled to v, so b could never come back below the threshold).
+        gnss_current = self._t_acc is not None and m.t - self._t_acc <= self.gnss_timeout_s
+        if a.valid and (gnss_current or np.sqrt(self.P[2, 2]) <= self.accel_trust_sigma_b):
             w = a.yaw_rate
             acc = a.a_long - b - d * v * w  # d_psi * a_lat is the yaw error's share of the measured a_long
             self.x = np.array([s + v * dt + 0.5 * acc * dt * dt, v + acc * dt, b, d])
