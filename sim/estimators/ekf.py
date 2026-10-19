@@ -1,4 +1,4 @@
-"""EKF (T8.2, docs/design/T8.2_ekf.md): state [s, v, b] from aligned IMU acceleration and GNSS."""
+"""EKF (T8.2, docs/design/T8.2_ekf.md): state [s, v, b, d_psi] from aligned IMU acceleration and GNSS."""
 from __future__ import annotations
 
 from typing import ClassVar
@@ -11,9 +11,9 @@ from sim.estimators.registry import register
 from sim.world.road import RoadMap
 
 R68_TO_AXIS = 1.5096  # h_acc is the radial 68% value; for a 2-D Gaussian R68 = 1.5096 * sigma_axis
-_I3 = np.eye(3)
-_H_GNSS = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
-_H_V = np.array([[0.0, 1.0, 0.0]])
+_I4 = np.eye(4)
+_H_GNSS = np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]])
+_H_V = np.array([[0.0, 1.0, 0.0, 0.0]])
 
 
 @register
@@ -35,8 +35,10 @@ class EkfEstimator:
             setattr(self, k, float(v))
         self.road = road
         self.aligner = Aligner(road)
-        self.x = np.zeros(3)  # s, v, b
-        self.P = np.diag([self.initial_sigma_s**2, self.initial_sigma_v**2, self.init_bias_sigma**2])
+        self.x = np.zeros(4)  # s, v, b, d_psi (remaining mount yaw error)
+        self.P = np.diag([self.initial_sigma_s**2, self.initial_sigma_v**2, self.init_bias_sigma**2, 0.1**2])
+        self._d_ready = False  # d_psi starts with the aligner's sigma_psi at the first aligned sample
+        self._was_realigned = False
         self._limits = [(sl.from_s, sl.to_s, sl.kmh / 3.6) for sl in road.speed_limits]
         self._t_imu: float | None = None
         self._have_fix = False
@@ -63,7 +65,7 @@ class EkfEstimator:
             return False
         k = self.P @ h.T @ np.linalg.inv(s_mat)
         self.x = self.x + k @ y
-        ikh = _I3 - k @ h
+        ikh = _I4 - k @ h
         self.P = ikh @ self.P @ ikh.T + k @ r @ k.T
         self._clip()
         return True
@@ -76,6 +78,13 @@ class EkfEstimator:
             self.aligner.process_gnss(m)
             self._gnss(m)
 
+    def _reset_psi(self, sigma_psi: float) -> None:
+        """d_psi = 0 with the aligner's sigma_psi; no correlation with the other states."""
+        self.x[3] = 0.0
+        self.P[3, :] = 0.0
+        self.P[:, 3] = 0.0
+        self.P[3, 3] = sigma_psi**2
+
     def _imu(self, m: Measurement) -> None:
         a = self.aligner.process_imu(m, float(self.x[0]), float(self.x[1]))  # the EKF's own position for the grade
         dt = 0.0 if self._t_imu is None else m.t - self._t_imu
@@ -84,18 +93,31 @@ class EkfEstimator:
             return
         if a.mount_changed:  # the constant offset may have changed with the mount
             self.P[2, 2] += (G * a.sigma_tilt) ** 2
-        s, v, b = self.x
+        s, v, b, d = self.x
         if a.valid:
-            acc = a.a_long - b
-            self.x = np.array([s + v * dt + 0.5 * acc * dt * dt, v + acc * dt, b])
-            f = np.array([[1.0, dt, -0.5 * dt * dt], [0.0, 1.0, -dt], [0.0, 0.0, 1.0]])
-            g = np.array([0.5 * dt * dt, dt, 0.0])
-            q = a.sigma_a_long**2 * np.outer(g, g)
+            al = self.aligner.active
+            realigned = a.mode == "realigned"
+            if (not self._d_ready or a.mount_changed or (self._was_realigned and not realigned)) and al is not None:
+                self._reset_psi(al.sigma_psi)  # first aligned sample, a new mount, or a fresh calibration after a put-back
+                d = 0.0
+            self._d_ready, self._was_realigned = True, realigned
+            w = a.yaw_rate
+            acc = a.a_long - b - d * v * w  # d_psi * a_lat is the yaw error's share of the measured a_long
+            self.x = np.array([s + v * dt + 0.5 * acc * dt * dt, v + acc * dt, b, d])
+            f = np.array([
+                [1.0, dt - 0.5 * d * w * dt * dt, -0.5 * dt * dt, -0.5 * v * w * dt * dt],
+                [0.0, 1.0 - d * w * dt, -dt, -v * w * dt],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ])
+            g = np.array([0.5 * dt * dt, dt, 0.0, 0.0])
+            q = self.aligner.sigma_base**2 * np.outer(g, g)  # sigma_psi * |v * w| is carried by d_psi, not counted twice
             q[2, 2] += self.bias_rw**2 * dt
         else:  # constant velocity, the driver's unknown acceleration as a velocity random walk
-            self.x = np.array([s + v * dt, v, b])
-            f = np.array([[1.0, dt, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
-            q = np.zeros((3, 3))
+            self.x = np.array([s + v * dt, v, b, d])
+            f = np.eye(4)
+            f[0, 1] = dt
+            q = np.zeros((4, 4))
             q[:2, :2] = self.v_rw**2 * np.array([[dt**3 / 3.0, dt**2 / 2.0], [dt**2 / 2.0, dt]])
         self.P = f @ self.P @ f.T + q
         self._clip()
@@ -114,8 +136,8 @@ class EkfEstimator:
             return  # far off the single-lane road: a broken fix
         z, r = np.array([s_meas, float(d["speed"])]), np.diag([sig_s**2, sig_v**2])
         if not self._have_fix:
-            self.x = np.array([s_meas, z[1], 0.0])
-            self.P = np.diag([r[0, 0], r[1, 1], self.init_bias_sigma**2])
+            self.x = np.array([s_meas, z[1], 0.0, 0.0])
+            self.P = np.diag([r[0, 0], r[1, 1], self.init_bias_sigma**2, 0.1**2])
             self._have_fix = True
         elif not self._kalman(_H_GNSS, z, r, gate=self.gate_chi2):
             return
