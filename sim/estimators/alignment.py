@@ -288,7 +288,8 @@ class Aligner:
 
         Gravity tilt: the mean specific force over `gravity_avg_s` minus the vehicle's own acceleration. With current
         GNSS the mean is taken between the first and last fix in the window and the acceleration is the GNSS dv/dt
-        (sigma 0.05 m/s^2); otherwise the estimator's own speed change is used (sigma 0.2 m/s^2, A30).
+        (sigma 0.05 m/s^2); otherwise no acceleration is subtracted (sigma 0.2 m/s^2, A30). The estimator's own speed change must not be
+        used: an EKF that integrates a tilt-biased a_long would then explain the bias away as real deceleration.
         """
         gr = self._grav
         if gr["v0"] is None:
@@ -307,8 +308,8 @@ class Aligner:
             n, mean_a, a_f = n1 - n0, (a1 - a0) / (n1 - n0), (v1 - v0) / (t1 - t0)
             mean_al, mean_gs, sigma_acc = (l1 - l0) / n, (g1 - g0) / n, self.acc_unknown_gnss_mps2
         else:
-            n, span = gr["n"], t - gr["t0"]
-            mean_a, a_f = gr["a"] / n, (gr["v1"] - gr["v0"]) / span
+            n = gr["n"]  # no GNSS: the vehicle's acceleration is unknown, not read from the estimator (that is circular)
+            mean_a, a_f = gr["a"] / n, 0.0
             mean_al, mean_gs, sigma_acc = gr["al"] / n, gr["gs"] / n, self.acc_unknown_mps2
         u_meas = _unit(mean_a - al.f * (a_f + mean_gs) - al.l * mean_al)
         angle = float(np.arccos(np.clip(u_meas @ al.u, -1.0, 1.0)))
