@@ -273,7 +273,7 @@ Rating for the interview demo: **core** (the story breaks without it), **useful*
 
 | View | What it shows | File | Rating |
 |---|---|---|---|
-| Map (SVG) | Road, tunnels, exits, truth car, each estimator with ±2σ bar, recent GNSS fixes. | `MapView.jsx`, `MapStatic.jsx`, `MapDynamic.jsx` | core |
+| Map (SVG) | Road, tunnels, exits, truth car, each estimator (own colour and hollow shape) with ±2σ bar, recent GNSS fixes. | `MapView.jsx`, `MapStatic.jsx`, `MapDynamic.jsx` | core |
 | Map pan, wheel zoom, scale bar | Navigation of the map. | `MapView.jsx`, `ScaleBar.jsx` | optional |
 | Map rotation, north arrow, "North up" checkbox | The road runs left to right by default (view rotation only, no data change); the arrow shows north; the checkbox restores north up. | `MapView.jsx`, `NorthArrow.jsx`, `lib/mapProjection.js` | useful |
 | Map "Follow car" checkbox | Keeps the car centered (1 km window). | `MapView.jsx` | useful |

@@ -1,7 +1,8 @@
 import { memo, useEffect, useMemo, useState } from 'react'
 import { interpAt } from '../lib/interp'
 import { estimateAt } from '../lib/trace'
-import { estimatorColor, TRUTH_COLOR } from '../colors'
+import { estimatorColor, estimatorShape, TRUTH_COLOR } from '../colors'
+import EstimatorMarker from './EstimatorMarker'
 
 const HEIGHT = 160
 const M = { l: 46, r: 14, t: 10, b: 24 }
@@ -85,10 +86,11 @@ function ProfileMarkers({ map, sc, vehicle, estimators, t }) {
       {Object.entries(vehicle.estimates ?? {}).map(([id, e]) => {
         const { s, shown, held } = estimateAt(e, t) // marker at the displayed position; thin ring at raw s when they differ
         const color = estimatorColor(estimators, id)
+        const shape = estimatorShape(estimators, id)
         return (
           <g key={id}>
-            {held && <circle {...pos(s)} r={7} fill="none" stroke={color} strokeOpacity={0.6} strokeWidth={1} />}
-            <circle {...pos(shown)} r={7} fill="none" stroke={color} strokeWidth={2.5} />
+            {held && <EstimatorMarker shape={shape} x={pos(s).cx} y={pos(s).cy} r={7} color={color} strokeOpacity={0.6} strokeWidth={1} />}
+            <EstimatorMarker shape={shape} x={pos(shown).cx} y={pos(shown).cy} r={7} color={color} />
           </g>
         )
       })}

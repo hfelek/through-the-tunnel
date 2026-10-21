@@ -7,3 +7,11 @@ export function estimatorColor(estimators, id) {
   const i = estimators.findIndex((e) => e.id === id)
   return PALETTE[(i < 0 ? 0 : i) % PALETTE.length]
 }
+
+const SHAPES = ['circle', 'triangle', 'square', 'diamond']
+
+/** Fixed hollow shape per estimator, assigned in registry order like the colour (so coincident markers stay visible). */
+export function estimatorShape(estimators, id) {
+  const i = estimators.findIndex((e) => e.id === id)
+  return SHAPES[(i < 0 ? 0 : i) % SHAPES.length]
+}

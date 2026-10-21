@@ -71,7 +71,7 @@ body { margin: 0; }
 .legend { position: absolute; left: 10px; bottom: 8px; display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; background: rgba(255,255,255,0.9); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
-.dot.hollow { border: 2px solid; }
+.legend-marker { display: block; flex: none; }
 .dot.gnss { background: #6b7280; width: 6px; height: 6px; opacity: 0.6; }
 .map-view.empty { display: flex; align-items: center; justify-content: center; color: var(--muted); border-style: dashed; }
 .view-error { padding: 12px 14px; border-radius: 8px; background: #fef2f2; border: 1px solid #fecaca; color: var(--danger); font-size: 14px; }

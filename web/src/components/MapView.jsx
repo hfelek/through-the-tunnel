@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { interpAt } from '../lib/interp'
 import { roadPointAt } from '../lib/road'
 import { roadRotation, screenToWorldOffset } from '../lib/mapProjection'
-import { estimatorColor, TRUTH_COLOR } from '../colors'
+import { estimatorColor, estimatorShape, TRUTH_COLOR } from '../colors'
+import EstimatorMarker from './EstimatorMarker'
 import { ExitLayer, RoadPaths } from './MapStatic'
 import MapDynamic from './MapDynamic'
 import ScaleBar from './ScaleBar'
@@ -124,7 +125,9 @@ export default function MapView({ trace, estimators, t }) {
         <span><i className="dot" style={{ background: TRUTH_COLOR }} /> Truth</span>
         {Object.keys(vehicle.estimates ?? {}).map((id) => (
           <span key={id}>
-            <i className="dot hollow" style={{ borderColor: estimatorColor(estimators, id) }} />
+            <svg width={20} height={20} className="legend-marker">
+              <EstimatorMarker shape={estimatorShape(estimators, id)} x={10} y={10} r={6} color={estimatorColor(estimators, id)} strokeWidth={2} />
+            </svg>
             {estimators.find((e) => e.id === id)?.label ?? id}
           </span>
         ))}

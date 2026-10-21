@@ -2,7 +2,8 @@ import { lowerBound, interpAt } from '../lib/interp'
 import { roadPointAt } from '../lib/road'
 import { project } from '../lib/mapProjection'
 import { estimateAt } from '../lib/trace'
-import { estimatorColor, TRUTH_COLOR } from '../colors'
+import { estimatorColor, estimatorShape, TRUTH_COLOR } from '../colors'
+import EstimatorMarker from './EstimatorMarker'
 
 const GNSS_WINDOW_S = 10
 const MIN_BAR_PX = 3 // display-only: keeps a tiny 2*sigma bar visible; not a data value
@@ -43,7 +44,7 @@ export default function MapDynamic({ map, vehicle, estimators, t, cx, cy, scale,
     const p = roadPointAt(map, shown) // the marker is the displayed position; the bar stays centred on s
     const raw = held ? roadPointAt(map, s) : null
     const color = estimatorColor(estimators, id)
-    return { id, color, s, sigma, p, raw }
+    return { id, color, shape: estimatorShape(estimators, id), s, sigma, p, raw }
   })
 
   return (
@@ -58,10 +59,10 @@ export default function MapDynamic({ map, vehicle, estimators, t, cx, cy, scale,
         return <circle cx={px} cy={py} r={6} fill={TRUTH_COLOR} />
       })()}
       {est.map((e) => e.raw && (
-        <circle key={`raw-${e.id}`} cx={to(e.raw)[0]} cy={to(e.raw)[1]} r={9} fill="none" stroke={e.color} strokeOpacity={0.6} strokeWidth={1} />
+        <EstimatorMarker key={`raw-${e.id}`} shape={e.shape} x={to(e.raw)[0]} y={to(e.raw)[1]} r={9} color={e.color} strokeOpacity={0.6} strokeWidth={1} />
       ))}
       {est.map((e) => (
-        <circle key={e.id} cx={to(e.p)[0]} cy={to(e.p)[1]} r={9} fill="none" stroke={e.color} strokeWidth={2.5} />
+        <EstimatorMarker key={e.id} shape={e.shape} x={to(e.p)[0]} y={to(e.p)[1]} r={9} color={e.color} />
       ))}
     </g>
   )
