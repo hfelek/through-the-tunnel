@@ -30,7 +30,7 @@ RESULTS = ROOT / "docs" / "results"
 ESTIMATORS = ("baseline", "ekf", "ekf_zupt", "pf")
 DEFAULT_C1 = Aligner.default_params["tilt_gyro_c1_deg_per_s"]  # A30 default, read before any worker overrides it
 MAX_TUNNELS = 3  # exit-error columns per row: one per tunnel index
-COUNTERS = ("gate_resets", "beacon_updates", "zupt_applied", "zupt_gated")  # EKF counters; empty where absent
+COUNTERS = ("gate_resets", "beacon_updates", "zupt_applied", "zupt_gated", "bias_gated")  # EKF counters; empty where absent
 
 COLUMNS = [
     "scenario", "vehicle", "estimator", "variant", "seed", "git",

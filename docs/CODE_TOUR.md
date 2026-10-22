@@ -203,11 +203,11 @@ State `[s, v, b, d_psi]`: position, speed, acceleration offset, remaining mount 
   position and speed.
 - Weak speed prior (`:148`): pull `v` down if it is above `speed_limit_factor` × the limit.
 - `estimate` (`:227`) returns `s, v, sqrt(P)` and the mode (`gnss`, `recovering`, `dead_reckoning`).
-- `EkfZuptEstimator` (`:274`, id `ekf_zupt`, label "EKF + ZUPT"): the same class with `zupt = True` and four more parameters
-  (`zupt_acc_std`, `zupt_gyro_std`, `zupt_v_sigma`, `zupt_gate_chi2`). `ekf` stays without ZUPT so the two can be compared.
+- `EkfZuptEstimator` (`:274`, id `ekf_zupt`, label "EKF + ZUPT"): the same class with `zupt = True` and five more parameters
+  (`zupt_acc_std`, `zupt_gyro_std`, `zupt_v_sigma`, `zupt_gate_chi2`, `zupt_bias_floor_mps2`). `ekf` stays without ZUPT so the two can be compared.
   `_stationary_updates` (`:187`), called at the end of `_imu`: while the detector says stationary, `v = 0` every 0.1 s through
-  `_kalman(..., gate=zupt_gate_chi2)` (a rejected update is counted in `zupt_gated`), and once per second the mean aligned
-  `a_long` as a measurement of `b` (`H = [0, 0, 1, 0]`, true acceleration is 0). `_speed_not_zero` (`:183`) is the same
+  `_kalman(..., gate=zupt_gate_chi2, keep_s=False)` (a rejected update is counted in `zupt_gated`; T9.3: `keep_s=False` sets the s gain to 0, because the detector can fire while the car still creeps and P_sv/P_vv of ~22 s would turn the false `v = 0` into metres), and once per second the mean aligned
+  `a_long` as a measurement of `b` (`H = [0, 0, 1, 0]`, true acceleration is 0) with `R = max(s_win, 0.02)^2 / n + zupt_bias_floor_mps2^2` (`s_win` = std of `a_long` in the window; T9.3, A28/A32), gated at chi-square 10.8 (`BIAS_GATE_CHI2`; a rejected window is counted in `bias_gated`). `_speed_not_zero` (`:183`) is the same
   chi-square test; a bias window that fails it is dropped, because the detector lags the departure by about 2 s and the
   window would hold real acceleration (A32).
 - Exit safeguard (T8.6): in `_gnss` (`:212`), a fix that passes the lateral check but fails the gate adds to `_gate_streak`;
@@ -226,6 +226,8 @@ State `[s, v, b, d_psi]`: position, speed, acceleration offset, remaining mount 
   values and reports a pass when the value drops `drop_db` below its maximum. `poll(t)` reports a pass after 1 s without
   packets. `_finish` returns the time of the maximum, or the middle of the plateau (within 1 dB of the maximum for more than
   3 s) when the car stopped next to the beacon. After a pass it stays disarmed until the average falls below `min_dbm`.
+  T9.3: `_finish` returns that time minus `SMOOTH_S / 2`, the group delay of the causal moving average (measured +0.50 s, about 10 m
+  at 20 m/s, T9.2). The EKF's `beacon_sigma` default is 10 m, the per-pass spread measured then (9.9 m).
 
 ### `pf.py`: the particle filter (T8.4, `docs/design/T8.4_pf.md`, A34)
 
@@ -410,7 +412,7 @@ Edit `vehicles[0].plan` in the scenario (`docs/CONTRACTS.md` 3.2) or use the "Dr
 | `test_baseline.py` | baseline: small exit error at constant speed, large on stop-and-go |
 | `test_alignment.py` | Aligner on noise-free data: mount yaw and gyro bias found, handling detected and re-aligned, no false detection |
 | `test_pf.py` | particle filter: `curved_5km_exit_inside` in-tunnel RMSE below `ekf_zupt`; `undersea_3km_dip` exit error bounded |
-| `test_ekf.py` | EKF in-tunnel consistency on `curved_2km`; EKF+ZUPT in-tunnel consistency on `hard_brake_inside`; beacons bound the `beacons_5km` error (RMSE < 20 m) and change nothing without beacons (the 15 s standstill); the stationary detector never fires on the raw IMU of the constant-speed `curved_2km` and `beacons_5km`; EKF+ZUPT `display_s` is non-decreasing, its max display jump is below the baseline's and recovery exists in `short_straight_500m`, `hard_brake_inside`, `stop_and_go_3km` (T8.6) |
+| `test_ekf.py` | EKF in-tunnel consistency on `curved_2km`; EKF+ZUPT in-tunnel RMSE below half of the EKF's on `hard_brake_inside`; the beacon peak time of a symmetric pass is the true pass time (the moving-average delay is removed); a `v = 0` update with `keep_s=False` leaves s unchanged; beacons bound the `beacons_5km` error (RMSE < 20 m) and change nothing without beacons (the 15 s standstill); the stationary detector never fires on the raw IMU of the constant-speed `curved_2km` and `beacons_5km`; EKF+ZUPT `display_s` is non-decreasing, its max display jump is below the baseline's and recovery exists in `short_straight_500m`, `hard_brake_inside`, `stop_and_go_3km` (T8.6) |
 | `test_metrics.py` | RMSE, exit error, consistency, recovery time |
 | `test_montecarlo.py` | N = 2 on `short_straight_500m` into a temporary directory: CSV columns, resume adds nothing, summary table |
 | `test_callouts.py` | perfect estimate fires at the ideal time; larger k fires earlier; missed callouts |

@@ -150,7 +150,7 @@ def plots(rows: list[dict[str, str]], out: Path) -> None:
         ax.bar(np.arange(len(scenarios)) + j * width, med, width, label=est)
     ax.set_yscale("log")
     ax.set_xticks(np.arange(len(scenarios)) + 0.4 - width / 2, scenarios, rotation=60, ha="right")
-    ax.set_ylabel(f"median |exit error| (m), log scale, clipped at {FLOOR_M} m")
+    ax.set_ylabel(f"median |exit error| (m)\nlog scale, clipped at {FLOOR_M} m")  # two lines: one long line was cut off
     ax.legend()
     fig.tight_layout()
     fig.savefig(out / "overview_median_exit_error.png", dpi=130)

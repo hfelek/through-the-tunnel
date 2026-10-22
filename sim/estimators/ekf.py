@@ -1,6 +1,7 @@
 """EKF (T8.2, docs/design/T8.2_ekf.md): state [s, v, b, d_psi] from aligned IMU acceleration and GNSS."""
 from __future__ import annotations
 
+import math
 from typing import ClassVar
 
 import numpy as np
@@ -21,6 +22,8 @@ _H_B = np.array([[0.0, 0.0, 1.0, 0.0]])
 ZUPT_PERIOD_S = 0.1  # zero-velocity update rate while stationary (10 Hz)
 BEACON_GATE_CHI2 = 10.8  # chi-square, 1 dof, 99.9% (the beacon measures s only)
 BIAS_PERIOD_S = 1.0  # bias update rate while stationary
+BIAS_GATE_CHI2 = 10.8  # chi-square, 1 dof, 99.9%: a window mean the bias cannot explain (e.g. the start of a departure) is dropped
+BIAS_MIN_STD = 0.02  # m/s^2, lower bound for the noise measured in a window (a suspiciously quiet window must not get a huge gain; T9.3)
 
 
 @register
@@ -32,7 +35,7 @@ class EkfEstimator:
         "speed_limit_factor": 1.3, "v_prior_sigma": 2.0, "accel_trust_sigma_b": 0.05,
         "initial_sigma_s": 50.0, "initial_sigma_v": 5.0, "gnss_timeout_s": 1.5, "recover_fixes": 3,
         "gate_reset_n": 5, "display_k": 0.5, "display_max_catchup": 10.0,  # T8.6, A31
-        "beacon_min_dbm": -85.0, "beacon_drop_db": 3.0, "beacon_sigma": 5.0,  # T8.5, A33
+        "beacon_min_dbm": -85.0, "beacon_drop_db": 3.0, "beacon_sigma": 10.0,  # T8.5, A33
     }
     param_info: ClassVar[dict[str, dict[str, str]]] = {  # display metadata for the UI (T7.9-CR1); A31 = EKF tuning, A33 = beacons
         "bias_rw": {"label": "Accelerometer bias drift", "unit": "m/s²/√s", "description": "How fast the accelerometer bias may drift (process noise on the bias). Raising it relearns the bias faster but makes the estimate noisier (A31)."},
@@ -90,8 +93,8 @@ class EkfEstimator:
             self._detector = StationaryDetector(self.zupt_acc_std, self.zupt_gyro_std)
             self._next_zupt = 0.0
             self._bias_t0: float | None = None
-            self._bias_sum, self._bias_n = 0.0, 0
-            self.zupt_applied = self.zupt_gated = self.bias_updates = 0  # counters, for inspection
+            self._bias_sum, self._bias_sq, self._bias_n = 0.0, 0.0, 0
+            self.zupt_applied = self.zupt_gated = self.bias_updates = self.bias_gated = 0  # counters, for inspection
 
     # -- helpers ----------------------------------------------------------------------------------------------------
     def _limit(self, s: float) -> float | None:
@@ -104,14 +107,16 @@ class EkfEstimator:
         self.x[0] = min(max(self.x[0], 0.0), self.road.length_m)
         self.x[1] = max(self.x[1], 0.0)  # vehicles do not reverse in a tunnel
 
-    def _kalman(self, h: np.ndarray, z: np.ndarray, r: np.ndarray, gate: float | None = None) -> bool:
-        """Linear update (Joseph form); False if the chi-square gate rejects it."""
+    def _kalman(self, h: np.ndarray, z: np.ndarray, r: np.ndarray, gate: float | None = None, keep_s: bool = True) -> bool:
+        """Linear update (Joseph form); False if the chi-square gate rejects it. keep_s=False: the update cannot move s."""
         y = z - h @ self.x
         s_mat = h @ self.P @ h.T + r
         if gate is not None and float(y @ np.linalg.solve(s_mat, y)) > gate:
             return False
         k = self.P @ h.T @ np.linalg.inv(s_mat)
         k[3, :] = 0.0  # consider state: d_psi's uncertainty is propagated, its mean is never updated (Joseph form holds for any gain)
+        if not keep_s:
+            k[0, :] = 0.0  # same for s: P stays consistent with this suboptimal gain (Joseph form)
         self.x = self.x + k @ y
         ikh = _I4 - k @ h
         self.P = ikh @ self.P @ ikh.T + k @ r @ k.T
@@ -211,26 +216,34 @@ class EkfEstimator:
         """While the detector says stationary: v = 0 at 10 Hz (gated) and the mean a_long as a bias measurement at 1 Hz."""
         d = m.data
         if not self._detector.update(m.t, d["ax"], d["ay"], d["az"], d["gx"], d["gy"], d["gz"]):
-            self._bias_t0, self._bias_sum, self._bias_n = None, 0.0, 0  # leaving a stop: restart the bias window
+            self._bias_t0, self._bias_sum, self._bias_sq, self._bias_n = None, 0.0, 0.0, 0  # leaving a stop: restart the bias window
             return
         if m.t >= self._next_zupt:
             self._next_zupt = m.t + ZUPT_PERIOD_S
             # gate: if the EKF's own speed and uncertainty cannot be explained by v = 0 (slow crawl, false detection), skip
-            ok = self._kalman(_H_V, np.array([0.0]), np.array([[self.zupt_v_sigma**2]]), gate=self.zupt_gate_chi2)
+            # keep_s=False (T9.3): the detector can fire while the car still creeps at 0.4-0.8 m/s, and P_sv/P_vv of ~22 s would turn
+            # that false 'v = 0' into metres of position error; the update corrects v (and b through P_vb) only
+            ok = self._kalman(_H_V, np.array([0.0]), np.array([[self.zupt_v_sigma**2]]), gate=self.zupt_gate_chi2, keep_s=False)
             self.zupt_applied, self.zupt_gated = self.zupt_applied + ok, self.zupt_gated + (not ok)
         if self._bias_t0 is None:
             self._bias_t0 = m.t
         if aligned:
-            self._bias_sum, self._bias_n = self._bias_sum + a_long, self._bias_n + 1
+            self._bias_sum, self._bias_sq, self._bias_n = self._bias_sum + a_long, self._bias_sq + a_long**2, self._bias_n + 1
         if m.t - self._bias_t0 >= BIAS_PERIOD_S and self._bias_n > 0:
             if self._speed_not_zero():  # the car is pulling away: the detector lags, so this window holds real acceleration
-                self._bias_t0, self._bias_sum, self._bias_n = m.t, 0.0, 0
+                self._bias_t0, self._bias_sum, self._bias_sq, self._bias_n = m.t, 0.0, 0.0, 0
                 return
-            # standing still the true acceleration is 0, so the mean of a_long measures the offset b (sigma_base is per sample)
-            r = self.aligner.sigma_base**2 / self._bias_n
-            self._kalman(_H_B, np.array([self._bias_sum / self._bias_n]), np.array([[r]]))
-            self.bias_updates += 1
-            self._bias_t0, self._bias_sum, self._bias_n = m.t, 0.0, 0
+            # standing still the true acceleration is 0, so the mean of a_long measures the bias b. R comes from the noise
+            # measured in this window (A28's sigma_base is the driving vibration, ~8x too loud for a stop), floored at
+            # BIAS_MIN_STD, plus zupt_bias_floor_mps2 for correlated vibration and standing-vs-cruising differences (T9.3)
+            n, mean = self._bias_n, self._bias_sum / self._bias_n
+            s_win = math.sqrt(max(self._bias_sq / n - mean**2, 0.0) * n / max(n - 1, 1))  # sample std
+            r = max(s_win, BIAS_MIN_STD) ** 2 / n + self.zupt_bias_floor_mps2**2
+            if self._kalman(_H_B, np.array([mean]), np.array([[r]]), gate=BIAS_GATE_CHI2):
+                self.bias_updates += 1
+            else:
+                self.bias_gated += 1
+            self._bias_t0, self._bias_sum, self._bias_sq, self._bias_n = m.t, 0.0, 0.0, 0
 
     def _gnss(self, m: Measurement) -> None:
         d = m.data
@@ -303,15 +316,17 @@ class EkfZuptEstimator(EkfEstimator):
     default_params: ClassVar[dict[str, float]] = {
         **EkfEstimator.default_params,
         "zupt_acc_std": 0.05, "zupt_gyro_std": 0.004, "zupt_v_sigma": 0.02, "zupt_gate_chi2": 10.8,
+        "zupt_bias_floor_mps2": 0.003,
     }
     param_info: ClassVar[dict[str, dict[str, str]]] = {  # A32
         **EkfEstimator.param_info,
         "zupt_acc_std": {"label": "Standstill: accelerometer limit", "unit": "m/s²", "description": "The vehicle counts as stationary when the std of the accelerometer magnitude over 1 s stays below this (and the gyro below its limit) for 0.5 s. Raising it detects standstill more easily, also while driving (A32)."},
         "zupt_gyro_std": {"label": "Standstill: gyro limit", "unit": "rad/s", "description": "The same test for the gyro magnitude: it must stay below this for the vehicle to count as stationary (A32)."},
         "zupt_v_sigma": {"label": "Zero-speed noise", "unit": "m/s", "description": "Standard deviation of the 'speed is 0' measurement applied at 10 Hz while stationary. Smaller means a stronger update (A32)."},
+        "zupt_bias_floor_mps2": {"label": "Stop bias noise floor", "unit": "m/s²", "description": "Noise added to the bias measurement of a stop on top of the noise measured in its 1 s window, for correlated vibration and standing-vs-cruising differences. Raising it makes the bias learn more slowly from stops (A32)."},
         "zupt_gate_chi2": {"label": "Zero-speed gate", "unit": "chi-square", "description": "Chi-square limit (1 degree of freedom): 'speed is 0' is not applied if the filter's speed and uncertainty cannot be explained by standing still (A32)."},
     }
     constraints: ClassVar[dict[str, dict[str, object]]] = {
         **EkfEstimator.constraints,
-        **{k: {"type": "float", "gt": 0} for k in ("zupt_acc_std", "zupt_gyro_std", "zupt_v_sigma", "zupt_gate_chi2")},
+        **{k: {"type": "float", "gt": 0} for k in ("zupt_acc_std", "zupt_gyro_std", "zupt_v_sigma", "zupt_gate_chi2", "zupt_bias_floor_mps2")},
     }

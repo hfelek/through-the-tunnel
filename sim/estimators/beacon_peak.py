@@ -51,4 +51,4 @@ class PeakDetector:
         self._pass, self._armed = [], False
         self._packets.clear()
         self._sum = 0.0
-        return t_peak
+        return t_peak - SMOOTH_S / 2  # a causal moving average delays the peak by half its window (T9.3, A33)
