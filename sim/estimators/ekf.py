@@ -35,15 +35,15 @@ class EkfEstimator:
         "beacon_min_dbm": -85.0, "beacon_drop_db": 3.0, "beacon_sigma": 5.0,  # T8.5, A33
     }
     param_info: ClassVar[dict[str, dict[str, str]]] = {  # display metadata for the UI (T7.9-CR1); A31 = EKF tuning, A33 = beacons
-        "bias_rw": {"label": "Offset drift", "unit": "m/s²/√s", "description": "How fast the accelerometer offset may drift (process noise on the offset). Raising it relearns the offset faster but makes the estimate noisier (A31)."},
+        "bias_rw": {"label": "Accelerometer bias drift", "unit": "m/s²/√s", "description": "How fast the accelerometer bias may drift (process noise on the bias). Raising it relearns the bias faster but makes the estimate noisier (A31)."},
         "v_rw": {"label": "Speed noise without accelerometer", "unit": "m/s/√s", "description": "Process noise on speed when the accelerometer is not used: the driver's unknown acceleration. Raising it widens the uncertainty and makes the filter follow GNSS speed more closely (A31)."},
-        "init_bias_sigma": {"label": "Initial offset uncertainty", "unit": "m/s²", "description": "Uncertainty of the accelerometer offset at the start and at the first fix. Raising it lets the first fixes correct the offset more strongly (A31)."},
+        "init_bias_sigma": {"label": "Initial accelerometer bias uncertainty", "unit": "m/s²", "description": "Uncertainty of the accelerometer bias at the start and at the first fix. Raising it lets the first fixes correct the bias more strongly (A31)."},
         "sigma_v": {"label": "Speed noise of a fix", "unit": "m/s", "description": "Speed noise assumed for a GNSS fix that reports no speed accuracy (A31)."},
         "lateral_k": {"label": "Off-road limit", "unit": "× sigma", "description": "A fix farther from the road than this many sigma (h_acc / 1.5096) is dropped as broken (A31)."},
         "gate_chi2": {"label": "GNSS gate", "unit": "chi-square", "description": "Chi-square limit (2 degrees of freedom, 99.9%) on a fix's position and speed innovation. A fix above it is rejected; raising it accepts more outliers (A31)."},
         "speed_limit_factor": {"label": "Speed-limit factor", "unit": "×", "description": "When the estimated speed exceeds this factor times the road's speed limit, a weak speed-limit measurement pulls it down (A31)."},
         "v_prior_sigma": {"label": "Speed-limit pull", "unit": "m/s", "description": "Standard deviation of that speed-limit measurement. Larger means a weaker pull (A31)."},
-        "accel_trust_sigma_b": {"label": "Accelerometer trust limit", "unit": "m/s²", "description": "Without a current fix, the accelerometer is integrated only while the offset uncertainty is below this; otherwise the speed is held constant (A31)."},
+        "accel_trust_sigma_b": {"label": "Accelerometer trust limit", "unit": "m/s²", "description": "Without a current fix, the accelerometer is integrated only while the bias uncertainty is below this; otherwise the speed is held constant (A31)."},
         "initial_sigma_s": {"label": "Initial position uncertainty", "unit": "m", "description": "Position uncertainty before the first fix (A31)."},
         "initial_sigma_v": {"label": "Initial speed uncertainty", "unit": "m/s", "description": "Speed uncertainty before the first fix (A31)."},
         "gnss_timeout_s": {"label": "GNSS timeout", "unit": "s", "description": "Time after the last accepted fix when the fix is no longer current. The filter then reports dead reckoning, and the accelerometer trust rule applies (A31)."},
@@ -53,7 +53,7 @@ class EkfEstimator:
         "display_max_catchup": {"label": "Display speed limit", "unit": "m/s", "description": "The displayed position never moves faster than the speed plus this. Affects the display only (T8.6, A31)."},
         "beacon_min_dbm": {"label": "Beacon detection level", "unit": "dBm", "description": "A beacon pass is recognised only while the 1 s average signal is above this level (T8.5, A33)."},
         "beacon_drop_db": {"label": "Beacon peak drop", "unit": "dB", "description": "A pass ends, and its peak time is fixed, when the signal falls this far below its maximum (T8.5, A33)."},
-        "beacon_sigma": {"label": "Beacon position noise", "unit": "m", "description": "Standard deviation of the position update at a beacon: the peak-time error, plus the speed error times the age of the detection (T8.5, A33)."},
+        "beacon_sigma": {"label": "Beacon position noise", "unit": "m", "description": "Position error of the beacon peak time alone. The update also adds the speed uncertainty times the detection age on top of this (T8.5, A33)."},
     }
     constraints: ClassVar[dict[str, dict[str, object]]] = {
         **{k: {"type": "float", "gt": 0} for k in default_params
