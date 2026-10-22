@@ -1,6 +1,7 @@
 import asyncio
 import json
 import re
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Response
@@ -18,7 +19,13 @@ SCENARIOS = ROOT / "scenarios"
 PRESETS = ROOT / "presets"
 ID_RE = re.compile(r"^[a-z0-9_]+$")
 
-app = FastAPI(title="Through the Tunnel")
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    yield
+    mc.shutdown()  # the pool workers ignore Ctrl+C, so the server stops them
+
+
+app = FastAPI(title="Through the Tunnel", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173"], allow_methods=["GET", "POST"])
 
 

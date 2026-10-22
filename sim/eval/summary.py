@@ -58,9 +58,19 @@ def has_variants(rows: list[dict[str, str]]) -> bool:
     return any(r["variant"] != "" for r in rows)
 
 
+def _recovery_cells(g: list[dict[str, str]], i: int, first: bool) -> list[str]:
+    """Recovery per tunnel (an empty cell = never recovered, counted); the display jump is per run, so on the first tunnel row."""
+    rec = _nums(g, f"recovery_time_s_t{i}")
+    not_rec = sum(1 for r in g if r[f"exit_error_m_t{i}"] != "" and r[f"recovery_time_s_t{i}"] == "")
+    jump = _nums(g, "max_display_jump_m")
+    return [_stat(rec, np.median), _stat(rec, _p90), str(not_rec),
+            _stat(jump, np.median) if first else "", _stat(jump, np.max) if first else ""]
+
+
 def accuracy_table(rows: list[dict[str, str]]) -> list[str]:
     head = ["Scenario", "Estimator", "Tunnel", "Runs", "Median abs. exit error (m)", "p90 abs. exit error (m)",
-            "p95 abs. exit error (m)", "Max abs. exit error (m)", "Median RMSE (m)", "Mean consistency (%)", "Missed callouts", "Median time (µs/meas.)"]
+            "p95 abs. exit error (m)", "Max abs. exit error (m)",
+            "Median recovery (s)", "p90 recovery (s)", "Not recovered", "Median max display jump (m)", "Max display jump (m)", "Median RMSE (m)", "Mean consistency (%)", "Missed callouts", "Median time (µs/meas.)"]
     use = any(r["accel_use_pct"] != "" for r in rows)  # only the A30 study records it
     if use:
         head.append("Mean accelerometer use after put-back (%)")
@@ -74,6 +84,7 @@ def accuracy_table(rows: list[dict[str, str]]) -> list[str]:
             first = i == 0
             cells = [scen, est, f"T{i}" if n_tunnels(g) > 1 else "", str(len(g)), _stat(err, np.median), _stat(err, _p90),
                      _stat(err, _p95), _stat(err, np.max),
+                     *_recovery_cells(g, i, first),
                      _stat(_nums(g, "rmse_in_tunnel_m"), np.median) if first else "",
                      _stat(_nums(g, "consistency_pct"), np.mean) if first else "",
                      str(int(_nums(g, "missed_callouts").sum())) if first and len(_nums(g, "missed_callouts")) else "–",

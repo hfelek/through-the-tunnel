@@ -30,8 +30,17 @@ class Busy(Exception):
 def _get_pool() -> ProcessPoolExecutor:
     global _pool
     if _pool is None:  # spawn, not fork: the server has threads, and spawn behaves the same on every OS
-        _pool = ProcessPoolExecutor(WORKERS, mp_context=multiprocessing.get_context("spawn"))
+        _pool = ProcessPoolExecutor(WORKERS, mp_context=multiprocessing.get_context("spawn"),
+                                    initializer=mc.ignore_sigint)
     return _pool
+
+
+def shutdown() -> None:
+    """Stop the pool (called when the server shuts down); pending tasks are cancelled."""
+    global _pool
+    if _pool is not None:
+        _pool.shutdown(wait=False, cancel_futures=True)
+        _pool = None
 
 
 def _percentile(v: list[float], q: float) -> float | None:

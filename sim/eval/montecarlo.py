@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import signal
 import subprocess
 import time
 from multiprocessing import Pool
@@ -36,6 +37,7 @@ COLUMNS = [
     "scenario", "vehicle", "estimator", "variant", "seed", "git",
     "rmse_in_tunnel_m", "consistency_pct", "us_per_measurement", *COUNTERS, "accel_use_pct",
     *(f"exit_error_m_t{i}" for i in range(MAX_TUNNELS)),
+    *(f"recovery_time_s_t{i}" for i in range(MAX_TUNNELS)), "max_display_jump_m",
     *(f"callout_err_{d}_s" for d in DISTANCES_M), "missed_callouts",
 ]
 
@@ -162,6 +164,8 @@ def make_rows(sc: Scenario, trace: Any, counters: dict[tuple[int, str], dict[str
             row.update({c: v for c, v in counters.get((vi, key), {}).items()})
             for i, tid in enumerate(tunnel_ids[:MAX_TUNNELS]):
                 row[f"exit_error_m_t{i}"] = _cell(m.get("exit_error_m", {}).get(tid))
+                row[f"recovery_time_s_t{i}"] = _cell(m.get("recovery_time_s", {}).get(tid))  # empty = never recovered
+            row["max_display_jump_m"] = _cell(m.get("max_display_jump_m"))
             if exit_id is not None:  # callout timing t - t_ideal (positive = late); a missed callout leaves its cell empty
                 timing = m.get("callout_timing_error_s", {}).get(exit_id, {})
                 for d in DISTANCES_M:
@@ -230,6 +234,11 @@ def run_task(task: tuple[str, str, dict, int, int, tuple[str, ...], str]) -> lis
     return make_rows(sc, trace, counters, seed, variant, git)
 
 
+def ignore_sigint() -> None:
+    """Pool initializer: Ctrl+C reaches only the parent, which then stops the pool (no traceback per worker)."""
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+
 def timed_task(task: tuple) -> tuple[list[dict[str, Any]], float]:
     """run_task plus its wall time in seconds (the API extrapolates its runtime from the first tasks)."""
     t0 = time.perf_counter()
@@ -283,7 +292,7 @@ def execute(tasks: list[tuple], path: Path, jobs: int) -> None:
         finished = map(run_task, tasks)
         pool = None
     else:
-        pool = Pool(jobs or None)
+        pool = Pool(jobs or None, initializer=ignore_sigint)
         finished = pool.imap_unordered(run_task, tasks)
     try:
         for i, rows in enumerate(finished, 1):
