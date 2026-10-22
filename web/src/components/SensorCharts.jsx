@@ -6,6 +6,7 @@ import { M, TICK, X_AXIS_H, Y_AXIS_W, fmt } from '../lib/plotGeometry'
 import { tunnelIntervals } from '../lib/trace'
 
 const CHART_H = 120
+const TITLE_H = 18 // the title and series legend sit in their own strip above the plot area (T7.9)
 
 const ChartRow = memo(function ChartRow({ spec, w, duration, intervals }) {
   const x = <XAxis type="number" dataKey="t" domain={[0, duration]} allowDataOverflow height={X_AXIS_H} tick={TICK} tickFormatter={fmt} />
@@ -15,8 +16,8 @@ const ChartRow = memo(function ChartRow({ spec, w, duration, intervals }) {
   ))
   const grid = <CartesianGrid vertical={false} stroke="#e5e7eb" />
   return (
-    <div className="chart-row" style={{ height: CHART_H }}>
-      <div className="chart-title">
+    <div className="chart-row" style={{ height: CHART_H + TITLE_H }}>
+      <div className="chart-title above" style={{ height: TITLE_H }}>
         {spec.title} ({spec.unit})
         {spec.type === 'line' && spec.series.length > 1 &&
           spec.series.map((s) => <span key={s.key} style={{ color: s.color }}> {s.key}</span>)}

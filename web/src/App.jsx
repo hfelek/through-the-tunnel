@@ -73,6 +73,8 @@ export default function App() {
     if (id) getScenario(id).then((scenario) => edit(scenario, true), fail)
   }, [edit])
 
+  const [settingsOpen, setSettingsOpen] = useState(false) // closed by default: the header shows a summary instead
+  const toggleSettings = useCallback(() => setSettingsOpen((o) => !o), [])
   const [editing, setEditing] = useState(false)
   const openEditor = useCallback(() => setEditing(true), [])
   const applyJson = useCallback((scenario) => { setEditing(false); edit(scenario, true) }, [edit])
@@ -80,9 +82,29 @@ export default function App() {
 
   return (
     <div className="app">
-      <Toolbar state={state} onSelect={select} onRun={run} />
+      <Toolbar state={state} onSelect={select} onRun={run} settingsOpen={settingsOpen} onToggleSettings={toggleSettings} />
+      {settingsOpen && (
+        <ErrorBoundary name="Settings">
+          <Controls
+            scenario={state.scenario} presets={state.presets} calloutK={state.calloutK} autoRun={state.autoRun}
+            onEdit={edit} onCommit={commit} onCalloutK={setCalloutK} onAutoRun={setAutoRun}
+            onEditJson={openEditor} onReset={resetToDefault}
+            methods={(
+              <ErrorBoundary name="Methods">
+                <EstimatorPicker
+                  estimators={state.estimators} selected={state.selected} params={state.params}
+                  onToggle={toggleEstimator} onParam={setParam} onReset={resetParams}
+                />
+              </ErrorBoundary>
+            )}
+          />
+        </ErrorBoundary>
+      )}
       <main className="layout">
         <div className="left">
+          <ErrorBoundary name="Panel" resetKey={state.trace}>
+            <Panel trace={state.trace} estimators={state.estimators} outdated={state.outdated} />
+          </ErrorBoundary>
           <ErrorBoundary name="Map" resetKey={state.trace}>
             <MapView trace={state.trace} estimators={state.estimators} t={t} />
           </ErrorBoundary>
@@ -117,24 +139,6 @@ export default function App() {
                 </>
               )}
             </ChartStack>
-          </ErrorBoundary>
-        </div>
-        <div className="right">
-          <ErrorBoundary name="Controls">
-            <Controls
-              scenario={state.scenario} presets={state.presets} calloutK={state.calloutK} autoRun={state.autoRun}
-              onEdit={edit} onCommit={commit} onCalloutK={setCalloutK} onAutoRun={setAutoRun}
-              onEditJson={openEditor} onReset={resetToDefault}
-            />
-          </ErrorBoundary>
-          <ErrorBoundary name="Methods">
-            <EstimatorPicker
-              estimators={state.estimators} selected={state.selected} params={state.params}
-              onToggle={toggleEstimator} onParam={setParam} onReset={resetParams}
-            />
-          </ErrorBoundary>
-          <ErrorBoundary name="Panel" resetKey={state.trace}>
-            <Panel trace={state.trace} estimators={state.estimators} outdated={state.outdated} />
           </ErrorBoundary>
         </div>
       </main>

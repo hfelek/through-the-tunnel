@@ -1,7 +1,8 @@
 import { memo, useState } from 'react'
 import InfoModal from './InfoModal'
+import { settingsSummary } from '../lib/summary'
 
-export default memo(function Toolbar({ state, onSelect, onRun }) {
+export default memo(function Toolbar({ state, onSelect, onRun, settingsOpen, onToggleSettings }) {
   const { scenarios, scenarioId, scenario, loading, error } = state
   const current = scenarios.find((s) => s.id === scenarioId)
   const [info, setInfo] = useState(false)
@@ -22,6 +23,10 @@ export default memo(function Toolbar({ state, onSelect, onRun }) {
       <button onClick={onRun} disabled={loading || !scenario}>
         Run
       </button>
+      <button className={`settings-btn${settingsOpen ? ' open' : ''}`} onClick={onToggleSettings} aria-expanded={settingsOpen}>
+        Settings {settingsOpen ? '▴' : '▾'}
+      </button>
+      {!settingsOpen && <span className="summary">{settingsSummary(scenario, state.selected.length)}</span>}
       {loading && (
         <span className="loading">
           <span className="spinner" /> Simulating…

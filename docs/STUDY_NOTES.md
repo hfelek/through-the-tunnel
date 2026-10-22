@@ -282,7 +282,7 @@ Rating for the interview demo: **core** (the story breaks without it), **useful*
 | Metrics table | Per estimator: in-tunnel RMSE, exit errors, consistency, callout timing, compute time; best per column. | `MetricsTable.jsx` | core |
 | Error chart | Signed error vs time, ±2σ band, callout fire times and ideal lines. | `ErrorChart.jsx` | core |
 | Error chart range select (auto, ±50 m, ±200 m) | Y scale. | `ErrorChart.jsx` | optional |
-| Sensor charts + checkboxes | IMU, baro, mag, GNSS, BLE series on the same time axis. | `SensorCharts.jsx`, `sensorSeries.js` | useful |
+| Sensor charts + checkboxes | IMU, baro, mag, GNSS, BLE series on the same time axis; title and legend above each plot. | `SensorCharts.jsx`, `sensorSeries.js` | useful |
 | Chart stack click-to-seek and shared cursor | Click any chart to move time. | `ChartStack.jsx` | useful |
 
 ### Right column
@@ -292,9 +292,10 @@ Rating for the interview demo: **core** (the story breaks without it), **useful*
 | Auto-run checkbox | Re-runs after each committed edit. | `Controls.jsx`, `App.jsx` | useful |
 | Edit JSON | Full scenario in a text box; error with line and column. | `JsonEditor.jsx` | useful |
 | Reset to default | Reload the scenario from its file, discarding edits (edits are never saved; T7.9). | `Controls.jsx`, `App.jsx:resetToDefault` | optional |
+| Settings button and summary | Opens the full-width Settings panel (closed by default); while closed the header shows e.g. "5 km tunnel · exit 5.9 km · 3 plan points · 4 methods". | `Toolbar.jsx`, `lib/summary.js`, `App.jsx` | core |
 | Tunnel length slider | Resizes the first tunnel and extends the road. | `Controls.jsx`, `scenarioEdits.js:setTunnelLength` | core |
 | Exit position slider | Moves the first exit. | `Controls.jsx` | core |
-| Driving plan table | One row per speed point, stop or traffic section, with add and delete buttons and a start speed. | `DrivingPlan.jsx`, `scenarioEdits.js:addPlanPoint` | core |
+| Driving plan | One labelled line per speed point, stop or traffic section, with add and delete buttons and a start speed. | `DrivingPlan.jsx`, `scenarioEdits.js:addPlanPoint` | core |
 | Speed fluctuation slider | `speed_jitter_kmh`, 0-6 km/h (above 6 the jerk limit A11 is exceeded). | `Controls.jsx` | useful |
 | Phone preset select | Flagship vs budget phone. | `Controls.jsx` | useful |
 | Mount pitch slider | Phone tilt in the mount. | `Controls.jsx` | optional |
@@ -303,7 +304,7 @@ Rating for the interview demo: **core** (the story breaks without it), **useful*
 | Callout k slider | How early callouts fire (`s + k*sigma`). | `Controls.jsx` | useful |
 | Methods list: checkbox per estimator | Which estimators run. | `EstimatorPicker.jsx` | core |
 | Params (number inputs, bool checkbox, Reset) | Edit estimator parameters. | `EstimatorPicker.jsx` | useful (the ZUPT threshold demo needss it) |
-| Results panel | Duration, RMSE and exit error per estimator, "Outdated" banner. | `Panel.jsx` | useful (repeats the metrics table) |
+| Results panel | Duration, RMSE and exit error per estimator (a strip above the map), "Outdated" banner. | `Panel.jsx` | useful (repeats the metrics table) |
 
 ### Features you could drop
 

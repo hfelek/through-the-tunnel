@@ -296,15 +296,15 @@ Pattern to keep: data-heavy layers are memoized and drawn once per trace; only s
 - Charts: `ChartStack.jsx` (`:15` click-to-seek) measures the width and draws the one shared cursor; all charts use the
   geometry in `lib/plotGeometry.js` (`timeToX`, `xToTime`, `:12-15`) so one x mapping fits all. `ErrorChart.jsx`:
   `buildRows` (`:14`) → error line and ±2σ band per estimator, `staggerLabels` (`:46`) for the callout labels.
-  `SensorCharts.jsx` (`:52`) with `lib/sensorSeries.js` (`buildCharts`, `:33`; `breakGaps`, `:15` inserts nulls so GNSS lines
+  `SensorCharts.jsx` (`:52`; each chart's title and series legend sit in a strip above the plot area, `TITLE_H`) with `lib/sensorSeries.js` (`buildCharts`, `:33`; `breakGaps`, `:15` inserts nulls so GNSS lines
   break in tunnels). Recharts never receives `t`.
 - `MetricsTable.jsx`: columns are generated from the metrics present (`buildColumns`, `:13`); best value per column
   (`bestRows`, `:39`).
-- Right panel: `Controls.jsx` (`Slider`, `:8`; the controls read their value from the scenario), `lib/scenarioEdits.js` (pure
+- Settings panel (T7.9; no right column any more): the header has a "Settings" button and, while the panel is closed (default), a one-line summary (`lib/summary.js: settingsSummary`). `Controls.jsx` is the open panel (`Slider`; full width, columns Road and tunnel / Driving plan / Phone and sensors / Methods, with Auto-run, Edit JSON and Reset to default on top; the Methods column is the `EstimatorPicker` passed in as `methods`; the controls read their value from the scenario), `lib/scenarioEdits.js` (pure
   functions, each returns a new scenario: `setTunnelLength`, `extendRoad`, `addPlanPoint`, `editPlanPoint`, `deletePlanPoint`),
-  `DrivingPlan.jsx` (the plan table; `Num` commits on Enter or blur),
+  `DrivingPlan.jsx` (one labelled line per plan point, e.g. "at 2.0 km → 90 km/h, rate 1.5 m/s²"; `Num` commits on Enter or blur),
   `EstimatorPicker.jsx` (`ParamInput`, `:14`; `BoolInput` checkbox for `bool` constraints), `JsonEditor.jsx` (`describe`, `:4`: JSON error with line and column),
-  `Panel.jsx` (results, "outdated" banner), `Toolbar.jsx` (the dropdown shows each scenario's `title`; the "i" button opens `InfoModal.jsx` with the full description, closed by its button, Escape or a click outside).
+  `Panel.jsx` (results and the "outdated" banner, a full-width strip above the map), `Toolbar.jsx` (the dropdown shows each scenario's `title`; the "i" button opens `InfoModal.jsx` with the full description, closed by its button, Escape or a click outside).
 - `ErrorBoundary.jsx` wraps each view so one crash does not blank the page (`getDerivedStateFromProps` resets it on a new
   trace, `:11`).
 - Colors: `colors.js: estimatorColor` (`:6`), one color per estimator in registry order. No estimator name is hard-coded in

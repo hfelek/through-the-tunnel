@@ -41,7 +41,7 @@ body { margin: 0; }
   background: #fef2f2; border: 1px solid #fecaca; color: var(--danger); font-size: 14px;
 }
 
-.layout { flex: 1; display: grid; grid-template-columns: 1fr 340px; gap: 12px; padding: 12px 16px; }
+.layout { flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 12px 16px; }
 .left { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .placeholder {
   display: flex; align-items: center; justify-content: center; color: var(--muted);
@@ -56,13 +56,17 @@ body { margin: 0; }
 .chart-stack { position: relative; cursor: crosshair; }
 .chart-row { position: relative; }
 .chart-row + .chart-row { border-top: 1px solid var(--border); }
+.chart-title.above { position: static; padding-left: 52px; line-height: 18px; white-space: nowrap; }
 .chart-title { position: absolute; left: 52px; top: 2px; z-index: 1; font-size: 11px; color: var(--muted); pointer-events: none; }
 .chart-cursor { position: absolute; top: 0; bottom: 0; width: 1px; background: #111827; opacity: 0.7; pointer-events: none; z-index: 2; }
 
 .panel { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; align-self: start; font-size: 14px; }
 .panel h2 { font-size: 16px; margin: 0 0 8px; }
 .panel h3 { font-size: 14px; margin: 0 0 4px; }
-.est-card { border-top: 1px solid var(--border); padding-top: 8px; margin-top: 8px; line-height: 1.5; }
+.est-cards { display: flex; flex-wrap: wrap; gap: 8px 24px; }
+.est-card { border-top: 1px solid var(--border); padding-top: 8px; margin-top: 8px; line-height: 1.5; min-width: 180px; }
+.panel.results { align-self: stretch; }
+.panel.results h2 { margin: 0; }
 .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
 .muted { color: var(--muted); }
 
@@ -119,12 +123,8 @@ body { margin: 0; }
 .ctl-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
 .seed { width: 90px; }
 .plan h3 { margin: 4px 0; font-size: 14px; }
-.plan { display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
-.plan-table { border-collapse: collapse; width: 100%; }
-.plan-table th { text-align: left; font-weight: 600; color: var(--muted); }
-.plan-table td { padding: 2px 2px; vertical-align: top; }
-.plan-table .nowrap { white-space: nowrap; }
-.controls .plan-num { padding: 1px 2px; font-size: 12px; }
+.plan { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.controls .plan-num { padding: 1px 3px; font-size: 13px; }
 .controls .plan-del { width: auto; padding: 0 6px; }
 .json-drawer {
   position: fixed; top: 0; right: 0; bottom: 0; width: min(640px, 100vw); z-index: 20; display: flex; flex-direction: column; gap: 8px;
@@ -149,3 +149,21 @@ button.link { background: none; border: 0; padding: 0; margin-top: 4px; color: v
 .metrics th:first-child { text-align: left; }
 .metrics td.best { font-weight: 700; background: #ecfdf5; }
 .metrics td.missed { color: var(--danger); font-weight: 600; }
+
+/* Settings panel (T7.9) */
+.toolbar button.settings-btn { background: #fff; color: var(--text); border-color: var(--border); }
+.toolbar button.settings-btn.open { background: var(--accent); color: #fff; border-color: var(--accent); }
+.summary { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.settings { margin: 12px 16px 0; align-self: stretch; }
+.settings-top { padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+.settings-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.6fr) minmax(0, 1fr) minmax(0, 1.2fr); gap: 8px 24px; }
+.settings-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.settings-col h3 { font-size: 14px; margin: 0; }
+@media (max-width: 1250px) {
+  .settings-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .settings-plan { grid-column: 1 / -1; order: -1; }
+}
+@media (max-width: 700px) { .settings-cols { grid-template-columns: minmax(0, 1fr); } }
+.plan-row { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.plan-row .plan-type { min-width: 52px; font-weight: 600; }
+.plan-row .plan-del { margin-left: auto; }

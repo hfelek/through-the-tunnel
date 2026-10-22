@@ -9,13 +9,13 @@ export default memo(function Panel({ trace, estimators, outdated }) {
   if (!vehicle) return <aside className="panel"><p className="muted">Run a scenario to see results.</p></aside>
   const dur = vehicleDuration(vehicle)
   return (
-    <aside className="panel">
+    <aside className="panel results">
       {outdated && <div className="outdated">Outdated, run to update</div>}
       <h2>
         <span className="swatch" style={{ background: TRUTH_COLOR }} />
-        {vehicle.id}
+        {vehicle.id} <span className="muted">· simulated duration <b>{fmt(dur, 's')}</b></span>
       </h2>
-      <p>Simulated duration: <b>{fmt(dur, 's')}</b></p>
+      <div className="est-cards">
       {Object.entries(vehicle.metrics ?? {}).map(([id, m]) => {
         const label = estimators.find((e) => e.id === id)?.label ?? id
         const exits = Object.entries(m.exit_error_m ?? {})
@@ -33,6 +33,7 @@ export default memo(function Panel({ trace, estimators, outdated }) {
           </section>
         )
       })}
+      </div>
     </aside>
   )
 })

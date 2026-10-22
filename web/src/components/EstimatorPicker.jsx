@@ -50,8 +50,7 @@ function BoolInput({ name, value, onCommit }) {
 
 export default memo(function EstimatorPicker({ estimators, selected, params, onToggle, onParam, onReset }) {
   return (
-    <aside className="panel picker">
-      <h2>Methods</h2>
+    <div className="picker">
       {estimators.length === 0 && <p className="muted">No methods loaded.</p>}
       {estimators.map((e) => (
         <div key={e.id} className="picker-item">
@@ -75,6 +74,6 @@ export default memo(function EstimatorPicker({ estimators, selected, params, onT
           )}
         </div>
       ))}
-    </aside>
+    </div>
   )
 })
