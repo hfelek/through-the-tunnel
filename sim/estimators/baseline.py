@@ -19,6 +19,13 @@ class BaselineEstimator:
     default_params: ClassVar[dict[str, float]] = {  # sigma_rate_mps is a tuning value, judged by T5.2
         "gap_timeout_s": 1.5, "n_speed_fixes": 3, "sigma_rate_mps": 0.5, "recover_fixes": 3, "initial_sigma_s": 50.0,
     }
+    param_info: ClassVar[dict[str, dict[str, str]]] = {  # display metadata for the UI (T7.9-CR1)
+        "gap_timeout_s": {"label": "GNSS gap limit", "unit": "s", "description": "Time without a fix after which the baseline stops using the fix and continues at the held speed. Raising it trusts an old fix for longer."},
+        "n_speed_fixes": {"label": "Fixes in the speed average", "unit": "count", "description": "Number of the latest GNSS speeds averaged into the speed that is held through an outage. Raising it smooths noise but follows speed changes more slowly."},
+        "sigma_rate_mps": {"label": "Uncertainty growth", "unit": "m/s", "description": "How fast the reported position uncertainty grows per second of outage. It changes the reported sigma only, not the position. A tuning value."},
+        "recover_fixes": {"label": "Fixes marked recovering", "unit": "count", "description": "Number of fixes after an outage that carry the mode 'recovering' before 'gnss'. A label only; the position is the same."},
+        "initial_sigma_s": {"label": "Initial position uncertainty", "unit": "m", "description": "Position uncertainty reported before the first fix."},
+    }
     constraints: ClassVar[dict[str, dict[str, object]]] = {
         "gap_timeout_s": {"type": "float", "gt": 0},
         "n_speed_fixes": {"type": "int", "min": 1},

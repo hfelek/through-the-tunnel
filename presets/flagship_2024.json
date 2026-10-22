@@ -1,5 +1,6 @@
 {
   "id": "flagship_2024",
+  "name": "High-end phone (2024)",
   "description": "Current flagship smartphone: Bosch BMI260-class IMU, BMP390-class barometer, single-frequency GNSS.",
   "accel": {
     "noise_density": {

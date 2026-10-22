@@ -39,6 +39,7 @@ class Mag(_Model):
 
 class Preset(_Model):
     id: str
+    name: str = ""  # display name for the UI; empty = show the id
     description: str
     accel: ImuAxis
     gyro: ImuAxis

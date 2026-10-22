@@ -2,10 +2,11 @@ import { memo, useMemo, useState } from 'react'
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, XAxis, YAxis } from 'recharts'
 import ErrorBoundary from './ErrorBoundary'
 import { estimatorColor, TRUTH_COLOR } from '../colors'
-import { M, TICK, X_AXIS_H, Y_AXIS_W, fmt, timeToX } from '../lib/plotGeometry'
+import { M, TICK, X_AXIS_H, X_TICK_MARGIN, Y_AXIS_W, Y_PAD, fmt, timeToX } from '../lib/plotGeometry'
 import { tunnelIntervals } from '../lib/trace'
 
 const CHART_H = 220
+const TITLE_H = 18 // the title sits in a strip above the plot area, like the sensor charts
 const MARGIN = { ...M, top: 36 } // room for up to three staggered label levels (x mapping is unchanged)
 const LABEL_CHAR_PX = 6
 const RANGES = { auto: 'Auto', 50: '±50 m', 200: '±200 m' }
@@ -59,15 +60,15 @@ const Plot = memo(function Plot({ rows, ids, colors, own, ideal, intervals, w, d
   const labelled = useMemo(() => staggerLabels(ideal, duration, w), [ideal, duration, w])
   const domain = range === 'auto' ? ['auto', 'auto'] : [-range, range]
   return (
-    <div className="chart-row" style={{ height: CHART_H }}>
-      <div className="chart-title">
+    <div className="chart-row" style={{ height: CHART_H + TITLE_H }}>
+      <div className="chart-title above" style={{ height: TITLE_H }}>
         Along-track error (m), shaded: ±2σ around the estimate
         {ids.map((id) => <span key={id} style={{ color: colors[id] }}> {id}</span>)}
       </div>
       <ComposedChart width={w} height={CHART_H} data={rows} margin={MARGIN} accessibilityLayer={false}>
         <CartesianGrid vertical={false} stroke="#e5e7eb" />
-        <XAxis type="number" dataKey="t" domain={[0, duration]} allowDataOverflow height={X_AXIS_H} tick={TICK} tickFormatter={fmt} />
-        <YAxis width={Y_AXIS_W} domain={domain} allowDataOverflow tick={TICK} tickFormatter={fmt} tickCount={5} />
+        <XAxis type="number" dataKey="t" domain={[0, duration]} allowDataOverflow height={X_AXIS_H} tickMargin={X_TICK_MARGIN} tick={TICK} tickFormatter={fmt} />
+        <YAxis width={Y_AXIS_W} padding={Y_PAD} domain={domain} allowDataOverflow tick={TICK} tickFormatter={fmt} tickCount={5} />
         {intervals.map((iv) => (
           <ReferenceArea key={iv.ref} x1={iv.start} x2={iv.end} fill="#374151" fillOpacity={0.14} stroke="none" ifOverflow="hidden" />
         ))}

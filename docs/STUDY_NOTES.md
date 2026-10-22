@@ -297,13 +297,13 @@ Rating for the interview demo: **core** (the story breaks without it), **useful*
 | Exit position slider | Moves the first exit. | `Controls.jsx` | core |
 | Driving plan | One labelled line per speed point, stop or traffic section, with add and delete buttons and a start speed. | `DrivingPlan.jsx`, `scenarioEdits.js:addPlanPoint` | core |
 | Speed fluctuation slider | `speed_jitter_kmh`, 0-6 km/h (above 6 the jerk limit A11 is exceeded). | `Controls.jsx` | useful |
-| Phone preset select | Flagship vs budget phone. | `Controls.jsx` | useful |
+| Phone preset select | High-end vs low-cost phone (shows the preset's `name`, not its id). | `Controls.jsx` | useful |
 | Mount pitch slider | Phone tilt in the mount. | `Controls.jsx` | optional |
 | Beacons checkbox, beacon spacing slider | BLE beacons in the tunnel. | `Controls.jsx` | useful (spacing: optional) |
 | Seed input, New seed | Different noise realization. | `Controls.jsx` | useful |
 | Callout k slider | How early callouts fire (`s + k*sigma`). | `Controls.jsx` | useful |
 | Methods list: checkbox per estimator | Which estimators run. | `EstimatorPicker.jsx` | core |
-| Params (number inputs, bool checkbox, Reset) | Edit estimator parameters. | `EstimatorPicker.jsx` | useful (the ZUPT threshold demo needss it) |
+| Params (number inputs, bool checkbox, Reset) | Edit estimator parameters; each shows a label, a unit and an "i" with a one-sentence description (`param_info`). | `EstimatorPicker.jsx` | useful (the ZUPT threshold demo needss it) |
 | Results panel | Duration, RMSE and exit error per estimator (a strip above the map), "Outdated" banner. | `Panel.jsx` | useful (repeats the metrics table) |
 
 ### Features you could drop
@@ -398,10 +398,10 @@ step; do it before the next one (`git checkout -- <file>`).
 
 ### 4. Add a new parameter to the baseline
 
-- **Steps:** in `sim/estimators/baseline.py` add `"demo_gain": 1.0` to `default_params` (line 19) and
-  `"demo_gain": {"type": "float", "gt": 0}` to `constraints` (line 22). Read it in `reset` (like `gap_timeout_s`, `:32-35`) and
+- **Steps:** in `sim/estimators/baseline.py` add `"demo_gain": 1.0` to `default_params` (line 19),
+  `"demo_gain": {"type": "float", "gt": 0}` to `constraints` and `"demo_gain": {"label": "Demo gain", "unit": "×", "description": "Test factor."}` to `param_info` (the registry test needs a label and a description). Read it in `reset` (like `gap_timeout_s`, `:32-35`) and
   multiply the dead-reckoning speed by it in `update`/`estimate` where the speed is used.
-- **Expected:** `uvicorn --reload` restarts; reload the page. The baseline's Params box has a new number input `demo_gain`.
+- **Expected:** `uvicorn --reload` restarts; reload the page. The baseline's Params box has a new number input labelled "Demo gain".
   Set `1.1` and Run: the baseline's tunnel error should grow clearly (its speed is 10% too high; I did not measure the size). Type `0` and the input
   shows "must be > 0" and does not send. Send `0` from the API anyway (`curl`) and you get a 422 naming `demo_gain`.
 - **File to read:** `sim/estimators/registry.py: validate_params`, `web/src/components/EstimatorPicker.jsx: ParamInput`.

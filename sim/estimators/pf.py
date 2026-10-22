@@ -31,6 +31,16 @@ class PfEstimator:
     id = "pf"
     label = "PF (EKF + ZUPT + map)"
     default_params: ClassVar[dict[str, float]] = {**_OWN, **EkfZuptEstimator.default_params}
+    param_info: ClassVar[dict[str, dict[str, str]]] = {  # A34; the EKF + ZUPT parameters apply to the wrapped filter
+        **EkfZuptEstimator.param_info,
+        "n": {"label": "Particles", "unit": "count", "description": "Number of particles. More particles give a smoother estimate and cost more time (A34)."},
+        "dv_rw": {"label": "Particle speed drift", "unit": "m/s/√s", "description": "Random walk of each particle's speed offset from the EKF speed. Raising it spreads the particles faster (A34)."},
+        "sigma_yaw": {"label": "Yaw-rate noise", "unit": "rad/s", "description": "Noise assumed when the measured yaw rate (1 s average) is compared with speed times road curvature at each particle. Smaller means curves correct the position more strongly (A34)."},
+        "jitter_s": {"label": "Resampling jitter, position", "unit": "m", "description": "Random shift added to each particle's position after resampling, so the particles do not collapse onto copies (A34)."},
+        "jitter_v": {"label": "Resampling jitter, speed", "unit": "m/s", "description": "The same for each particle's speed offset (A34)."},
+        "seed": {"label": "Random seed", "unit": "", "description": "Seed of the particle filter's own random generator. The same seed gives the same run (A34)."},
+        "informative_ratio": {"label": "Informative-map ratio", "unit": "× yaw-rate noise", "description": "Weighting and resampling are skipped when the spread of the particles' expected yaw rates is below this times the yaw-rate noise, for example on a straight road (A34)."},
+    }
     constraints: ClassVar[dict[str, dict[str, object]]] = {
         **EkfZuptEstimator.constraints,
         **{k: {"type": "float", "gt": 0} for k in _OWN if k not in ("n", "seed")},

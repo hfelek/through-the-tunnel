@@ -25,7 +25,12 @@ def dummy():
 
 
 def test_register_and_list(dummy):
-    assert {"id": "dummy", "label": "Dummy", "params": {}, "constraints": {}} in list_estimators()
+    entries = list_estimators()
+    assert {"id": "dummy", "label": "Dummy", "params": {}, "param_info": {}, "constraints": {}} in entries
+    for e in entries:  # the UI shows these instead of the code names (T7.9-CR1)
+        for name in e["params"]:
+            info = e["param_info"].get(name, {})
+            assert info.get("label") and info.get("description"), f"{e['id']}.{name} needs a label and a description"
     assert get_estimator("dummy") is dummy
     with pytest.raises(ValueError):
         register(dummy)

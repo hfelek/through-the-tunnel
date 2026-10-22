@@ -2,6 +2,8 @@
 
 Two phone profiles. Every value in the JSON files carries its own `source` field; this page explains where the numbers come from and how the derived ones were computed.
 
+Each file has an `id` (the file name, used in scenarios) and an optional `name`, the display name the UI shows ("High-end phone (2024)", "Low-cost phone"). A new preset needs a `name`, or the UI shows its id.
+
 | Preset | Meaning | Basis |
 | --- | --- | --- |
 | `flagship_2024` | A current high-end smartphone | Bosch BMI260 (IMU marketed for smartphones) and BMP390 (barometer) datasheets, GPS.gov smartphone accuracy |

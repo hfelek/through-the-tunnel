@@ -1,5 +1,6 @@
 {
   "id": "budget",
+  "name": "Low-cost phone",
   "description": "Low-cost smartphone: flagship values scaled by the multipliers in assumption A16 (older IMU and barometer generation, weaker GNSS antenna).",
   "accel": {
     "noise_density": {

@@ -155,7 +155,7 @@ Consistency is measured inside tunnels only, because with GNSS every method is t
 | --- | --- |
 | `GET /api/scenarios` | Scenario list (id, title, description); `title` is the optional display name of the scenario file, the id when the file has none |
 | `GET /api/scenarios/{id}` | Scenario JSON |
-| `GET /api/estimators` | Methods in the registry: `[{ id, label, params: {name: default}, constraints: {name: {type: "int"\|"float"\|"bool", min?, gt?}} }]`. `min` is inclusive, `gt` exclusive; a `bool` parameter is a JSON true/false |
+| `GET /api/estimators` | Methods in the registry: `[{ id, label, params: {name: default}, param_info: {name: {label, unit, description}}, constraints: {name: {type: "int"\|"float"\|"bool", min?, gt?}} }]`. `min` is inclusive, `gt` exclusive; a `bool` parameter is a JSON true/false. `param_info` is display metadata for the UI (short label, unit text, one-sentence description); every parameter has a label and a description; ids and parameter names do not change |
 | `GET /api/presets` | Sensor presets |
 | `POST /api/simulate` | Body: `{ scenario, estimators: {id: params}, decimate_hz (default 10), callout_k (default 1.0) }` → trace. 422 naming the parameter for an unknown parameter name or a value outside its constraints, and `estimator <id> failed: <message>` if an estimator raises |
 | `POST /api/montecarlo` | Body: `{ scenario, estimators, runs }` → metric distributions |

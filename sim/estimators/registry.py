@@ -31,14 +31,18 @@ def _defaults(cls: type) -> dict[str, Any]:
     return dict(getattr(cls, "default_params", {}))
 
 
+def _param_info(cls: type) -> dict[str, dict[str, str]]:
+    return {k: dict(v) for k, v in getattr(cls, "param_info", {}).items()}
+
+
 def _constraints(cls: type) -> dict[str, dict[str, Any]]:
     return {k: dict(v) for k, v in getattr(cls, "constraints", {}).items()}
 
 
 def list_estimators() -> list[dict[str, Any]]:
-    """Registry entries with default parameters and their constraints (`type` int / float / bool, optional `min` / `gt`)."""
+    """Registry entries with default parameters, display info and constraints (`type` int / float / bool, optional `min` / `gt`)."""
     return [
-        {"id": k, "label": c.label, "params": _defaults(c), "constraints": _constraints(c)}
+        {"id": k, "label": c.label, "params": _defaults(c), "param_info": _param_info(c), "constraints": _constraints(c)}
         for k, c in _REGISTRY.items()
     ]
 

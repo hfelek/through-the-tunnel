@@ -153,8 +153,8 @@ Estimators see only the map and time-ordered `Measurement`s (see section 11).
 - `@register` (`:13`) puts a class in `_REGISTRY` by its `id` (`:18`). `list_estimators` (`:38`) returns
   `{id, label, params, constraints}` for the API and the UI; `validate_params` (`:46`) rejects unknown names and out-of-range
   values (a `bool` constraint accepts only true/false); `EstimatorFailed` (`:26`) turns a crash inside an estimator into an API 422.
-- A class declares `default_params` and `constraints` (`{"type": "int"|"float", "min"?, "gt"?}`); the UI builds its
-  parameter inputs from them.
+- A class declares `default_params`, `constraints` (`{"type": "int"|"float", "min"?, "gt"?}`) and `param_info` (`{name: {label, unit, description}}`, T7.9-CR1: what the UI shows instead of the code name; `list_estimators` returns it and `tests/test_estimators.py` requires a label and a description for every parameter); the UI builds its
+  parameter inputs from them. Subclasses extend the parent's dict (`{**EkfEstimator.param_info, ...}`).
 
 ### `baseline.py`: the baseline
 
@@ -243,7 +243,7 @@ State `[s, v, b, d_psi]`: position, speed, acceleration offset, remaining mount 
 - CR1: `_propagate` also adds `N(0, sqrt(max(0, ΔP_vv)))` to every `dv` (`_pvv_prev`); The `bool` constraint type (registry, `EstimatorPicker` checkbox) stays, although no estimator has a bool parameter now.
 - `estimate` (`:162`): in the tunnel the weighted mean and std of `s`, `v_ekf` + weighted mean `dv`; otherwise the EKF's.
   `display_s` is the T8.6 rule applied to the particle mean (`_advance_display`, `:155`).
-- Recipe, a new PF parameter: add it to `_OWN` (`:16`) and, if it needs a constraint, to `constraints`; unknown names go to the EKF.
+- Recipe, a new PF parameter: add it to `_OWN` (`:16`), to `param_info` and, if it needs a constraint, to `constraints`; unknown names go to the EKF.
 
 ### `stationary.py`: the stationary detector (T8.3, A32)
 
@@ -296,13 +296,13 @@ Pattern to keep: data-heavy layers are memoized and drawn once per trace; only s
 - Charts: `ChartStack.jsx` (`:15` click-to-seek) measures the width and draws the one shared cursor; all charts use the
   geometry in `lib/plotGeometry.js` (`timeToX`, `xToTime`, `:12-15`) so one x mapping fits all. `ErrorChart.jsx`:
   `buildRows` (`:14`) → error line and ±2σ band per estimator, `staggerLabels` (`:46`) for the callout labels.
-  `SensorCharts.jsx` (`:52`; each chart's title and series legend sit in a strip above the plot area, `TITLE_H`) with `lib/sensorSeries.js` (`buildCharts`, `:33`; `breakGaps`, `:15` inserts nulls so GNSS lines
+  `SensorCharts.jsx` (`:52`; each chart's title and series legend sit in a strip above the plot area, `TITLE_H`; the error chart does the same; `lib/plotGeometry.js` `Y_PAD` and `X_TICK_MARGIN` keep tick labels off the axes) with `lib/sensorSeries.js` (`buildCharts`, `:33`; `breakGaps`, `:15` inserts nulls so GNSS lines
   break in tunnels). Recharts never receives `t`.
 - `MetricsTable.jsx`: columns are generated from the metrics present (`buildColumns`, `:13`); best value per column
   (`bestRows`, `:39`).
-- Settings panel (T7.9; no right column any more): the header has a "Settings" button and, while the panel is closed (default), a one-line summary (`lib/summary.js: settingsSummary`). `Controls.jsx` is the open panel (`Slider`; full width, columns Road and tunnel / Driving plan / Phone and sensors / Methods, with Auto-run, Edit JSON and Reset to default on top; the Methods column is the `EstimatorPicker` passed in as `methods`; the controls read their value from the scenario), `lib/scenarioEdits.js` (pure
+- Settings panel (T7.9; no right column any more): the header has a "Settings" button and, while the panel is closed (default), a one-line summary (`lib/summary.js: settingsSummary`). `Controls.jsx` is the open panel (`Slider`; full width, three columns Road and tunnel / Phone and sensors / Methods and, in its own full-width row below them, the Driving plan; the phone select shows each preset's `name`, `presets/*.json`, with Auto-run, Edit JSON and Reset to default on top; the Methods column is the `EstimatorPicker` passed in as `methods`; the controls read their value from the scenario), `lib/scenarioEdits.js` (pure
   functions, each returns a new scenario: `setTunnelLength`, `extendRoad`, `addPlanPoint`, `editPlanPoint`, `deletePlanPoint`),
-  `DrivingPlan.jsx` (one labelled line per plan point, e.g. "at 2.0 km → 90 km/h, rate 1.5 m/s²"; `Num` commits on Enter or blur),
+  `DrivingPlan.jsx` (one labelled line per plan point, e.g. "at 2.0 km → 90 km/h, rate 1.5 m/s²"; each field group is `nowrap`, a long row wraps only between groups; `Num` commits on Enter or blur),
   `EstimatorPicker.jsx` (`ParamInput`, `:14`; `BoolInput` checkbox for `bool` constraints), `JsonEditor.jsx` (`describe`, `:4`: JSON error with line and column),
   `Panel.jsx` (results and the "outdated" banner, a full-width strip above the map), `Toolbar.jsx` (the dropdown shows each scenario's `title`; the "i" button opens `InfoModal.jsx` with the full description, closed by its button, Escape or a click outside).
 - `ErrorBoundary.jsx` wraps each view so one crash does not blank the page (`getDerivedStateFromProps` resets it on a new
@@ -360,12 +360,12 @@ Edit `vehicles[0].plan` in the scenario (`docs/CONTRACTS.md` 3.2) or use the "Dr
    with approval), then read it in the sensor.
 
 ### ... add or change an estimator parameter
-1. In the estimator class: add it to `default_params` and `constraints` (`ekf.py:30-44`); read it in `reset`
+1. In the estimator class: add it to `default_params`, `constraints` and `param_info` (`ekf.py:30-60`; the registry test fails without a label and a description); read it in `reset`
    (`setattr` loop, `ekf.py:47`), use it where needed. For the ZUPT parameters, the same in `EkfZuptEstimator` (`ekf.py:280`).
-2. Nothing else for the UI: `/api/estimators` returns it, `EstimatorPicker` shows an input with the right limits, `Run` sends it,
+2. Nothing else for the UI: `/api/estimators` returns it, `EstimatorPicker` shows an input with the label, unit and an "i" with the description (`ParamName`) and the right limits, `Run` sends it,
    `/api/simulate` validates it (`registry.validate_params`).
 3. Document the value and why in `docs/ASSUMPTIONS.md` (A31 for the EKF); `python -m pytest -q`.
-4. A new estimator: a class with `id`, `label`, `default_params`, `constraints`, `reset`, `update`, `estimate`, decorated with
+4. A new estimator: a class with `id`, `label`, `default_params`, `constraints`, `param_info`, `reset`, `update`, `estimate`, decorated with
    `@register`, imported in `sim/estimators/__init__.py`. It appears in the UI by itself.
 
 ### ... change the callout rule or k

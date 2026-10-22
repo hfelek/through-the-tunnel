@@ -51,17 +51,12 @@ export default memo(function Controls({ scenario, presets, calloutK, autoRun, on
             <Slider label="Exit position" value={E.exitPos(scenario)} unit=" m" min={0} max={L} step={10} onChange={live(E.setExitPos)} onCommit={onCommit} />
           )}
         </div>
-        <div className="settings-col settings-plan">
-          <DrivingPlan scenario={scenario} onEdit={onEdit} />
-          <Slider label="Speed fluctuation" value={car.speed_jitter_kmh} unit=" km/h" min={0} max={E.MAX_JITTER_KMH} step={0.5}
-            hint="(typical deviation from the target speed)" onChange={live(E.setSpeedJitter)} onCommit={onCommit} />
-        </div>
         <div className="settings-col">
           <h3>Phone and sensors</h3>
           <label className="ctl">
             <span>Phone preset</span>
             <select value={car.phone.preset} onChange={(e) => now(E.setPhonePreset)(e.target.value)}>
-              {presetIds.map((id) => <option key={id} value={id}>{id}</option>)}
+              {presetIds.map((id) => <option key={id} value={id}>{presets[id]?.name || id}</option>)}
             </select>
           </label>
           <Slider label="Mount pitch" value={car.phone.mount.pitch_deg} unit="°" min={0} max={90} step={1} onChange={live(E.setMountPitch)} onCommit={onCommit} />
@@ -82,6 +77,11 @@ export default memo(function Controls({ scenario, presets, calloutK, autoRun, on
           {methods}
         </div>
       </div>
+        <div className="settings-plan">
+          <DrivingPlan scenario={scenario} onEdit={onEdit} />
+          <Slider label="Speed fluctuation" value={car.speed_jitter_kmh} unit=" km/h" min={0} max={E.MAX_JITTER_KMH} step={0.5}
+            hint="(typical deviation from the target speed)" onChange={live(E.setSpeedJitter)} onCommit={onCommit} />
+        </div>
     </section>
   )
 })

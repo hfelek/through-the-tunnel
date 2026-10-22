@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import * as E from '../lib/scenarioEdits'
 
 /** Number input that keeps its own text while typing and commits (runs) on Enter or blur. Empty = `onValue(undefined)`. */
@@ -33,13 +33,28 @@ function PointRow({ p, onPatch, onDelete }) {
       <Num value={p[key][1]} width={60} onValue={(v) => v !== undefined && onPatch({ [key]: [Math.min(p[key][0], v), v] })} />
     </>
   )
+  const g = (...parts) => <span className="plan-group">{parts.map((x, i) => <Fragment key={i}>{x}</Fragment>)}</span> // a group never breaks inside
   let body
   if (p.type === 'speed') {
-    body = <>at {km_('s', p.s)} km → <Num value={p.kmh} min={1} width={64} onValue={required('kmh')} /> km/h, rate <Num value={p.rate_mps2} step={0.1} width={64} placeholder="1.5" onValue={optional('rate_mps2')} /> m/s²</>
+    body = <>
+      {g('at ', km_('s', p.s), ' km')}
+      {g('→ ', <Num value={p.kmh} min={1} width={64} onValue={required('kmh')} />, ' km/h')}
+      {g('rate ', <Num value={p.rate_mps2} step={0.1} width={64} placeholder="1.5" onValue={optional('rate_mps2')} />, ' m/s²')}
+    </>
   } else if (p.type === 'stop') {
-    body = <>at {km_('s', p.s)} km, wait <Num value={p.dwell_s} width={64} onValue={required('dwell_s')} /> s, brake <Num value={p.decel_mps2} step={0.1} width={64} placeholder="1.5" onValue={optional('decel_mps2')} /> accel <Num value={p.accel_mps2} step={0.1} width={64} placeholder="1.5" onValue={optional('accel_mps2')} /> m/s²</>
+    body = <>
+      {g('at ', km_('s', p.s), ' km')}
+      {g('wait ', <Num value={p.dwell_s} width={64} onValue={required('dwell_s')} />, ' s')}
+      {g('brake ', <Num value={p.decel_mps2} step={0.1} width={64} placeholder="1.5" onValue={optional('decel_mps2')} />, ' m/s²')}
+      {g('accel ', <Num value={p.accel_mps2} step={0.1} width={64} placeholder="1.5" onValue={optional('accel_mps2')} />, ' m/s²')}
+    </>
   } else {
-    body = <>from {km_('from_s', p.from_s)} to {km_('to_s', p.to_s)} km, <Num value={p.kmh} min={1} width={64} onValue={required('kmh')} /> km/h, stops {range('stop_s')} s, go {range('go_s')} s</>
+    body = <>
+      {g('from ', km_('from_s', p.from_s), ' to ', km_('to_s', p.to_s), ' km')}
+      {g(<Num value={p.kmh} min={1} width={64} onValue={required('kmh')} />, ' km/h')}
+      {g('stops ', range('stop_s'), ' s')}
+      {g('go ', range('go_s'), ' s')}
+    </>
   }
   return (
     <div className="plan-row">

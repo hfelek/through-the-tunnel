@@ -11,7 +11,22 @@ function violation(c = {}, value) {
 }
 
 /** Number input that keeps a text draft and commits on blur / Enter; a bad value is rejected with a hint. */
-function ParamInput({ name, value, constraint, onCommit }) {
+function ParamName({ name, info }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <span className="param-name">
+        {info?.label ?? name}
+        {info?.description && (
+          <button type="button" className="info-i" title={info.description} aria-label={`About ${info.label}`} onClick={() => setOpen((o) => !o)}>i</button>
+        )}
+      </span>
+      {open && <span className="param-desc">{info.description} <span className="muted">({name})</span></span>}
+    </>
+  )
+}
+
+function ParamInput({ name, info, value, constraint, onCommit }) {
   const [draft, setDraft] = useState(null)
   const [err, setErr] = useState(null)
   const commit = () => {
@@ -25,7 +40,7 @@ function ParamInput({ name, value, constraint, onCommit }) {
   const isInt = constraint?.type === 'int'
   return (
     <label className="param">
-      <span>{name}</span>
+      <ParamName name={name} info={info} />
       <input
         type="number" step={isInt ? 1 : 'any'} min={constraint?.min ?? constraint?.gt}
         value={draft ?? value}
@@ -33,16 +48,17 @@ function ParamInput({ name, value, constraint, onCommit }) {
         onBlur={commit}
         onKeyDown={(e) => e.key === 'Enter' && commit()}
       />
+      {info?.unit && <span className="param-unit">{info.unit}</span>}
       {err && <span className="param-err">{err}</span>}
     </label>
   )
 }
 
 /** On/off parameter (constraint type "bool"): a checkbox that commits at once. */
-function BoolInput({ name, value, onCommit }) {
+function BoolInput({ name, info, value, onCommit }) {
   return (
     <label className="param">
-      <span>{name}</span>
+      <ParamName name={name} info={info} />
       <input type="checkbox" checked={Boolean(value)} onChange={(e) => onCommit(e.target.checked)} />
     </label>
   )
@@ -66,8 +82,8 @@ export default memo(function EstimatorPicker({ estimators, selected, params, onT
                 const value = params[e.id]?.[name] ?? e.params[name]
                 const onCommit = (v) => onParam(e.id, name, v)
                 return e.constraints?.[name]?.type === 'bool'
-                  ? <BoolInput key={name} name={name} value={value} onCommit={onCommit} />
-                  : <ParamInput key={name} name={name} value={value} constraint={e.constraints?.[name]} onCommit={onCommit} />
+                  ? <BoolInput key={name} name={name} info={e.param_info?.[name]} value={value} onCommit={onCommit} />
+                  : <ParamInput key={name} name={name} info={e.param_info?.[name]} value={value} constraint={e.constraints?.[name]} onCommit={onCommit} />
               })}
               <button className="link" onClick={() => onReset(e.id)}>Reset</button>
             </details>

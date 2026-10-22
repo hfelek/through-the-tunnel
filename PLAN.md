@@ -481,6 +481,7 @@ Every change that touches the contracts or the task list goes here, newest first
 | Date | Change | Affected |
 | --- | --- | --- |
 | 2026-10-19 | Particle filter uses curvature only; barometer kept as a sensor and chart, not used by estimators | T8.4 |
+| 2026-10-21 | Estimator params get display metadata (param_info); phone presets get display names | Section 3.6, T7.9 |
 | 2026-10-21 | Scenarios get an optional display title; scenario saving removed, edits stay in memory | Sections 3.2, 3.6, T7.9 |
 | 2026-10-19 | Vehicle profile replaced by a position-based driving plan (speed points, stops, traffic sections) | Section 3.2, T2.2 |
 | 2026-10-19 | Beacon positions are part of the map (RoadMap.beacons, trace map.beacons), like exits | Section 3, T8.5 |

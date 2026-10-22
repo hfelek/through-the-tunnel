@@ -34,6 +34,27 @@ class EkfEstimator:
         "gate_reset_n": 5, "display_k": 0.5, "display_max_catchup": 10.0,  # T8.6, A31
         "beacon_min_dbm": -85.0, "beacon_drop_db": 3.0, "beacon_sigma": 5.0,  # T8.5, A33
     }
+    param_info: ClassVar[dict[str, dict[str, str]]] = {  # display metadata for the UI (T7.9-CR1); A31 = EKF tuning, A33 = beacons
+        "bias_rw": {"label": "Offset drift", "unit": "m/s²/√s", "description": "How fast the accelerometer offset may drift (process noise on the offset). Raising it relearns the offset faster but makes the estimate noisier (A31)."},
+        "v_rw": {"label": "Speed noise without accelerometer", "unit": "m/s/√s", "description": "Process noise on speed when the accelerometer is not used: the driver's unknown acceleration. Raising it widens the uncertainty and makes the filter follow GNSS speed more closely (A31)."},
+        "init_bias_sigma": {"label": "Initial offset uncertainty", "unit": "m/s²", "description": "Uncertainty of the accelerometer offset at the start and at the first fix. Raising it lets the first fixes correct the offset more strongly (A31)."},
+        "sigma_v": {"label": "Speed noise of a fix", "unit": "m/s", "description": "Speed noise assumed for a GNSS fix that reports no speed accuracy (A31)."},
+        "lateral_k": {"label": "Off-road limit", "unit": "× sigma", "description": "A fix farther from the road than this many sigma (h_acc / 1.5096) is dropped as broken (A31)."},
+        "gate_chi2": {"label": "GNSS gate", "unit": "chi-square", "description": "Chi-square limit (2 degrees of freedom, 99.9%) on a fix's position and speed innovation. A fix above it is rejected; raising it accepts more outliers (A31)."},
+        "speed_limit_factor": {"label": "Speed-limit factor", "unit": "×", "description": "When the estimated speed exceeds this factor times the road's speed limit, a weak speed-limit measurement pulls it down (A31)."},
+        "v_prior_sigma": {"label": "Speed-limit pull", "unit": "m/s", "description": "Standard deviation of that speed-limit measurement. Larger means a weaker pull (A31)."},
+        "accel_trust_sigma_b": {"label": "Accelerometer trust limit", "unit": "m/s²", "description": "Without a current fix, the accelerometer is integrated only while the offset uncertainty is below this; otherwise the speed is held constant (A31)."},
+        "initial_sigma_s": {"label": "Initial position uncertainty", "unit": "m", "description": "Position uncertainty before the first fix (A31)."},
+        "initial_sigma_v": {"label": "Initial speed uncertainty", "unit": "m/s", "description": "Speed uncertainty before the first fix (A31)."},
+        "gnss_timeout_s": {"label": "GNSS timeout", "unit": "s", "description": "Time after the last accepted fix when the fix is no longer current. The filter then reports dead reckoning, and the accelerometer trust rule applies (A31)."},
+        "recover_fixes": {"label": "Fixes marked recovering", "unit": "count", "description": "Number of fixes after an outage that carry the mode 'recovering'. A label only; the update is the same (A31)."},
+        "gate_reset_n": {"label": "Gate reset count", "unit": "count", "description": "After this many on-road fixes in a row rejected by the gate, position and speed are reset from the fix (T8.6, A31)."},
+        "display_k": {"label": "Display catch-up gain", "unit": "1/s", "description": "Share of the gap between the displayed position and the estimate that the display closes per second. Affects the display only (T8.6, A31)."},
+        "display_max_catchup": {"label": "Display speed limit", "unit": "m/s", "description": "The displayed position never moves faster than the speed plus this. Affects the display only (T8.6, A31)."},
+        "beacon_min_dbm": {"label": "Beacon detection level", "unit": "dBm", "description": "A beacon pass is recognised only while the 1 s average signal is above this level (T8.5, A33)."},
+        "beacon_drop_db": {"label": "Beacon peak drop", "unit": "dB", "description": "A pass ends, and its peak time is fixed, when the signal falls this far below its maximum (T8.5, A33)."},
+        "beacon_sigma": {"label": "Beacon position noise", "unit": "m", "description": "Standard deviation of the position update at a beacon: the peak-time error, plus the speed error times the age of the detection (T8.5, A33)."},
+    }
     constraints: ClassVar[dict[str, dict[str, object]]] = {
         **{k: {"type": "float", "gt": 0} for k in default_params
            if k not in ("recover_fixes", "gate_reset_n", "beacon_min_dbm")},
@@ -282,6 +303,13 @@ class EkfZuptEstimator(EkfEstimator):
     default_params: ClassVar[dict[str, float]] = {
         **EkfEstimator.default_params,
         "zupt_acc_std": 0.05, "zupt_gyro_std": 0.004, "zupt_v_sigma": 0.02, "zupt_gate_chi2": 10.8,
+    }
+    param_info: ClassVar[dict[str, dict[str, str]]] = {  # A32
+        **EkfEstimator.param_info,
+        "zupt_acc_std": {"label": "Standstill: accelerometer limit", "unit": "m/s²", "description": "The vehicle counts as stationary when the std of the accelerometer magnitude over 1 s stays below this (and the gyro below its limit) for 0.5 s. Raising it detects standstill more easily, also while driving (A32)."},
+        "zupt_gyro_std": {"label": "Standstill: gyro limit", "unit": "rad/s", "description": "The same test for the gyro magnitude: it must stay below this for the vehicle to count as stationary (A32)."},
+        "zupt_v_sigma": {"label": "Zero-speed noise", "unit": "m/s", "description": "Standard deviation of the 'speed is 0' measurement applied at 10 Hz while stationary. Smaller means a stronger update (A32)."},
+        "zupt_gate_chi2": {"label": "Zero-speed gate", "unit": "chi-square", "description": "Chi-square limit (1 degree of freedom): 'speed is 0' is not applied if the filter's speed and uncertainty cannot be explained by standing still (A32)."},
     }
     constraints: ClassVar[dict[str, dict[str, object]]] = {
         **EkfEstimator.constraints,

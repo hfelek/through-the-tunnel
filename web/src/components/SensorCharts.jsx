@@ -2,15 +2,15 @@ import { memo, useMemo, useState } from 'react'
 import { CartesianGrid, Line, LineChart, ReferenceArea, Scatter, ScatterChart, XAxis, YAxis, ZAxis } from 'recharts'
 import ErrorBoundary from './ErrorBoundary'
 import { buildCharts } from '../lib/sensorSeries'
-import { M, TICK, X_AXIS_H, Y_AXIS_W, fmt } from '../lib/plotGeometry'
+import { M, TICK, X_AXIS_H, X_TICK_MARGIN, Y_AXIS_W, Y_PAD, fmt } from '../lib/plotGeometry'
 import { tunnelIntervals } from '../lib/trace'
 
 const CHART_H = 120
 const TITLE_H = 18 // the title and series legend sit in their own strip above the plot area (T7.9)
 
 const ChartRow = memo(function ChartRow({ spec, w, duration, intervals }) {
-  const x = <XAxis type="number" dataKey="t" domain={[0, duration]} allowDataOverflow height={X_AXIS_H} tick={TICK} tickFormatter={fmt} />
-  const y = <YAxis width={Y_AXIS_W} domain={['auto', 'auto']} tick={TICK} tickFormatter={fmt} tickCount={4} {...(spec.type === 'scatter' ? { dataKey: 'rssi' } : {})} />
+  const x = <XAxis type="number" dataKey="t" domain={[0, duration]} allowDataOverflow height={X_AXIS_H} tickMargin={X_TICK_MARGIN} tick={TICK} tickFormatter={fmt} />
+  const y = <YAxis width={Y_AXIS_W} padding={Y_PAD} domain={['auto', 'auto']} tick={TICK} tickFormatter={fmt} tickCount={4} {...(spec.type === 'scatter' ? { dataKey: 'rssi' } : {})} />
   const shade = intervals.map((iv) => (
     <ReferenceArea key={iv.ref} x1={iv.start} x2={iv.end} fill="#374151" fillOpacity={0.14} stroke="none" ifOverflow="hidden" />
   ))

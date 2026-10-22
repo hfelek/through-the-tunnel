@@ -12,7 +12,7 @@ export default function InfoModal({ title, text, onClose }) {
       <div className="modal" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
         <h2>{title}</h2>
         <p>{text}</p>
-        <button className="secondary" onClick={onClose} autoFocus>Close</button>
+        <button className="modal-close" onClick={onClose} autoFocus>Close</button>
       </div>
     </div>
   )

@@ -29,7 +29,8 @@ body { margin: 0; }
 .modal { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; max-width: 560px; width: calc(100% - 32px); box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
 .modal h2 { margin: 0 0 8px; font-size: 18px; }
 .modal p { margin: 0 0 14px; line-height: 1.45; }
-.modal button { padding: 4px 12px; border: 1px solid var(--border); border-radius: 6px; background: #fff; cursor: pointer; }
+.modal .modal-close { display: block; margin: 0 auto; padding: 5px 18px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--text); font: inherit; text-align: center; cursor: pointer; }
+.modal .modal-close:hover { background: var(--border); }
 .loading { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
 .spinner {
   width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent);
@@ -55,7 +56,7 @@ body { margin: 0; }
 .chart-controls select { font: inherit; }
 .chart-stack { position: relative; cursor: crosshair; }
 .chart-row { position: relative; }
-.chart-row + .chart-row { border-top: 1px solid var(--border); }
+.chart-row + .chart-row { border-top: 1px solid var(--border); margin-top: 10px; padding-top: 6px; }
 .chart-title.above { position: static; padding-left: 52px; line-height: 18px; white-space: nowrap; }
 .chart-title { position: absolute; left: 52px; top: 2px; z-index: 1; font-size: 11px; color: var(--muted); pointer-events: none; }
 .chart-cursor { position: absolute; top: 0; bottom: 0; width: 1px; background: #111827; opacity: 0.7; pointer-events: none; z-index: 2; }
@@ -139,6 +140,10 @@ body { margin: 0; }
 .picker-item summary { cursor: pointer; color: var(--muted); }
 .param { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 2px 8px; margin: 3px 0; }
 .param input { width: 80px; font: inherit; padding: 2px 4px; border: 1px solid var(--border); border-radius: 4px; }
+.param-name { display: inline-flex; align-items: center; gap: 4px; }
+.param-unit { color: var(--muted); font-size: 12px; }
+.param-desc { flex-basis: 100%; font-size: 12px; color: var(--muted); line-height: 1.35; }
+.controls button.info-i { width: 15px; height: 15px; min-width: 15px; padding: 0; border-radius: 50%; border: 1px solid var(--muted); background: var(--card); color: var(--muted); font: italic 700 10px/1 serif; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 .param-err { flex-basis: 100%; color: var(--danger); font-size: 12px; }
 button.link { background: none; border: 0; padding: 0; margin-top: 4px; color: var(--accent); cursor: pointer; font: inherit; text-decoration: underline; }
 .metrics { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; overflow-x: auto; }
@@ -156,14 +161,15 @@ button.link { background: none; border: 0; padding: 0; margin-top: 4px; color: v
 .summary { color: var(--muted); font-size: 13px; white-space: nowrap; }
 .settings { margin: 12px 16px 0; align-self: stretch; }
 .settings-top { padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
-.settings-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.6fr) minmax(0, 1fr) minmax(0, 1.2fr); gap: 8px 24px; }
+.settings-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 24px; }
+.settings-plan { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--border); }
 .settings-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .settings-col h3 { font-size: 14px; margin: 0; }
-@media (max-width: 1250px) {
-  .settings-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .settings-plan { grid-column: 1 / -1; order: -1; }
-}
+@media (max-width: 1000px) { .settings-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .settings-cols { grid-template-columns: minmax(0, 1fr); } }
-.plan-row { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.plan-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.plan-group { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .plan-row .plan-type { min-width: 52px; font-weight: 600; }
 .plan-row .plan-del { margin-left: auto; }
+.plan-row { padding: 2px 0; }
+.settings-plan .ctl { max-width: 420px; }
