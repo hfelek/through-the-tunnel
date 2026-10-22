@@ -57,6 +57,9 @@ def has_variants(rows: list[dict[str, str]]) -> bool:
 def accuracy_table(rows: list[dict[str, str]]) -> list[str]:
     head = ["Scenario", "Estimator", "Tunnel", "Runs", "Median abs. exit error (m)", "p90 abs. exit error (m)",
             "Median RMSE (m)", "Mean consistency (%)", "Missed callouts", "Median time (µs/meas.)"]
+    use = any(r["accel_use_pct"] != "" for r in rows)  # only the A30 study records it
+    if use:
+        head.append("Mean accelerometer use after put-back (%)")
     var = has_variants(rows)
     if var:
         head.insert(0, "Variant")
@@ -70,6 +73,8 @@ def accuracy_table(rows: list[dict[str, str]]) -> list[str]:
                      _stat(_nums(g, "consistency_pct"), np.mean) if first else "",
                      str(int(_nums(g, "missed_callouts").sum())) if first and len(_nums(g, "missed_callouts")) else "–",
                      _stat(_nums(g, "us_per_measurement"), np.median) if first else ""]
+            if use:
+                cells.append(_stat(_nums(g, "accel_use_pct"), np.mean) if first else "")
             lines.append("| " + " | ".join(([variant] if var else []) + cells) + " |")
     return lines
 

@@ -19,7 +19,8 @@ import numpy as np
 
 import sim.estimators  # noqa: F401  (registers the estimators)
 from sim.contracts.scenario import Scenario, load_scenario
-from sim.estimators.alignment import Aligner
+from sim.estimators.alignment import Aligner, G
+from sim.estimators.ekf import EkfEstimator
 from sim.eval.callouts import DISTANCES_M
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -33,20 +34,21 @@ COUNTERS = ("gate_resets", "beacon_updates", "zupt_applied", "zupt_gated")  # EK
 
 COLUMNS = [
     "scenario", "vehicle", "estimator", "variant", "seed", "git",
-    "rmse_in_tunnel_m", "consistency_pct", "us_per_measurement", *COUNTERS,
+    "rmse_in_tunnel_m", "consistency_pct", "us_per_measurement", *COUNTERS, "accel_use_pct",
     *(f"exit_error_m_t{i}" for i in range(MAX_TUNNELS)),
     *(f"callout_err_{d}_s" for d in DISTANCES_M), "missed_callouts",
 ]
 
 # Side studies (same script): a variant is a dict of settings applied inside the worker; no estimator code changes.
 #   aligner_c1: A30 `tilt_gyro_c1_deg_per_s` (the EKF builds its aligner with the defaults, so the default is overridden)
+#   trace_accel: record the share of IMU samples after the put-back on which the EKF used the accelerometer
 #   beacon_sigma: EKF parameter, passed as an estimator parameter
 STUDIES: dict[str, dict[str, Any]] = {
-    "a30": {
+    "a30": {  # c1 = 1e-9 means no tilt uncertainty growth; the EKF then trusts the accelerometer after the put-back
         "csv": "a30_runs.csv",
-        "scenarios": ("phone_handled_mid_tunnel", "phone_in_hand_2min", "phone_in_hand_whole_trip"),
+        "scenarios": ("phone_handled_mid_tunnel", "phone_in_hand_2min"),  # both end their hand event in the tunnel
         "estimators": ("ekf_zupt",),
-        "variants": {"c1=0.02": {"aligner_c1": 0.02}, "c1=0.03": {"aligner_c1": 0.03}},
+        "variants": {f"c1={v}": {"aligner_c1": c1, "trace_accel": True} for v, c1 in (("1e-9", 1e-9), ("0.02", 0.02), ("0.03", 0.03))},
     },
     "beacon_sigma": {
         "csv": "beacon_sigma_runs.csv",
@@ -79,6 +81,45 @@ def exit_in_tunnel(sc: Scenario) -> str | None:
         if any(t.start_s <= ex.s <= t.end_s for t in sc.road.tunnels):
             return ex.id
     return None
+
+
+def watch_accel_use(ekf: Any) -> list[tuple[float, bool]]:
+    """Wrap `ekf.update` (the instance only, no estimator code changes) to log, per IMU sample from the first put-back
+    on, whether the EKF integrated the accelerometer. The rule is the one in ekf.py: a valid aligned sample and either
+    a current fix or sqrt(P_bias) <= accel_trust_sigma_b, where P_bias includes the put-back inflation (G * sigma_tilt)^2."""
+    log: list[tuple[float, bool]] = []
+    update = ekf.update
+    state = {"put_back": False}
+
+    def wrapped(m: Any) -> None:
+        if m.kind != "imu":
+            update(m)
+            return
+        p_bias = float(ekf.P[2, 2])  # before the update: the put-back inflation is added inside it
+        update(m)
+        a = getattr(ekf, "aligned", None)
+        if a is None:
+            return
+        if a.mount_changed:
+            state["put_back"] = True
+            p_bias += (G * a.sigma_tilt) ** 2
+        if state["put_back"]:
+            current = ekf._t_acc is not None and m.t - ekf._t_acc <= ekf.gnss_timeout_s
+            log.append((m.t, bool(a.valid and (current or np.sqrt(p_bias) <= ekf.accel_trust_sigma_b))))
+
+    ekf.update = wrapped
+    return log
+
+
+def accel_use_pct(log: list[tuple[float, bool]], trace_vehicle: Any) -> float | str:
+    """Share (%) of the logged IMU samples, from the put-back to the tunnel exit, that used the accelerometer."""
+    if not log:
+        return ""
+    t0 = log[0][0]
+    exits = [e.t for e in trace_vehicle.events if e.type == "tunnel_exit" and e.t > t0]
+    t_end = exits[0] if exits else log[-1][0]
+    used = [u for t, u in log if t <= t_end]
+    return 100.0 * sum(used) / len(used) if used else ""
 
 
 def _cell(x: Any) -> Any:
@@ -130,6 +171,7 @@ def run_task(task: tuple[str, str, dict, int, int, tuple[str, ...], str]) -> lis
         Aligner.default_params["tilt_gyro_c1_deg_per_s"] = DEFAULT_C1  # a worker may have run a variant before
 
     made: list[tuple[str, Any]] = []
+    watched: dict[int, list[tuple[float, bool]]] = {}
     real = runner.get_estimator
 
     def spy(key: str):  # records the instances the runner builds, to read their counters afterwards
@@ -138,6 +180,8 @@ def run_task(task: tuple[str, str, dict, int, int, tuple[str, ...], str]) -> lis
         def make():
             inst = cls()
             made.append((key, inst))
+            if settings.get("trace_accel") and isinstance(inst, EkfEstimator):  # the aligner only exists after reset()
+                watched[id(inst)] = watch_accel_use(inst)
             return inst
         return make
 
@@ -153,6 +197,8 @@ def run_task(task: tuple[str, str, dict, int, int, tuple[str, ...], str]) -> lis
         seen[key] = vi + 1
         src = getattr(inst, "ekf", inst)  # the particle filter wraps an EKF
         counters[(vi, key)] = {c: getattr(src, c) for c in COUNTERS if hasattr(src, c)}
+        if id(inst) in watched:
+            counters[(vi, key)]["accel_use_pct"] = accel_use_pct(watched[id(inst)], trace.vehicles[vi])
     return make_rows(sc, trace, counters, seed, variant, git)
 
 
