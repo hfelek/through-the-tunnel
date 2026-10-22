@@ -261,6 +261,8 @@ estimator; the EKF owns one instance.
   `reach = s + k·sigma >= exit_s - d` for `d` in 500, 200, 0 m (`:19`, `:23`). `ideal_times` (`:29`) is the truth-side
   reference; `missed_callouts` (`:56`) lists callouts the true vehicle reached but the estimator never fired.
 
+- Monte Carlo (T9.1): `montecarlo.py` runs every scenario x seed x estimator in worker processes (`run_task`: one task = one scenario, variant and seed with all missing estimators) and appends one CSV row per vehicle and estimator to `docs/results/runs.csv` as each task finishes (`_append`; `_read_done` lets an interrupted run resume). Seed 0 is the scenario's own seed and the pf's default seed, so it reproduces single runs; seeds 1..N-1 come from `derive_seed` (`SeedSequence`) and also set the pf seed. The EKF counters (`gate_resets`, `beacon_updates`, `zupt_applied`, `zupt_gated`) are read from the estimator instances through a wrapper of `runner.get_estimator` inside the worker, so no estimator or runner code changed. The git column is the short hash plus `-dirty` outside `docs/results`. Side studies (`--study a30` / `beacon_sigma`) use `variants`: A30's `tilt_gyro_c1_deg_per_s` is overridden on `Aligner.default_params` inside the worker; `beacon_sigma` is an estimator parameter. `summary.py` makes `summary.md` (accuracy and callout-timing tables), the box plots and the log-scale overview (|exit error| clipped at 0.1 m) from the CSV only. Commands: `make montecarlo ARGS="--seeds 50"`, `make montecarlo ARGS="--study a30"`, `make summary`. Results are committed by hand.
+
 ## 8. `sim/runner.py`: the glue
 
 - `run_scenario` (`:127`): builds the road, the motions, the sensors, the estimator outputs, then the metrics and callouts,
@@ -410,6 +412,7 @@ Edit `vehicles[0].plan` in the scenario (`docs/CONTRACTS.md` 3.2) or use the "Dr
 | `test_pf.py` | particle filter: `curved_5km_exit_inside` in-tunnel RMSE below `ekf_zupt`; `undersea_3km_dip` exit error bounded |
 | `test_ekf.py` | EKF in-tunnel consistency on `curved_2km`; EKF+ZUPT in-tunnel consistency on `hard_brake_inside`; beacons bound the `beacons_5km` error (RMSE < 20 m) and change nothing without beacons (the 15 s standstill); the stationary detector never fires on the raw IMU of the constant-speed `curved_2km` and `beacons_5km`; EKF+ZUPT `display_s` is non-decreasing, its max display jump is below the baseline's and recovery exists in `short_straight_500m`, `hard_brake_inside`, `stop_and_go_3km` (T8.6) |
 | `test_metrics.py` | RMSE, exit error, consistency, recovery time |
+| `test_montecarlo.py` | N = 2 on `short_straight_500m` into a temporary directory: CSV columns, resume adds nothing, summary table |
 | `test_callouts.py` | perfect estimate fires at the ideal time; larger k fires earlier; missed callouts |
 | `test_runner.py` | same seed is byte-identical (without the wall-clock `compute_us_per_measurement`); an estimator sees only time-ordered measurements, and no estimator module imports sensor, eval, runner or vehicle code (`ast` check); changing the GNSS preset keeps the IMU identical |
 | `test_api.py` | endpoints, simulate returns a decimated trace, invalid inputs and bad parameters give 422, an estimator crash gives 422 |
