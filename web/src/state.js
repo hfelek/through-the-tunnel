@@ -51,8 +51,6 @@ export function reducer(state, action) {
       return { ...state, calloutK: action.value, outdated: state.trace != null }
     case 'set_auto_run':
       return { ...state, autoRun: action.value }
-    case 'saved': // keep the scenario and trace on screen; the new file just becomes the selected one
-      return { ...state, scenarios: action.scenarios, scenarioId: action.id }
     case 'scenario_loaded':
       return action.id === state.scenarioId ? { ...state, scenario: action.scenario } : state
     case 'run_start':

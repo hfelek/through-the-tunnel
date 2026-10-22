@@ -1,8 +1,7 @@
-import { memo, useState } from 'react'
+import { memo } from 'react'
 import * as E from '../lib/scenarioEdits'
 import DrivingPlan from './DrivingPlan'
 
-const ID_RE = /^[a-z0-9_]+$/
 const COMMIT_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown']
 
 /** Range input that edits the JSON on every step but only commits (runs) on release. */
@@ -20,38 +19,11 @@ function Slider({ label, value, min, max, step, unit, hint, onChange, onCommit }
   )
 }
 
-function SaveAs({ scenario, onSave }) {
-  const [open, setOpen] = useState(false)
-  const [id, setId] = useState('')
-  const [err, setErr] = useState(null)
-  const save = async () => {
-    if (!ID_RE.test(id)) return setErr('Use lowercase letters, digits and _ only.')
-    try {
-      await onSave(id, scenario)
-      setOpen(false)
-      setId('')
-      setErr(null)
-    } catch (e) {
-      setErr(e.message)
-    }
-  }
-  if (!open) return <button className="secondary" onClick={() => setOpen(true)}>Save as…</button>
-  return (
-    <div className="save-as">
-      <input value={id} placeholder="new_scenario_id" autoFocus onChange={(e) => { setId(e.target.value); setErr(null) }}
-        onKeyDown={(e) => e.key === 'Enter' && save()} />
-      <button onClick={save}>Save</button>
-      <button className="secondary" onClick={() => setOpen(false)}>Cancel</button>
-      {err && <div className="error-box">{err}</div>}
-    </div>
-  )
-}
-
 /**
  * Quick controls. Every one reads its value from the scenario and writes through onEdit(newScenario, commit);
  * commit=false only updates the JSON (slider drag), commit=true also runs when auto-run is on.
  */
-export default memo(function Controls({ scenario, presets, calloutK, autoRun, onEdit, onCommit, onCalloutK, onAutoRun, onEditJson, onReset, onSave }) {
+export default memo(function Controls({ scenario, presets, calloutK, autoRun, onEdit, onCommit, onCalloutK, onAutoRun, onEditJson, onReset }) {
   if (!scenario) return null
   const car = scenario.vehicles[0]
   const L = E.roadLength(scenario)
@@ -66,8 +38,7 @@ export default memo(function Controls({ scenario, presets, calloutK, autoRun, on
       <div className="ctl-row">
         <label><input type="checkbox" checked={autoRun} onChange={(e) => onAutoRun(e.target.checked)} /> Auto-run</label>
         <button className="secondary" onClick={onEditJson}>Edit JSON</button>
-        <button className="secondary" onClick={onReset} title="Reload this scenario from disk, discarding edits">Reset to saved</button>
-        <SaveAs scenario={scenario} onSave={onSave} />
+        <button className="secondary" onClick={onReset} title="Reload this scenario from its file, discarding edits">Reset to default</button>
       </div>
       {scenario.road.tunnels[0] && (
         <Slider label="Tunnel length" value={E.tunnelLength(scenario) / 1000} unit=" km" min={Math.min(0.5, maxTun / 1000)} max={maxTun / 1000} step={0.1}

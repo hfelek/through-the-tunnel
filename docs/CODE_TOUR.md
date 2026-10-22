@@ -272,8 +272,7 @@ estimator; the EKF owns one instance.
 
 ## 9. `sim/api` and `sim/cli.py`
 
-`main.py` (FastAPI): `GET /api/scenarios` (`:35`), `GET /api/scenarios/{id}` (`:44`), `POST /api/scenarios` (`:59`, "Save
-as": `open("x")` at `:65` so an existing file is never overwritten), `GET /api/estimators` (`:72`), `GET /api/presets` (`:77`),
+`main.py` (FastAPI): `GET /api/scenarios` (`:35`), `GET /api/scenarios/{id}` (`:44`), (no save endpoint since T7.9: edits stay in memory), `GET /api/estimators` (`:72`), `GET /api/presets` (`:77`),
 `POST /api/simulate` (`:82`): validates estimator ids and parameters (`:90`), runs `run_scenario` (`:94`), decimates
 (`decimate_hz` default 10), returns JSON without nulls. `cli.py` runs a scenario to a trace file.
 
@@ -343,7 +342,7 @@ Edit `vehicles[0].plan` in the scenario (`docs/CONTRACTS.md` 3.2) or use the "Dr
    `tests/test_scenarios.py`), a new `"seed"`, a non-empty `"title"` (the name in the dropdown; the listing falls back to the id) and a non-empty `"description"`.
 2. Add a row to `scenarios/README.md`.
 3. `tests/test_api.py` asserts the scenario count and `tests/test_scenarios.py` a minimum: update both numbers.
-4. `python -m pytest -q`. No frontend change: the picker reads `/api/scenarios`. Or in the UI: edit, "Save as".
+4. `python -m pytest -q`. No frontend change: the picker reads `/api/scenarios`. Scenarios cannot be saved from the UI any more (T7.9); edit the file, or edit in the UI and copy the JSON from "Edit JSON".
 
 ### ... change a sensor noise value
 1. Datasheet-style values (noise density, bias, scale error, GNSS std, baro noise): `presets/flagship_2024.json` (and
@@ -414,7 +413,6 @@ Edit `vehicles[0].plan` in the scenario (`docs/CONTRACTS.md` 3.2) or use the "Dr
 | `test_callouts.py` | perfect estimate fires at the ideal time; larger k fires earlier; missed callouts |
 | `test_runner.py` | same seed is byte-identical (without the wall-clock `compute_us_per_measurement`); an estimator sees only time-ordered measurements, and no estimator module imports sensor, eval, runner or vehicle code (`ast` check); changing the GNSS preset keeps the IMU identical |
 | `test_api.py` | endpoints, simulate returns a decimated trace, invalid inputs and bad parameters give 422, an estimator crash gives 422 |
-| `test_save_as.py` | "Save as": creates, rejects bad ids, 409 on overwrite |
 | `test_health.py` | `/api/health` |
 
 The frontend has no automated tests; it is checked by `npm run build`, `npx oxlint` and by hand in the browser.

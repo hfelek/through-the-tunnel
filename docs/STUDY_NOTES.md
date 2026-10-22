@@ -291,8 +291,7 @@ Rating for the interview demo: **core** (the story breaks without it), **useful*
 |---|---|---|---|
 | Auto-run checkbox | Re-runs after each committed edit. | `Controls.jsx`, `App.jsx` | useful |
 | Edit JSON | Full scenario in a text box; error with line and column. | `JsonEditor.jsx` | useful |
-| Reset to saved | Reload the scenario from disk. | `Controls.jsx` | optional |
-| Save as… | Writes a new scenario file (never overwrites). | `Controls.jsx`, `api/main.py:save_scenario` | useful |
+| Reset to default | Reload the scenario from its file, discarding edits (edits are never saved; T7.9). | `Controls.jsx`, `App.jsx:resetToDefault` | optional |
 | Tunnel length slider | Resizes the first tunnel and extends the road. | `Controls.jsx`, `scenarioEdits.js:setTunnelLength` | core |
 | Exit position slider | Moves the first exit. | `Controls.jsx` | core |
 | Driving plan table | One row per speed point, stop or traffic section, with add and delete buttons and a start speed. | `DrivingPlan.jsx`, `scenarioEdits.js:addPlanPoint` | core |
@@ -311,7 +310,7 @@ Rating for the interview demo: **core** (the story breaks without it), **useful*
 - **Results panel** (`Panel.jsx`): its numbers are a subset of the metrics table. Keep only the "Outdated" banner, or move
   that into the toolbar.
 - **Map pan/zoom and scale bar** (`MapView.jsx` pointer and wheel code, `ScaleBar.jsx`): "Follow car" covers the demo.
-- **Error chart range select**, **Reset to saved**, **Mount pitch**, **Beacon spacing**, **keyboard shortcuts**: small, harmless,
+- **Error chart range select**, **Reset to default**, **Mount pitch**, **Beacon spacing**, **keyboard shortcuts**: small, harmless,
   but not needed for the story.
 - **ErrorBoundary around every view**: invisible when nothing breaks; do not drop, but do not explain it either.
 - **Finding, not a feature:** `display_s` (the smoothed position of T8.6) is in the trace but **no file under `web/src` reads
@@ -386,15 +385,15 @@ step; do it before the next one (`git checkout -- <file>`).
   and passing vehicles are unknown and could be that large, which is why the estimators no longer use the barometer
   (T8.4-CR2). Only the barometer chart changes; the metrics table stays identical, because no estimator reads the barometer.
 
-### 3. Add a scenario from the UI and save it
+### 3. Edit a scenario in the UI and reset it
 
-- **Steps:** select `curved_2km`; drag "Tunnel length" to 1.5 km, "Start speed" (Driving plan) to 90 km/h; click **Save as…**, type
-  `my_curved_90`, **Save**.
-- **File to read:** `web/src/components/Controls.jsx: SaveAs`, `sim/api/main.py: save_scenario` (`:59`), `web/src/lib/scenarioEdits.js`.
-- **Expected:** the picker now lists `my_curved_90`, the file `scenarios/my_curved_90.json` exists, saving it again says
-  "already exists" (409; the file mode is `"x"`).
-- **Careful:** `python -m pytest -q` will now fail: `tests/test_api.py` and `tests/test_scenarios.py` count the scenarios.
-  Either delete the file (`rm scenarios/my_curved_90.json`) or update both numbers as in the CODE_TOUR recipe "add a scenario".
+- **Steps:** select `curved_2km`; drag "Tunnel length" to 1.5 km and set "Start speed" (Driving plan) to 90 km/h; look at the
+  result. Click **Reset to default**.
+- **File to read:** `web/src/lib/scenarioEdits.js` (pure edits), `web/src/App.jsx: resetToDefault`.
+- **Expected:** every edit changes only the scenario JSON in the browser and re-runs; **Reset to default** reloads the file
+  from `/api/scenarios/curved_2km` and the original values return. Nothing is written to `scenarios/` (since T7.9 there is no
+  save). To keep a variant, copy the JSON from **Edit JSON** into a new file (and add the title, README row and test counts as in
+  the CODE_TOUR recipe "add a scenario").
 
 ### 4. Add a new parameter to the baseline
 

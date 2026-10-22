@@ -26,7 +26,7 @@ BIAS_PERIOD_S = 1.0  # bias update rate while stationary
 @register
 class EkfEstimator:
     id = "ekf"
-    label = "EKF (IMU + GNSS)"
+    label = "EKF"
     default_params: ClassVar[dict[str, float]] = {  # A31
         "bias_rw": 5e-4, "v_rw": 0.3, "init_bias_sigma": 0.1, "sigma_v": 0.2, "lateral_k": 3.0, "gate_chi2": 13.8,
         "speed_limit_factor": 1.3, "v_prior_sigma": 2.0, "accel_trust_sigma_b": 0.05,

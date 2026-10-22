@@ -29,7 +29,7 @@ def systematic_resample(w: np.ndarray, u: float) -> np.ndarray:
 @register
 class PfEstimator:
     id = "pf"
-    label = "Particle filter (map matching)"
+    label = "PF (EKF + ZUPT + map)"
     default_params: ClassVar[dict[str, float]] = {**_OWN, **EkfZuptEstimator.default_params}
     constraints: ClassVar[dict[str, dict[str, object]]] = {
         **EkfZuptEstimator.constraints,

@@ -132,6 +132,7 @@ export default function MapView({ trace, estimators, t }) {
           </span>
         ))}
         <span><i className="dot gnss" /> GNSS fix (last 10 s)</span>
+        <span className="legend-note">Each method adds to the one before it.</span>
       </div>
     </section>
   )

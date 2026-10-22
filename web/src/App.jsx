@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
-import { getEstimators, getPresets, getScenario, getScenarios, saveScenario, simulate } from './api'
+import { getEstimators, getPresets, getScenario, getScenarios, simulate } from './api'
 import { initialState, reducer } from './state'
 import Toolbar from './components/Toolbar'
 import Panel from './components/Panel'
@@ -68,7 +68,7 @@ export default function App() {
   const toggleEstimator = useCallback((id) => applyEdit({ type: 'toggle_estimator', id }, true), [applyEdit])
   const setParam = useCallback((id, name, value) => applyEdit({ type: 'set_param', id, name, value }, true), [applyEdit])
   const resetParams = useCallback((id) => applyEdit({ type: 'reset_params', id }, true), [applyEdit])
-  const resetToSaved = useCallback(() => {
+  const resetToDefault = useCallback(() => {
     const id = latest.current.scenarioId
     if (id) getScenario(id).then((scenario) => edit(scenario, true), fail)
   }, [edit])
@@ -77,11 +77,6 @@ export default function App() {
   const openEditor = useCallback(() => setEditing(true), [])
   const applyJson = useCallback((scenario) => { setEditing(false); edit(scenario, true) }, [edit])
   const closeEditor = useCallback(() => setEditing(false), [])
-  const save = useCallback(async (id, scenario) => {
-    await saveScenario(id, scenario)
-    const scenarios = await getScenarios()
-    dispatch({ type: 'saved', id, scenarios })
-  }, [])
 
   return (
     <div className="app">
@@ -129,7 +124,7 @@ export default function App() {
             <Controls
               scenario={state.scenario} presets={state.presets} calloutK={state.calloutK} autoRun={state.autoRun}
               onEdit={edit} onCommit={commit} onCalloutK={setCalloutK} onAutoRun={setAutoRun}
-              onEditJson={openEditor} onReset={resetToSaved} onSave={save}
+              onEditJson={openEditor} onReset={resetToDefault}
             />
           </ErrorBoundary>
           <ErrorBoundary name="Methods">
