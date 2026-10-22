@@ -1,3 +1,4 @@
+import asyncio
 import json
 import re
 from pathlib import Path
@@ -6,6 +7,7 @@ from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from sim.api import mc
 from sim.contracts.scenario import Scenario
 from sim.contracts.trace import decimate
 from sim.estimators import EstimatorFailed, list_estimators, validate_params
@@ -61,20 +63,43 @@ def presets() -> dict[str, dict]:
     return {p.stem: json.loads(p.read_text()) for p in sorted(PRESETS.glob("*.json"))}
 
 
-@app.post("/api/simulate")
-def simulate(req: SimulateRequest) -> Response:
+def check_estimators(estimators: dict[str, dict]) -> None:
     known = {e["id"] for e in list_estimators()}
-    for key in req.estimators:
+    for key in estimators:
         if key not in known:
             raise HTTPException(422, f"unknown estimator: {key}")
-    for key, params in req.estimators.items():
+    for key, params in estimators.items():
         try:
             validate_params(key, params)
         except (ValueError, TypeError) as e:
             raise HTTPException(422, str(e)) from None
+
+
+@app.post("/api/simulate")
+def simulate(req: SimulateRequest) -> Response:
+    check_estimators(req.estimators)
     try:
         trace = run_scenario(req.scenario, req.estimators, callout_k=req.callout_k)
     except EstimatorFailed as e:
         raise HTTPException(422, str(e)) from None
     body = decimate(trace, req.decimate_hz).model_dump_json(exclude_none=True)
     return Response(body, media_type="application/json")
+
+
+class MonteCarloRequest(BaseModel):
+    scenario: Scenario
+    estimators: dict[str, dict] = Field(min_length=1)  # id -> parameters, as in SimulateRequest
+    n_seeds: int = Field(default=20, ge=1, le=50)
+
+
+@app.post("/api/montecarlo")
+async def montecarlo(req: MonteCarloRequest) -> dict:
+    check_estimators(req.estimators)
+    try:  # in a thread, so the event loop (and /api/simulate) stays free while the process pool works
+        return await asyncio.get_running_loop().run_in_executor(None, mc.run, req.scenario, req.estimators, req.n_seeds)
+    except mc.TooSlow as e:
+        raise HTTPException(422, str(e)) from None
+    except mc.Busy:
+        raise HTTPException(409, "another Monte Carlo is still running") from None
+    except EstimatorFailed as e:
+        raise HTTPException(422, str(e)) from None

@@ -36,6 +36,10 @@ def _p90(v: np.ndarray) -> float:
     return float(np.percentile(v, 90))
 
 
+def _p95(v: np.ndarray) -> float:
+    return float(np.percentile(v, 95))
+
+
 def _groups(rows: list[dict[str, str]]) -> dict[tuple[str, str, str], list[dict[str, str]]]:
     """Rows by (variant, scenario, estimator), in a stable order."""
     out: dict[tuple[str, str, str], list[dict[str, str]]] = defaultdict(list)
@@ -56,7 +60,7 @@ def has_variants(rows: list[dict[str, str]]) -> bool:
 
 def accuracy_table(rows: list[dict[str, str]]) -> list[str]:
     head = ["Scenario", "Estimator", "Tunnel", "Runs", "Median abs. exit error (m)", "p90 abs. exit error (m)",
-            "Median RMSE (m)", "Mean consistency (%)", "Missed callouts", "Median time (µs/meas.)"]
+            "p95 abs. exit error (m)", "Max abs. exit error (m)", "Median RMSE (m)", "Mean consistency (%)", "Missed callouts", "Median time (µs/meas.)"]
     use = any(r["accel_use_pct"] != "" for r in rows)  # only the A30 study records it
     if use:
         head.append("Mean accelerometer use after put-back (%)")
@@ -69,6 +73,7 @@ def accuracy_table(rows: list[dict[str, str]]) -> list[str]:
             err = np.abs(_nums(g, f"exit_error_m_t{i}"))
             first = i == 0
             cells = [scen, est, f"T{i}" if n_tunnels(g) > 1 else "", str(len(g)), _stat(err, np.median), _stat(err, _p90),
+                     _stat(err, _p95), _stat(err, np.max),
                      _stat(_nums(g, "rmse_in_tunnel_m"), np.median) if first else "",
                      _stat(_nums(g, "consistency_pct"), np.mean) if first else "",
                      str(int(_nums(g, "missed_callouts").sum())) if first and len(_nums(g, "missed_callouts")) else "–",
@@ -100,14 +105,15 @@ def callout_table(rows: list[dict[str, str]]) -> list[str]:
 def write_summary(rows: list[dict[str, str]], path: Path, title: str) -> None:
     n_seeds = len({(r["scenario"], r["seed"]) for r in rows})
     commits = sorted({r["git"] for r in rows})
+    git_line = f"Git hashes in the CSV: {', '.join(f'`{c}`' for c in commits)}"  # a mixed set means rows from different commits
     text = "\n".join([
         f"# {title}", "",
         (f"{len(rows)} rows, commit {', '.join(commits)}. `Runs` counts rows (vehicle x seed). Exit error is signed in "
          "the CSV; the table uses its absolute value (per tunnel where a scenario has several). Consistency is the share "
          "of tunnel samples with |error| < 2 sigma. Timing error is t - t_ideal (positive = late). Time per measurement "
          "was measured with several processes running in parallel, so only the ratios are meaningful."), "",
-        "## Accuracy", "", *accuracy_table(rows), "",
-        "## Callout timing", "", *callout_table(rows), "",
+        "## Accuracy", "", git_line, "", *accuracy_table(rows), "",
+        "## Callout timing", "", git_line, "", *callout_table(rows), "",
     ])
     path.write_text(text)
     print(f"wrote {path} ({n_seeds} scenario-seed pairs)")

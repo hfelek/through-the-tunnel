@@ -13,6 +13,7 @@ import MapView from './components/MapView'
 import Timeline from './components/Timeline'
 import ChartStack from './components/ChartStack'
 import ErrorChart from './components/ErrorChart'
+import MonteCarlo from './components/MonteCarlo'
 import SensorCharts from './components/SensorCharts'
 import { vehicleDuration } from './lib/trace'
 import { usePlayback } from './lib/usePlayback'
@@ -125,6 +126,9 @@ export default function App() {
           </ErrorBoundary>
           <ErrorBoundary name="Metrics" resetKey={state.trace}>
             <MetricsTable trace={state.trace} estimators={state.estimators} />
+          </ErrorBoundary>
+          <ErrorBoundary name="Monte Carlo">
+            <MonteCarlo scenario={state.scenario} estimators={state.estimators} params={state.params} />
           </ErrorBoundary>
           <ErrorBoundary name="Charts" resetKey={state.trace}>
             <ChartStack duration={duration} t={t} onSeek={seek}>

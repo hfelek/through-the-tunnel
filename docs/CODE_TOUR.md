@@ -276,7 +276,7 @@ estimator; the EKF owns one instance.
 
 ## 9. `sim/api` and `sim/cli.py`
 
-`main.py` (FastAPI): `GET /api/scenarios` (`:35`), `GET /api/scenarios/{id}` (`:44`), (no save endpoint since T7.9: edits stay in memory), `GET /api/estimators` (`:72`), `GET /api/presets` (`:77`),
+`main.py` (FastAPI): `GET /api/scenarios` (`:35`), `GET /api/scenarios/{id}` (`:44`), (no save endpoint since T7.9: edits stay in memory), `GET /api/estimators` (`:72`), `GET /api/presets` (`:77`), `POST /api/montecarlo` (T9.4, end of file: `async`, runs `sim/api/mc.py::run` in a thread so the event loop and `/api/simulate` stay free),
 `POST /api/simulate` (`:82`): validates estimator ids and parameters (`:90`), runs `run_scenario` (`:94`), decimates
 (`decimate_hz` default 10), returns JSON without nulls. `cli.py` runs a scenario to a trace file.
 
@@ -289,7 +289,9 @@ Pattern to keep: data-heavy layers are memoized and drawn once per trace; only s
   `:46`, `run_done` check in `state.js:60`); `applyEdit` (`:59`) applies an edit action and runs when auto-run is on.
 - `state.js: reducer` (`:18`): scenario (single source of truth), trace, selected estimators and params, `outdated` flag
   (`edit_scenario`, `:48`: an edit keeps the old trace on screen marked outdated).
-- `api.js`: one function per endpoint; `simulate` (`:37`).
+- `api.js`: one function per endpoint; `simulate` (`:37`), `monteCarlo` (end of file).
+- `components/MonteCarlo.jsx` (T9.4): panel under the metrics table. Seeds input, estimator checkboxes (default `DEFAULT_ON`: baseline, ekf_zupt, pf), Run, a log-y strip chart (`Strip`, one dot per seed, dash = median, values clipped at 0.1 m) and a median / p90 / consistency table (`Stats`). It sends the scenario and parameters currently in the panel; a tunnel select appears when the scenario has several tunnels.
+- Live Monte Carlo (T9.4): `sim/api/mc.py` builds one task per seed with `montecarlo.inline_tasks` (the scenario object and UI parameters travel in the task `settings`, which `run_task` accepts as `scenario` / `params`) and runs them in a persistent spawn `ProcessPoolExecutor`. The first wave's task times (`timed_task`) give a projected runtime; above 60 s the rest is cancelled and the request gets a 422. One run at a time (409 otherwise). `summarize` returns signed exit errors per tunnel, consistency per run, median / p90 of |exit error|. No CSV.
 - Sweeps (T9.2): `sweep.py` reuses the Monte Carlo machinery (`montecarlo.execute`, `plan_tasks`, the resumable CSV) with one varied simulator setting per variant label: `accel_bias` multiplies the simulated phone's accelerometer bias (constant part and drift, A14) through `scaled_preset`, patched over `runner.load_preset` in the worker, so the estimators keep assuming the original phone; `tunnel_length` rebuilds a straight scenario with `with_tunnel_length` (tunnel 0.5-5 km, 1.5 km of road after it, exit 300 m after it). CSVs: `docs/results/sweeps/<name>.csv`; `make sweep ARGS="--sweep accel_bias --seeds 30"`; `make figures` regenerates every table and figure (main, side studies, sweeps) from the CSVs; per sweep a summary table, median |exit error| against the value (log y, one panel per scenario) and mean consistency.
 - Estimator markers (T7.2-CR4): each estimator has a colour (`colors.js: estimatorColor`) and a hollow shape (`estimatorShape`: circle, triangle, square, diamond, assigned by registry order like the colour, so no estimator name is hardcoded). `EstimatorMarker.jsx` draws it; the map, the elevation profile and the map legend use it. Reason: `ekf` and `ekf_zupt` give identical estimates without stops (e.g. `curved_5km_exit_inside`), so the later-drawn marker hid the other.
 - Map view rotation (T7.2-CR3): `lib/mapProjection.js` (`roadRotation`: angle that turns the road's first-to-last-point line left to right; `project`: world to screen pixels; `screenToWorldOffset`: the inverse for pan and wheel zoom). `MapView` holds `northUp` (default off, `rot = 0` when on) and passes `rot` to `RoadPaths` (an SVG `rotate` in the view transform), `ExitLayer` and `MapDynamic` (they project positions, so markers, labels and bars stay upright and keep their pixel sizes). `NorthArrow.jsx` points to world north on screen. Data and traces are not changed.
@@ -419,7 +421,7 @@ Edit `vehicles[0].plan` in the scenario (`docs/CONTRACTS.md` 3.2) or use the "Dr
 | `test_montecarlo.py` | N = 2 on `short_straight_500m` into a temporary directory: CSV columns, resume adds nothing, summary table |
 | `test_callouts.py` | perfect estimate fires at the ideal time; larger k fires earlier; missed callouts |
 | `test_runner.py` | same seed is byte-identical (without the wall-clock `compute_us_per_measurement`); an estimator sees only time-ordered measurements, and no estimator module imports sensor, eval, runner or vehicle code (`ast` check); changing the GNSS preset keeps the IMU identical |
-| `test_api.py` | endpoints, simulate returns a decimated trace, invalid inputs and bad parameters give 422, an estimator crash gives 422 |
+| `test_api.py` | endpoints, Monte Carlo with 2 seeds, simulate returns a decimated trace, invalid inputs and bad parameters give 422, an estimator crash gives 422 |
 | `test_health.py` | `/api/health` |
 
 The frontend has no automated tests; it is checked by `npm run build`, `npx oxlint` and by hand in the browser.

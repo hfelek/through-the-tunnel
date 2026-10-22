@@ -46,3 +46,10 @@ export const simulate = (scenario, estimators, decimateHz = 10, calloutK = 1.0) 
     }),
   })
 
+
+export const monteCarlo = (scenario, estimators, nSeeds) =>
+  request('/api/montecarlo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scenario, estimators, n_seeds: nSeeds }),
+  })

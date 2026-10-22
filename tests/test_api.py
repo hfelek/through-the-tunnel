@@ -62,3 +62,15 @@ def test_invalid_inputs_rejected() -> None:
     finally:
         unregister("crashy")
     assert r.status_code == 422 and r.json()["detail"] == "estimator crashy failed: boom"
+
+
+def test_montecarlo_two_seeds() -> None:
+    body = {"scenario": json.loads(SCENARIO.read_text()), "estimators": {"baseline": {}, "ekf_zupt": {}}, "n_seeds": 2}
+    r = client.post("/api/montecarlo", json=body)
+    assert r.status_code == 200
+    res = r.json()
+    tid = res["tunnels"][0]
+    assert set(res["estimators"]) == {"baseline", "ekf_zupt"}
+    assert len(res["estimators"]["ekf_zupt"]["exit_error_m"][tid]) == 2  # one signed exit error per seed
+    assert res["estimators"]["baseline"]["median_abs_exit_error_m"][tid] >= 0
+    assert client.post("/api/montecarlo", json={**body, "n_seeds": 51}).status_code == 422

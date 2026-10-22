@@ -176,12 +176,13 @@ def run_task(task: tuple[str, str, dict, int, int, tuple[str, ...], str]) -> lis
     from sim import runner
 
     name, variant, settings, k, _, estimators, git = task
-    sc = load_scenario(SCENARIOS / f"{name}.json")
+    # the live-demo API passes the scenario being edited in the UI instead of a file name
+    sc = Scenario.model_validate(settings["scenario"]) if "scenario" in settings else load_scenario(SCENARIOS / f"{name}.json")
     seed = derive_seed(sc.seed, k)
     sc = sc.model_copy(update={"seed": seed})  # the seed changes everything random in the scenario
     if "tunnel_km" in settings:
         sc = with_tunnel_length(sc, settings["tunnel_km"])
-    params: dict[str, dict] = {e: {} for e in estimators}
+    params: dict[str, dict] = {e: dict(settings.get("params", {}).get(e, {})) for e in estimators}
     if "pf" in params and k > 0:
         params["pf"]["seed"] = seed % (2**31)  # seed 0 keeps the pf's default seed, so it reproduces earlier single runs
     if "beacon_sigma" in settings:
@@ -227,6 +228,20 @@ def run_task(task: tuple[str, str, dict, int, int, tuple[str, ...], str]) -> lis
         if id(inst) in watched:
             counters[(vi, key)]["accel_use_pct"] = accel_use_pct(watched[id(inst)], trace.vehicles[vi])
     return make_rows(sc, trace, counters, seed, variant, git)
+
+
+def timed_task(task: tuple) -> tuple[list[dict[str, Any]], float]:
+    """run_task plus its wall time in seconds (the API extrapolates its runtime from the first tasks)."""
+    t0 = time.perf_counter()
+    rows = run_task(task)
+    return rows, time.perf_counter() - t0
+
+
+def inline_tasks(sc: Scenario, params: dict[str, dict], n_seeds: int) -> list[tuple]:
+    """One task per seed for a scenario given as an object (not a file), with the estimator parameters as they are in the UI."""
+    git = git_hash()
+    settings = {"scenario": sc.model_dump(mode="json"), "params": params}
+    return [(sc.id, "", settings, k, derive_seed(sc.seed, k), tuple(params), git) for k in range(n_seeds)]
 
 
 def _read_done(path: Path) -> set[tuple[str, str, int, str]]:
