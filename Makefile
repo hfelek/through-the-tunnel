@@ -1,4 +1,4 @@
-.PHONY: dev test lint montecarlo summary
+.PHONY: dev test lint montecarlo summary sweep figures
 
 dev:
 	@trap 'kill 0' INT TERM EXIT; \
@@ -19,3 +19,12 @@ montecarlo:
 # tables and plots from the CSV files, without rerunning anything
 summary:
 	python -m sim.eval.summary $(ARGS)
+
+# sweeps (T9.2): make sweep ARGS="--sweep accel_bias --seeds 30" (or --sweep tunnel_length)
+sweep:
+	python -m sim.eval.sweep $(ARGS)
+
+# every summary table and figure (main study, side studies, sweeps) from the CSV files, without rerunning anything
+figures:
+	python -m sim.eval.summary
+	python -m sim.eval.sweep --figures

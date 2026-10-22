@@ -75,6 +75,27 @@ def git_hash() -> str:
     return head + ("-dirty" if git("status", "--porcelain", "--", ".", ":!docs/results") else "")
 
 
+def scaled_preset(preset: Any, factor: float) -> Any:
+    """Copy of a phone preset with the accelerometer bias (constant part and drift, A14) multiplied; estimators never see it."""
+    p = preset.model_copy(deep=True)
+    p.accel.initial_bias_max.value *= factor
+    p.accel.bias_random_walk.value *= factor
+    return p
+
+
+def with_tunnel_length(sc: Scenario, km: float, tail_m: float = 1500.0, exit_after_m: float = 300.0) -> Scenario:
+    """Straight flat scenario with the first tunnel `km` long, `tail_m` of road after it and the exit `exit_after_m` after it."""
+    t = sc.road.tunnels[0]
+    end = t.start_s + 1000.0 * km
+    raw = sc.model_dump()
+    raw["road"]["segments"] = [{"type": "straight", "length_m": length, "grade_pct": 0}
+                               for length in (t.start_s, end - t.start_s, tail_m)]
+    raw["road"]["tunnels"] = [{"id": t.id, "start_s": t.start_s, "end_s": end}]
+    raw["road"]["exits"] = [{**raw["road"]["exits"][0], "s": end + exit_after_m}]
+    raw["road"]["speed_limits"] = [{**sl, "to_s": end + tail_m} for sl in raw["road"]["speed_limits"]]
+    return Scenario.model_validate(raw)  # validates: tunnel, exit and limits stay on the road
+
+
 def exit_in_tunnel(sc: Scenario) -> str | None:
     """Id of the first exit that lies inside a tunnel; the callout columns are only filled for such scenarios."""
     for ex in sc.road.exits:
@@ -158,6 +179,8 @@ def run_task(task: tuple[str, str, dict, int, int, tuple[str, ...], str]) -> lis
     sc = load_scenario(SCENARIOS / f"{name}.json")
     seed = derive_seed(sc.seed, k)
     sc = sc.model_copy(update={"seed": seed})  # the seed changes everything random in the scenario
+    if "tunnel_km" in settings:
+        sc = with_tunnel_length(sc, settings["tunnel_km"])
     params: dict[str, dict] = {e: {} for e in estimators}
     if "pf" in params and k > 0:
         params["pf"]["seed"] = seed % (2**31)  # seed 0 keeps the pf's default seed, so it reproduces earlier single runs
@@ -186,10 +209,14 @@ def run_task(task: tuple[str, str, dict, int, int, tuple[str, ...], str]) -> lis
         return make
 
     runner.get_estimator = spy
+    real_preset = runner.load_preset
+    if "accel_bias_scale" in settings:  # the simulated phone changes, the filters keep assuming the original one
+        runner.load_preset = lambda name: scaled_preset(real_preset(name), settings["accel_bias_scale"])
     try:
         trace = runner.run_scenario(sc, params)
     finally:
         runner.get_estimator = real
+        runner.load_preset = real_preset
     seen: dict[str, int] = {}
     counters: dict[tuple[int, str], dict[str, Any]] = {}
     for key, inst in made:  # the runner builds the estimators vehicle by vehicle
@@ -233,6 +260,26 @@ def plan_tasks(scenarios: list[str], estimators: list[str], variants: dict[str, 
     return tasks
 
 
+def execute(tasks: list[tuple], path: Path, jobs: int) -> None:
+    """Run the tasks (in worker processes unless jobs == 1) and append each finished task's rows to the CSV."""
+    print(f"{len(tasks)} tasks to run ({path})", flush=True)
+    t0 = time.time()
+    if jobs == 1:  # inline: easier to debug, and no process start-up in the smoke tests
+        finished = map(run_task, tasks)
+        pool = None
+    else:
+        pool = Pool(jobs or None)
+        finished = pool.imap_unordered(run_task, tasks)
+    try:
+        for i, rows in enumerate(finished, 1):
+            _append(path, rows)
+            print(f"[{i}/{len(tasks)}] {rows[0]['scenario']} {rows[0]['variant']} seed {rows[0]['seed']} "
+                  f"({time.time() - t0:.0f} s)", flush=True)
+    finally:
+        if pool is not None:
+            pool.terminate()
+
+
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--seeds", type=int, default=50, help="seeds per scenario (default 50)")
@@ -249,20 +296,7 @@ def main(argv: list[str] | None = None) -> None:
     args.out.mkdir(parents=True, exist_ok=True)
     path = args.out / study["csv"]
     tasks = plan_tasks(scenarios, estimators, study["variants"], args.seeds, _read_done(path), git_hash())
-    print(f"{len(tasks)} tasks to run ({path})", flush=True)
-    jobs = args.jobs or None
-    t0 = time.time()
-    if args.jobs == 1:  # inline: easier to debug, and no process start-up in the smoke test
-        results = map(run_task, tasks)
-        for i, rows in enumerate(results, 1):
-            _append(path, rows)
-            print(f"[{i}/{len(tasks)}] {rows[0]['scenario']} {rows[0]['variant']} seed {rows[0]['seed']}", flush=True)
-    else:
-        with Pool(jobs) as pool:
-            for i, rows in enumerate(pool.imap_unordered(run_task, tasks), 1):
-                _append(path, rows)
-                print(f"[{i}/{len(tasks)}] {rows[0]['scenario']} {rows[0]['variant']} seed {rows[0]['seed']} "
-                      f"({time.time() - t0:.0f} s)", flush=True)
+    execute(tasks, path, args.jobs)
 
 
 if __name__ == "__main__":
