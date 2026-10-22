@@ -1,6 +1,7 @@
 {
   "schema_version": "1.0",
   "id": "hard_brake_inside",
+  "title": "Hard brake inside a 2 km tunnel",
   "description": "A 2 km straight, flat tunnel at 80 km/h with a hard stop at 6 m/s^2 (well above the 3.4 m/s^2 AASHTO comfortable deceleration) 900 m into the tunnel, a 15 s wait, then acceleration back to 80 km/h. Tests the response to a sudden speed change: the baseline keeps its last speed and runs ahead, while an IMU-driven EKF should track the stop.",
   "seed": 106,
   "rates_hz": {

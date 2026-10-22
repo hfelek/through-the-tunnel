@@ -1,6 +1,7 @@
 {
   "schema_version": "1.0",
   "id": "curved_5km_exit_inside",
+  "title": "Curved 5 km tunnel, exit inside",
   "description": "The longest case: a 5 km flat tunnel (about 4.3 min without GNSS at 70 km/h) with two curves, and the exit 600 m before the tunnel end. Tests whether the 500 m and 200 m callouts are on time after a long outage, and whether the curves let map matching remove the accumulated drift before the exit.",
   "seed": 103,
   "rates_hz": {

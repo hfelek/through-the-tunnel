@@ -1,6 +1,7 @@
 {
   "schema_version": "1.0",
   "id": "curved_3km_exit_inside",
+  "title": "Curved 3 km tunnel, exit inside, one stop",
   "description": "3 km curved tunnel, exit at km 1.7 inside the tunnel",
   "seed": 42,
   "rates_hz": { "imu": 100, "gnss": 1, "baro": 10, "mag": 50, "output": 10 },

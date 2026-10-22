@@ -1,6 +1,7 @@
 {
   "schema_version": "1.0",
   "id": "curved_2km",
+  "title": "Curved 2 km tunnel",
   "description": "A 2 km flat tunnel with a left curve (R 800 m) and a right curve (R 600 m) at a constant 70 km/h. Tests curvature as a map feature: matching the measured yaw rate with v*curvature should correct the along-track error after each curve.",
   "seed": 102,
   "rates_hz": {

@@ -1,8 +1,10 @@
-import { memo } from 'react'
+import { memo, useState } from 'react'
+import InfoModal from './InfoModal'
 
 export default memo(function Toolbar({ state, onSelect, onRun }) {
   const { scenarios, scenarioId, scenario, loading, error } = state
   const current = scenarios.find((s) => s.id === scenarioId)
+  const [info, setInfo] = useState(false)
   return (
     <header className="toolbar">
       <h1>Through the Tunnel</h1>
@@ -13,7 +15,7 @@ export default memo(function Toolbar({ state, onSelect, onRun }) {
       >
         {scenarios.map((s) => (
           <option key={s.id} value={s.id}>
-            {s.id}
+            {s.title}
           </option>
         ))}
       </select>
@@ -25,7 +27,8 @@ export default memo(function Toolbar({ state, onSelect, onRun }) {
           <span className="spinner" /> Simulating…
         </span>
       )}
-      {current && <span className="description">{current.description}</span>}
+      <button className="secondary info-btn" disabled={!current} onClick={() => setInfo(true)} title="About this scenario" aria-label="About this scenario">i</button>
+      {info && current && <InfoModal title={current.title} text={current.description} onClose={() => setInfo(false)} />}
       {error && <div className="error-box">{error}</div>}
     </header>
   )

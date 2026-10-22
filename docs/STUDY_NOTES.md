@@ -261,9 +261,10 @@ Rating for the interview demo: **core** (the story breaks without it), **useful*
 
 | Element | What it does | File | Rating |
 |---|---|---|---|
-| Scenario select | Loads a scenario by id from `/api/scenarios`. | `Toolbar.jsx`, `App.jsx` | core |
+| Scenario select | Loads a scenario from `/api/scenarios`; shows its `title`, not the id. | `Toolbar.jsx`, `App.jsx` | core |
 | **Run** button | Sends the current scenario and chosen estimators. | `Toolbar.jsx`, `App.jsx:runWith` | core |
-| Spinner and description | "Simulating…" and the scenario's one-line text. | `Toolbar.jsx` | useful |
+| Spinner | "Simulating…" while a run is in progress. | `Toolbar.jsx` | useful |
+| Scenario info ("i") | Modal with the title and the full description; closes with a button, Escape or a click outside. | `Toolbar.jsx`, `InfoModal.jsx` | useful |
 | Error box | Shows API errors (field names from 422). | `Toolbar.jsx` | core |
 | Play / pause, speed select (1-20x), time slider | Moves the shared time cursor. | `Timeline.jsx`, `usePlayback.js` | core |
 | "T1 entry" / "T1 exit" jump buttons | Seek to 5 s before the event. | `Timeline.jsx` | useful |

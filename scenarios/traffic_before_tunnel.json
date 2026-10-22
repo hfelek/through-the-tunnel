@@ -1,6 +1,7 @@
 {
   "schema_version": "1.0",
   "id": "traffic_before_tunnel",
+  "title": "Traffic before a 3 km tunnel",
   "description": "Stop-and-go traffic (30 km/h, stops of 3-10 s) and speed changes on the open road before a 3 km straight, flat tunnel, i.e. during calibration, then varying speed (90, 40, 70 km/h) inside it. Tests the claim that traffic before the tunnel improves calibration: the forward axis and the accelerometer bias become observable.",
   "seed": 115,
   "rates_hz": {

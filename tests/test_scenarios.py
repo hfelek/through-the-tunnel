@@ -14,6 +14,7 @@ def test_every_scenario_validates_and_runs():
             sc = load_scenario(path)
             assert sc.id == path.stem, f"id '{sc.id}' != file name"
             assert sc.description.strip(), "empty description"
+            assert sc.title.strip(), "empty title"
             run_scenario(sc)
         except Exception as e:  # noqa: BLE001 - collect every failure, assert once
             failures.append(f"{path.name}: {type(e).__name__}: {e}")

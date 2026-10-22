@@ -1,6 +1,7 @@
 {
   "schema_version": "1.0",
   "id": "twin_tunnels_short_gap",
+  "title": "Two tunnels with a short gap",
   "description": "Two 1.5 km straight, flat tunnels with a 200 m open gap between them at 70 km/h, so the car is in the open for only about 10 s. With a 2-6 s reacquisition delay, 3 bad fixes after exit and portal degradation on both sides, few or no good fixes arrive in the gap. Tests that the bad fixes are rejected and that drift from the first tunnel carries correctly into the second; the exit is inside the second tunnel.",
   "seed": 110,
   "rates_hz": {

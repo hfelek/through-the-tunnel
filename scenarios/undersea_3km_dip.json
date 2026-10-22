@@ -1,6 +1,7 @@
 {
   "schema_version": "1.0",
   "id": "undersea_3km_dip",
+  "title": "Undersea 3 km tunnel with a dip",
   "description": "A 3 km straight undersea-style tunnel: 1200 m down at -4%, 600 m flat at the bottom (48 m below the portals), 1200 m up at +4%, at a constant 70 km/h. Tests the barometer as a map feature: matching the relative pressure change with the map altitude z(s) should correct the along-track error on the slopes. Grade changes are blended over 40 m (A12).",
   "seed": 104,
   "rates_hz": {

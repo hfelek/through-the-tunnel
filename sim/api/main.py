@@ -37,7 +37,7 @@ def scenarios() -> list[dict[str, str]]:
     out = []
     for path in sorted(SCENARIOS.glob("*.json")):
         data = json.loads(path.read_text())
-        out.append({"id": data["id"], "description": data.get("description", "")})
+        out.append({"id": data["id"], "title": data.get("title") or data["id"], "description": data.get("description", "")})
     return sorted(out, key=lambda x: x["id"])
 
 

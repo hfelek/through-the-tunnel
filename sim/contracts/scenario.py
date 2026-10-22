@@ -223,6 +223,7 @@ def _check_plan(v: Vehicle, length: float) -> None:
 class Scenario(_Model):
     schema_version: str
     id: str
+    title: str = ""  # display name for the UI; empty = show the id
     description: str = ""
     seed: int
     rates_hz: RatesHz

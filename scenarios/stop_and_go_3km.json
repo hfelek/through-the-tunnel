@@ -1,6 +1,7 @@
 {
   "schema_version": "1.0",
   "id": "stop_and_go_3km",
+  "title": "3 km tunnel with stop-and-go traffic",
   "description": "A 3 km straight, flat tunnel with seeded stop-and-go traffic over 2 km inside it (30 km/h while moving, stops of 5-30 s, 15-40 s of driving between stops). The vehicle spends several minutes in the tunnel. Expected failure of the constant-speed baseline; tests stop detection (ZUPT) and the EKF speed state.",
   "seed": 105,
   "rates_hz": {

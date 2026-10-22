@@ -1,6 +1,7 @@
 {
   "schema_version": "1.0",
   "id": "budget_phone_5km",
+  "title": "Budget phone, 5 km tunnel",
   "description": "Identical to curved_5km_exit_inside (same road, exit and seed, so the true motion is the same) except the phone uses the budget preset (A16). Tests how much each method degrades with 2-4x worse sensors; compare directly with curved_5km_exit_inside.",
   "seed": 103,
   "rates_hz": {

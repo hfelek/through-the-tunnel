@@ -1,6 +1,7 @@
 {
   "schema_version": "1.0",
   "id": "speed_changes_3km",
+  "title": "3 km tunnel with speed changes",
   "description": "A 3 km straight, flat tunnel with speed changes inside it and no stops: 70 km/h entering, 90 km/h from km 2.0, 30 km/h at km 2.8, 60 km/h from km 3.5, with 4 km/h of driver speed fluctuation. The baseline keeps its entry speed; the EKF should follow the changes from the accelerometer; ZUPT is not involved.",
   "seed": 114,
   "rates_hz": {

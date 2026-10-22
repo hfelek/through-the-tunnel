@@ -305,7 +305,7 @@ Pattern to keep: data-heavy layers are memoized and drawn once per trace; only s
   functions, each returns a new scenario: `setTunnelLength`, `extendRoad`, `addPlanPoint`, `editPlanPoint`, `deletePlanPoint`),
   `DrivingPlan.jsx` (the plan table; `Num` commits on Enter or blur),
   `EstimatorPicker.jsx` (`ParamInput`, `:14`; `BoolInput` checkbox for `bool` constraints), `JsonEditor.jsx` (`describe`, `:4`: JSON error with line and column),
-  `Panel.jsx` (results, "outdated" banner), `Toolbar.jsx`.
+  `Panel.jsx` (results, "outdated" banner), `Toolbar.jsx` (the dropdown shows each scenario's `title`; the "i" button opens `InfoModal.jsx` with the full description, closed by its button, Escape or a click outside).
 - `ErrorBoundary.jsx` wraps each view so one crash does not blank the page (`getDerivedStateFromProps` resets it on a new
   trace, `:11`).
 - Colors: `colors.js: estimatorColor` (`:6`), one color per estimator in registry order. No estimator name is hard-coded in
@@ -340,7 +340,7 @@ Edit `vehicles[0].plan` in the scenario (`docs/CONTRACTS.md` 3.2) or use the "Dr
 
 ### ... add a scenario
 1. Copy a file in `scenarios/` to `scenarios/<id>.json`; set `"id"` to the file name without `.json` (checked by
-   `tests/test_scenarios.py`), a new `"seed"`, and a non-empty `"description"`.
+   `tests/test_scenarios.py`), a new `"seed"`, a non-empty `"title"` (the name in the dropdown; the listing falls back to the id) and a non-empty `"description"`.
 2. Add a row to `scenarios/README.md`.
 3. `tests/test_api.py` asserts the scenario count and `tests/test_scenarios.py` a minimum: update both numbers.
 4. `python -m pytest -q`. No frontend change: the picker reads `/api/scenarios`. Or in the UI: edit, "Save as".
@@ -395,7 +395,7 @@ Edit `vehicles[0].plan` in the scenario (`docs/CONTRACTS.md` 3.2) or use the "Dr
 | Test file | Covers |
 | --- | --- |
 | `test_scenario.py` | scenario schema: example validates; tunnel/exit off the road and unknown plan types rejected |
-| `test_scenarios.py` | every file in `scenarios/` validates, id equals the file name, has a description, and runs |
+| `test_scenarios.py` | every file in `scenarios/` validates, id equals the file name, has a title and a description, and runs |
 | `test_road.py` | length, grade, arc heading and map projection, `in_tunnel` |
 | `test_vehicle.py` | stop is exact and speed non-negative, same seed same result, lateral acceleration in a curve, follower keeps its gap, plan points met at their position (slowdown within 5 m, speed-up starts at its point, stop within 1 m with its dwell) |
 | `test_imu.py` | presets validate and need a source; at rest the acceleration norm ≈ g; gyro z = v·curvature; inverse transform returns the true acceleration |

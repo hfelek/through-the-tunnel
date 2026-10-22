@@ -1,6 +1,7 @@
 {
   "schema_version": "1.0",
   "id": "short_straight_500m",
+  "title": "Short straight tunnel (500 m)",
   "description": "Easiest case: a 500 m straight, flat tunnel at a constant 70 km/h, so the GNSS outage lasts only about 26 s and every method should do well. The exit is 300 m past the tunnel, so the 500 m callout falls inside the tunnel and the 200 m callout falls in the GNSS recovery window.",
   "seed": 101,
   "rates_hz": {

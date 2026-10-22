@@ -1,6 +1,7 @@
 {
   "schema_version": "1.0",
   "id": "phone_in_hand_2min",
+  "title": "Phone in hand for 2 minutes",
   "description": "Same road as curved_5km_exit_inside, but the phone is picked up in the middle of the tunnel and held in the hand for 2 minutes (from t = 100 s), with the user re-orienting it now and then, then put back at a slightly different angle. Tests the in-hand mode: a phone not attached to the car cannot measure the car's acceleration, so the estimators must stop integrating acceleration and stop detection while it is in hand, and their uncertainty must grow honestly; after it is put back, the new mount must be found from the gyro.",
   "seed": 112,
   "rates_hz": {

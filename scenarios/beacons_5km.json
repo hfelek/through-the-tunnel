@@ -1,6 +1,7 @@
 {
   "schema_version": "1.0",
   "id": "beacons_5km",
+  "title": "5 km tunnel with beacons",
   "description": "A 5 km straight, flat tunnel at 70 km/h with BLE beacons every 400 m. Straight and flat on purpose: there are no curves or slopes for map matching, so beacons are the only in-tunnel position fix. With beacons on, the error should stay bounded by the drift between two beacons; with beacons off, this is the honest-failure case where the particle filter gains nothing over the EKF.",
   "seed": 111,
   "rates_hz": {

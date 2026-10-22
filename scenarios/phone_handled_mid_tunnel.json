@@ -1,6 +1,7 @@
 {
   "schema_version": "1.0",
   "id": "phone_handled_mid_tunnel",
+  "title": "Phone picked up mid-tunnel",
   "description": "A 3 km straight, flat tunnel at 70 km/h; at t = 150 s, about halfway through the tunnel, the phone is picked up for 4 s and put back at a different angle (yaw 4 -> 12 deg, pitch 65 -> 55 deg, roll -2 -> 5 deg). Tests handling detection and re-alignment without GNSS: until the new mount is found, the longitudinal acceleration is wrong.",
   "seed": 107,
   "rates_hz": {

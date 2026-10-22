@@ -1,6 +1,7 @@
 {
   "schema_version": "1.0",
   "id": "phone_in_hand_whole_trip",
+  "title": "Phone in hand for the whole trip",
   "description": "Same road as curved_5km_exit_inside, but the phone is in the driver's hand for the whole trip, before, inside and after the tunnel, and is moved around freely while navigation runs. The phone is never attached to the car, so no alignment is possible: the estimators cannot use the accelerometer for the car's motion and must rely on GNSS, the last speed, the barometer and the map. This is the hardest honest case.",
   "seed": 113,
   "rates_hz": {

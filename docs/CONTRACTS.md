@@ -25,6 +25,7 @@ A scenario defines the road, tunnels, exits, vehicles, phones and environment ef
 {
   "schema_version": "1.0",
   "id": "curved_3km_exit_inside",
+  "title": "Curved 3 km tunnel, exit inside, one stop",
   "description": "3 km curved tunnel, exit at km 1.7 inside the tunnel",
   "seed": 42,
   "rates_hz": { "imu": 100, "gnss": 1, "baro": 10, "mag": 50, "output": 10 },
@@ -75,7 +76,7 @@ A scenario defines the road, tunnels, exits, vehicles, phones and environment ef
 }
 ```
 
-Driving plan: `initial_kmh` is the first target speed; `plan` is a list of points sorted by position `s` (strictly increasing; a `traffic` section counts from `from_s`), read like speed signs. `{ "type": "speed", "s": m, "kmh": v, "rate_mps2": 1.5 }`: a lower speed is reached exactly at `s` (the car holds its speed and brakes as late as possible at `rate_mps2`), a higher speed starts at `s` (the car holds its speed until `s`, then accelerates at `rate_mps2`). `{ "type": "stop", "s": m, "dwell_s": d, "decel_mps2": 1.5, "accel_mps2": 1.5 }`: speed 0 exactly at `s`, wait `dwell_s`, accelerate to the current target speed. `{ "type": "traffic", "from_s": m, "to_s": m, "kmh": v, "stop_s": [min, max], "go_s": [min, max] }`: seeded random stop-and-go between `from_s` and `to_s` (`kmh` while moving, `stop_s` = stop duration, `go_s` = driving time between stops, both sampled with the scenario seed); afterwards the car returns to the current target speed. Rates default to 1.5 m/s² (A11). The last target speed holds to the road end. Transitions are jerk-limited (A11). `speed_jitter_kmh` is a fluctuation on top of the target speed while it is held; it is off during transitions, stops and traffic. A slowdown or stop that is too close to the previous point to brake at its rate is rejected with a message naming the point and the minimum distance. A `handling_events` item: `{ "t": 150, "duration_s": 4, "new_mount": {...} }`.
+`title` is an optional display name for the UI (ids and file names do not change). Driving plan: `initial_kmh` is the first target speed; `plan` is a list of points sorted by position `s` (strictly increasing; a `traffic` section counts from `from_s`), read like speed signs. `{ "type": "speed", "s": m, "kmh": v, "rate_mps2": 1.5 }`: a lower speed is reached exactly at `s` (the car holds its speed and brakes as late as possible at `rate_mps2`), a higher speed starts at `s` (the car holds its speed until `s`, then accelerates at `rate_mps2`). `{ "type": "stop", "s": m, "dwell_s": d, "decel_mps2": 1.5, "accel_mps2": 1.5 }`: speed 0 exactly at `s`, wait `dwell_s`, accelerate to the current target speed. `{ "type": "traffic", "from_s": m, "to_s": m, "kmh": v, "stop_s": [min, max], "go_s": [min, max] }`: seeded random stop-and-go between `from_s` and `to_s` (`kmh` while moving, `stop_s` = stop duration, `go_s` = driving time between stops, both sampled with the scenario seed); afterwards the car returns to the current target speed. Rates default to 1.5 m/s² (A11). The last target speed holds to the road end. Transitions are jerk-limited (A11). `speed_jitter_kmh` is a fluctuation on top of the target speed while it is held; it is off during transitions, stops and traffic. A slowdown or stop that is too close to the previous point to brake at its rate is rejected with a message naming the point and the minimum distance. A `handling_events` item: `{ "t": 150, "duration_s": 4, "new_mount": {...} }`.
 
 `tunnel_env.pressure_step_pa` is positive when the pressure inside the tunnel is higher than outside (the barometer then reads a lower altitude).
 
@@ -152,7 +153,7 @@ Consistency is measured inside tunnels only, because with GNSS every method is t
 
 | Endpoint | Purpose |
 | --- | --- |
-| `GET /api/scenarios` | Scenario list (id, description) |
+| `GET /api/scenarios` | Scenario list (id, title, description); `title` is the optional display name of the scenario file, the id when the file has none |
 | `GET /api/scenarios/{id}` | Scenario JSON |
 | `POST /api/scenarios` | Body: `{ id, scenario }` → saves `scenarios/{id}.json` (201). `id` must match `^[a-z0-9_]+$` and the scenario must validate; its own `id` field is set to `id`. 409 if the file exists (never overwritten), 422 on a bad id or invalid scenario |
 | `GET /api/estimators` | Methods in the registry: `[{ id, label, params: {name: default}, constraints: {name: {type: "int"\|"float"\|"bool", min?, gt?}} }]`. `min` is inclusive, `gt` exclusive; a `bool` parameter is a JSON true/false |
