@@ -88,8 +88,9 @@ Everything runs on simulated data, built so that the estimators never see the tr
   two per question; the rest are in the full table (`docs/results/summary.md`).
 - **The simulator.** A web app (FastAPI and React) runs a scenario and shows the true position next to each method's
   estimate, its uncertainty band, the sensor streams and the callouts; every scenario value and estimator parameter can be
-  changed live, and a Monte Carlo panel runs 20 seeds of the current settings in about 30 s. The simulator supports several
-  cars in one tunnel (A10, A13); the evaluation scenarios use one, because each car's phone is estimated independently.
+  changed live, and a Monte Carlo panel runs 20 seeds of the current settings in about 30 s. The simulation core supports
+  several cars in one tunnel (A10, A13), added through the scenario JSON; the evaluation scenarios use one car, because each
+  car's phone is estimated independently, and the UI and metrics show the first car.
 - **Determinism.** One seed per scenario run is split into one random stream per sensor, so the same seed reproduces a run
   exactly and changing one sensor never changes another sensor's noise.
 
@@ -236,6 +237,13 @@ is the next step.
 - **Phone in hand:** the simulated hand motion may be gentler than a real one; the bus recording showed about 0.07 rad/s of
   hand-induced yaw noise per second, comparable to the yaw rate of a 300 m-radius curve at 20 m/s, so the PF result in
   `phone_in_hand_2min` is probably optimistic.
+- **A false beacon peak is not recovered from.** In 1 of 300 seeds of `beacons_5km`, RSSI noise produced a peak 3 s
+  before the real pass; the update moved the estimate 29 m ahead, and the gate then rejected the correct beacons that
+  followed (exit error 102 m). The re-initialisation after repeated rejections covers GNSS only; extending it to beacons is
+  a small, obvious next fix.
+- **Cold start.** The filter rejects fixes that lie far from the road. When the slowly varying lateral GNSS error stays
+  large at the start of a drive, it waits up to 25 s for the first accepted fix and then jumps to it (10 of 4,500 seeds).
+  This happens on the open road before the tunnel and does not affect the exit.
 - **Sensors are delay-free and synchronised** (A8); on real phones, BLE scanning adds latency (iOS reports ranging about
   once per second, A25).
 - **No vehicle speed** (OBD, CarPlay, Android Auto), barometer or magnetometer is used.
