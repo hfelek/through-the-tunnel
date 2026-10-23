@@ -1,81 +1,81 @@
 # Monte Carlo summary
 
-18000 rows, commit 8e180c2, f191672. `Runs` counts rows (vehicle x seed). Exit error is signed in the CSV; the table uses its absolute value (per tunnel where a scenario has several). Consistency is the share of tunnel samples with |error| < 2 sigma. Timing error is t - t_ideal (positive = late). Time per measurement was measured with several processes running in parallel, so only the ratios are meaningful.
+18000 rows, commit 915462e. `Runs` counts rows (vehicle x seed). Exit error is signed in the CSV; the table uses its absolute value (per tunnel where a scenario has several). Consistency is the share of tunnel samples with |error| < 2 sigma. Timing error is t - t_ideal (positive = late). Time per measurement was measured with several processes running in parallel, so only the ratios are meaningful.
 
 ## Accuracy
 
-Git hashes in the CSV: `8e180c2`, `f191672`
+Git hashes in the CSV: `915462e`
 
-| Scenario | Estimator | Tunnel | Runs | Median abs. exit error (m) | p90 abs. exit error (m) | p95 abs. exit error (m) | Max abs. exit error (m) | Median RMSE (m) | Mean consistency (%) | Missed callouts | Median time (µs/meas.) |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| beacons_5km | baseline |  | 300 | 101.7 | 250.1 | 283.6 | 359.8 | 60.8 | 95.9 | 0 | 0.6 |
-| beacons_5km | ekf |  | 300 | 3.3 | 8.1 | 10.6 | 102.5 | 4.9 | 96.7 | 0 | 49.9 |
-| beacons_5km | ekf_zupt |  | 300 | 3.3 | 8.1 | 10.6 | 102.5 | 4.9 | 96.7 | 0 | 52.8 |
-| beacons_5km | pf |  | 300 | 3.5 | 7.9 | 11.2 | 102.6 | 5.0 | 95.6 | 0 | 69.3 |
-| budget_phone_5km | baseline |  | 300 | 112.0 | 250.1 | 291.2 | 373.9 | 70.6 | 97.9 | 0 | 0.6 |
-| budget_phone_5km | ekf |  | 300 | 259.4 | 629.7 | 742.7 | 1156.7 | 121.9 | 93.3 | 0 | 49.8 |
-| budget_phone_5km | ekf_zupt |  | 300 | 259.4 | 629.7 | 742.7 | 1156.7 | 121.9 | 93.3 | 0 | 52.8 |
-| budget_phone_5km | pf |  | 300 | 43.2 | 106.1 | 122.7 | 262.5 | 20.2 | 95.0 | 0 | 72.1 |
-| curved_2km | baseline |  | 300 | 35.7 | 88.2 | 107.7 | 154.0 | 21.6 | 98.6 | 0 | 0.8 |
-| curved_2km | ekf |  | 300 | 29.4 | 79.2 | 91.0 | 420.1 | 15.5 | 98.0 | 0 | 52.4 |
-| curved_2km | ekf_zupt |  | 300 | 29.4 | 79.2 | 91.0 | 420.1 | 15.5 | 98.0 | 0 | 56.2 |
-| curved_2km | pf |  | 300 | 7.6 | 16.9 | 20.1 | 112.7 | 8.4 | 97.2 | 0 | 71.8 |
-| curved_3km_exit_inside | baseline |  | 300 | 1213.6 | 1351.5 | 1385.5 | 1505.8 | 813.1 | 24.6 | 0 | 0.7 |
-| curved_3km_exit_inside | ekf |  | 300 | 72.7 | 217.4 | 287.2 | 420.0 | 30.1 | 98.9 | 0 | 55.3 |
-| curved_3km_exit_inside | ekf_zupt |  | 300 | 25.9 | 58.6 | 67.2 | 106.3 | 14.4 | 98.9 | 0 | 60.0 |
-| curved_3km_exit_inside | pf |  | 300 | 5.1 | 11.8 | 14.2 | 20.7 | 27.5 | 98.6 | 0 | 79.4 |
-| curved_5km_exit_inside | baseline |  | 300 | 108.8 | 242.5 | 280.5 | 347.8 | 64.3 | 96.6 | 0 | 1.1 |
-| curved_5km_exit_inside | ekf |  | 300 | 141.7 | 353.9 | 406.9 | 725.3 | 68.6 | 97.3 | 0 | 105.1 |
-| curved_5km_exit_inside | ekf_zupt |  | 300 | 141.7 | 353.9 | 406.9 | 725.3 | 68.6 | 97.3 | 0 | 116.0 |
-| curved_5km_exit_inside | pf |  | 300 | 21.0 | 53.3 | 62.0 | 93.4 | 13.4 | 97.9 | 0 | 157.4 |
-| hard_brake_inside | baseline |  | 300 | 585.8 | 667.0 | 683.3 | 746.1 | 410.7 | 36.9 | 0 | 1.4 |
-| hard_brake_inside | ekf |  | 300 | 20.9 | 68.3 | 88.7 | 140.2 | 10.3 | 91.1 | 0 | 109.7 |
-| hard_brake_inside | ekf_zupt |  | 300 | 8.5 | 19.3 | 22.8 | 30.4 | 6.1 | 90.6 | 0 | 121.0 |
-| hard_brake_inside | pf |  | 300 | 8.0 | 19.1 | 22.7 | 29.8 | 6.2 | 95.3 | 0 | 159.5 |
-| phone_handled_mid_tunnel | baseline |  | 300 | 56.1 | 146.0 | 172.6 | 250.0 | 33.4 | 97.2 | 0 | 1.4 |
-| phone_handled_mid_tunnel | ekf |  | 300 | 49.5 | 124.4 | 145.5 | 203.8 | 24.2 | 93.8 | 0 | 114.4 |
-| phone_handled_mid_tunnel | ekf_zupt |  | 300 | 49.5 | 124.4 | 145.5 | 203.8 | 24.2 | 93.8 | 0 | 126.5 |
-| phone_handled_mid_tunnel | pf |  | 300 | 50.7 | 123.6 | 144.0 | 198.2 | 24.6 | 96.5 | 0 | 169.7 |
-| phone_in_hand_2min | baseline |  | 300 | 100.4 | 220.1 | 270.7 | 353.8 | 57.3 | 96.9 | 0 | 0.9 |
-| phone_in_hand_2min | ekf |  | 300 | 105.2 | 257.9 | 279.6 | 452.2 | 57.2 | 97.7 | 0 | 93.2 |
-| phone_in_hand_2min | ekf_zupt |  | 300 | 105.2 | 257.9 | 279.6 | 452.2 | 57.2 | 97.7 | 0 | 99.4 |
-| phone_in_hand_2min | pf |  | 300 | 12.9 | 31.0 | 38.8 | 64.9 | 39.2 | 98.1 | 0 | 136.9 |
-| phone_in_hand_whole_trip | baseline |  | 300 | 96.0 | 228.7 | 260.3 | 371.3 | 56.4 | 98.1 | 0 | 0.7 |
-| phone_in_hand_whole_trip | ekf |  | 300 | 108.9 | 242.1 | 277.6 | 380.5 | 64.7 | 99.1 | 0 | 76.9 |
-| phone_in_hand_whole_trip | ekf_zupt |  | 300 | 108.9 | 242.1 | 277.6 | 380.5 | 64.7 | 99.1 | 0 | 81.1 |
-| phone_in_hand_whole_trip | pf |  | 300 | 104.3 | 241.0 | 296.5 | 372.4 | 62.2 | 99.1 | 0 | 106.9 |
-| short_straight_500m | baseline |  | 300 | 12.4 | 28.8 | 34.0 | 42.2 | 9.3 | 99.6 | – | 1.0 |
-| short_straight_500m | ekf |  | 300 | 2.5 | 6.6 | 8.1 | 11.2 | 1.9 | 79.5 | – | 60.1 |
-| short_straight_500m | ekf_zupt |  | 300 | 2.5 | 6.6 | 8.1 | 11.2 | 1.9 | 79.5 | – | 64.2 |
-| short_straight_500m | pf |  | 300 | 2.6 | 6.8 | 7.9 | 11.2 | 2.0 | 81.0 | – | 77.8 |
-| speed_changes_3km | baseline |  | 300 | 1046.1 | 1352.7 | 1431.1 | 1500.0 | 603.4 | 25.0 | 0 | 0.7 |
-| speed_changes_3km | ekf |  | 300 | 88.3 | 235.4 | 270.1 | 431.2 | 40.5 | 92.3 | 0 | 56.2 |
-| speed_changes_3km | ekf_zupt |  | 300 | 88.3 | 235.4 | 270.1 | 431.2 | 40.5 | 92.3 | 0 | 59.7 |
-| speed_changes_3km | pf |  | 300 | 89.4 | 237.5 | 263.9 | 431.6 | 41.0 | 95.1 | 0 | 81.4 |
-| stop_and_go_3km | baseline |  | 300 | 1500.0 | 1500.0 | 1500.0 | 1500.0 | 1829.8 | 8.7 | 0 | 0.5 |
-| stop_and_go_3km | ekf |  | 300 | 85.8 | 834.8 | 1084.2 | 1500.0 | 46.4 | 96.8 | 0 | 46.6 |
-| stop_and_go_3km | ekf_zupt |  | 300 | 17.5 | 37.9 | 43.5 | 75.9 | 12.4 | 96.4 | 0 | 51.3 |
-| stop_and_go_3km | pf |  | 300 | 18.7 | 43.0 | 51.1 | 103.2 | 13.5 | 99.0 | 0 | 74.1 |
-| traffic_before_tunnel | baseline |  | 300 | 457.5 | 831.4 | 886.8 | 1151.5 | 259.0 | 36.6 | 0 | 0.6 |
-| traffic_before_tunnel | ekf |  | 300 | 52.2 | 129.7 | 149.0 | 243.4 | 24.0 | 94.8 | 0 | 40.7 |
-| traffic_before_tunnel | ekf_zupt |  | 300 | 48.1 | 123.9 | 155.4 | 248.8 | 22.3 | 93.9 | 0 | 44.2 |
-| traffic_before_tunnel | pf |  | 300 | 47.2 | 125.3 | 151.9 | 244.3 | 22.1 | 96.8 | 0 | 53.6 |
-| twin_tunnels_short_gap | baseline | T0 | 300 | 31.9 | 74.8 | 85.0 | 113.1 | 23.3 | 98.6 | 0 | 0.4 |
-| twin_tunnels_short_gap | baseline | T1 | 300 | 33.2 | 67.0 | 77.8 | 119.6 |  |  | – |  |
-| twin_tunnels_short_gap | ekf | T0 | 300 | 14.7 | 34.7 | 43.3 | 61.7 | 8.4 | 89.9 | 0 | 30.9 |
-| twin_tunnels_short_gap | ekf | T1 | 300 | 12.7 | 33.9 | 36.8 | 64.6 |  |  | – |  |
-| twin_tunnels_short_gap | ekf_zupt | T0 | 300 | 14.7 | 34.7 | 43.3 | 61.7 | 8.4 | 89.9 | 0 | 33.2 |
-| twin_tunnels_short_gap | ekf_zupt | T1 | 300 | 12.7 | 33.9 | 36.8 | 64.6 |  |  | – |  |
-| twin_tunnels_short_gap | pf | T0 | 300 | 15.2 | 34.8 | 42.2 | 61.6 | 8.5 | 93.3 | 0 | 44.2 |
-| twin_tunnels_short_gap | pf | T1 | 300 | 12.5 | 32.9 | 36.5 | 65.4 |  |  | – |  |
-| undersea_3km_dip | baseline |  | 300 | 60.5 | 139.8 | 168.8 | 241.4 | 37.2 | 97.2 | 0 | 0.5 |
-| undersea_3km_dip | ekf |  | 300 | 18.6 | 43.7 | 50.8 | 85.3 | 11.9 | 94.1 | 0 | 31.5 |
-| undersea_3km_dip | ekf_zupt |  | 300 | 18.6 | 43.7 | 50.8 | 85.3 | 11.9 | 94.1 | 0 | 33.8 |
-| undersea_3km_dip | pf |  | 300 | 19.5 | 43.3 | 52.1 | 88.3 | 11.7 | 95.7 | 0 | 45.9 |
+| Scenario | Estimator | Tunnel | Runs | Median abs. exit error (m) | p90 abs. exit error (m) | p95 abs. exit error (m) | Max abs. exit error (m) | Median recovery (s) | p90 recovery (s) | Not recovered | Median max display jump (m) | Max display jump (m) | Median RMSE (m) | Mean consistency (%) | Missed callouts | Median time (µs/meas.) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| beacons_5km | baseline |  | 300 | 101.7 | 250.1 | 283.6 | 359.8 | 3.0 | 3.0 | 0 | 99.7 | 359.5 | 60.8 | 95.9 | 0 | 0.6 |
+| beacons_5km | ekf |  | 300 | 3.3 | 8.1 | 10.6 | 102.5 | 0.0 | 0.0 | 0 | 0.7 | 34.6 | 4.9 | 96.7 | 0 | 49.1 |
+| beacons_5km | ekf_zupt |  | 300 | 3.3 | 8.1 | 10.6 | 102.5 | 0.0 | 0.0 | 0 | 0.7 | 34.6 | 4.9 | 96.7 | 0 | 51.3 |
+| beacons_5km | pf |  | 300 | 3.5 | 7.9 | 11.2 | 102.6 | 0.0 | 0.0 | 0 | 2.1 | 34.6 | 5.0 | 95.6 | 0 | 68.0 |
+| budget_phone_5km | baseline |  | 300 | 112.0 | 250.1 | 291.2 | 373.9 | 3.0 | 31.0 | 0 | 124.6 | 385.5 | 70.6 | 97.9 | 0 | 0.5 |
+| budget_phone_5km | ekf |  | 300 | 259.4 | 629.7 | 742.7 | 1156.7 | 2.0 | 3.0 | 1 | 1.9 | 9.5 | 121.9 | 93.3 | 0 | 36.8 |
+| budget_phone_5km | ekf_zupt |  | 300 | 259.4 | 629.7 | 742.7 | 1156.7 | 2.0 | 3.0 | 1 | 1.9 | 9.5 | 121.9 | 93.3 | 0 | 39.5 |
+| budget_phone_5km | pf |  | 300 | 43.2 | 106.1 | 122.7 | 262.5 | 2.0 | 3.0 | 1 | 2.1 | 9.5 | 20.2 | 95.0 | 0 | 56.8 |
+| curved_2km | baseline |  | 300 | 35.7 | 88.2 | 107.7 | 154.0 | 3.0 | 3.0 | 0 | 47.1 | 171.5 | 21.6 | 98.6 | 0 | 0.7 |
+| curved_2km | ekf |  | 300 | 29.4 | 79.2 | 91.0 | 420.1 | 2.0 | 3.0 | 0 | 1.3 | 12.7 | 15.5 | 98.0 | 0 | 47.7 |
+| curved_2km | ekf_zupt |  | 300 | 29.4 | 79.2 | 91.0 | 420.1 | 2.0 | 3.0 | 0 | 1.3 | 12.7 | 15.5 | 98.0 | 0 | 51.2 |
+| curved_2km | pf |  | 300 | 7.6 | 16.9 | 20.1 | 112.7 | 2.0 | 3.0 | 0 | 2.1 | 12.7 | 8.4 | 97.2 | 0 | 68.1 |
+| curved_3km_exit_inside | baseline |  | 300 | 1213.6 | 1351.5 | 1385.5 | 1505.8 | 3.0 | 3.0 | 0 | 1222.9 | 1506.6 | 813.1 | 24.6 | 0 | 0.6 |
+| curved_3km_exit_inside | ekf |  | 300 | 72.7 | 217.4 | 287.2 | 420.0 | 2.0 | 3.0 | 0 | 1.6 | 33.1 | 30.1 | 98.9 | 0 | 42.9 |
+| curved_3km_exit_inside | ekf_zupt |  | 300 | 25.9 | 58.6 | 67.2 | 106.3 | 2.0 | 3.0 | 0 | 1.3 | 33.1 | 14.4 | 98.9 | 0 | 46.3 |
+| curved_3km_exit_inside | pf |  | 300 | 5.1 | 11.8 | 14.2 | 20.7 | 2.0 | 3.0 | 0 | 2.1 | 33.1 | 27.5 | 98.6 | 0 | 62.8 |
+| curved_5km_exit_inside | baseline |  | 300 | 108.8 | 242.5 | 280.5 | 347.8 | 3.0 | 3.0 | 0 | 122.2 | 359.5 | 64.3 | 96.6 | 0 | 0.5 |
+| curved_5km_exit_inside | ekf |  | 300 | 141.7 | 353.9 | 406.9 | 725.3 | 2.0 | 3.0 | 0 | 1.7 | 13.5 | 68.6 | 97.3 | 0 | 41.1 |
+| curved_5km_exit_inside | ekf_zupt |  | 300 | 141.7 | 353.9 | 406.9 | 725.3 | 2.0 | 3.0 | 0 | 1.7 | 13.5 | 68.6 | 97.3 | 0 | 44.3 |
+| curved_5km_exit_inside | pf |  | 300 | 21.0 | 53.3 | 62.0 | 93.4 | 2.0 | 3.0 | 0 | 2.1 | 13.5 | 13.4 | 97.9 | 0 | 62.4 |
+| hard_brake_inside | baseline |  | 300 | 585.8 | 667.0 | 683.3 | 746.1 | 3.0 | 3.0 | 0 | 588.1 | 771.2 | 410.7 | 36.9 | 0 | 0.7 |
+| hard_brake_inside | ekf |  | 300 | 20.9 | 68.3 | 88.7 | 140.2 | 1.0 | 3.0 | 0 | 1.3 | 238.7 | 10.3 | 91.1 | 0 | 45.0 |
+| hard_brake_inside | ekf_zupt |  | 300 | 8.5 | 19.3 | 22.8 | 30.4 | 0.0 | 3.0 | 0 | 0.8 | 238.7 | 6.1 | 90.6 | 0 | 49.7 |
+| hard_brake_inside | pf |  | 300 | 8.0 | 19.1 | 22.7 | 29.8 | 0.0 | 3.0 | 0 | 2.3 | 238.7 | 6.2 | 95.3 | 0 | 65.8 |
+| phone_handled_mid_tunnel | baseline |  | 300 | 56.1 | 146.0 | 172.6 | 250.0 | 3.0 | 3.0 | 0 | 55.6 | 241.4 | 33.4 | 97.2 | 0 | 0.6 |
+| phone_handled_mid_tunnel | ekf |  | 300 | 49.5 | 124.4 | 145.5 | 203.8 | 2.0 | 3.0 | 0 | 1.3 | 173.3 | 24.2 | 93.8 | 0 | 42.1 |
+| phone_handled_mid_tunnel | ekf_zupt |  | 300 | 49.5 | 124.4 | 145.5 | 203.8 | 2.0 | 3.0 | 0 | 1.3 | 173.3 | 24.2 | 93.8 | 0 | 45.8 |
+| phone_handled_mid_tunnel | pf |  | 300 | 50.7 | 123.6 | 144.0 | 198.2 | 2.0 | 3.0 | 0 | 2.1 | 173.3 | 24.6 | 96.5 | 0 | 63.5 |
+| phone_in_hand_2min | baseline |  | 300 | 100.4 | 220.1 | 270.7 | 353.8 | 3.0 | 3.0 | 0 | 98.3 | 363.7 | 57.3 | 96.9 | 0 | 0.5 |
+| phone_in_hand_2min | ekf |  | 300 | 105.2 | 257.9 | 279.6 | 452.2 | 2.0 | 3.0 | 0 | 1.8 | 207.6 | 57.2 | 97.7 | 0 | 45.5 |
+| phone_in_hand_2min | ekf_zupt |  | 300 | 105.2 | 257.9 | 279.6 | 452.2 | 2.0 | 3.0 | 0 | 1.8 | 207.6 | 57.2 | 97.7 | 0 | 48.6 |
+| phone_in_hand_2min | pf |  | 300 | 12.9 | 31.0 | 38.8 | 64.9 | 2.0 | 3.0 | 0 | 2.1 | 207.6 | 39.2 | 98.1 | 0 | 67.7 |
+| phone_in_hand_whole_trip | baseline |  | 300 | 96.0 | 228.7 | 260.3 | 371.3 | 3.0 | 3.0 | 0 | 96.1 | 394.2 | 56.4 | 98.1 | 0 | 0.4 |
+| phone_in_hand_whole_trip | ekf |  | 300 | 108.9 | 242.1 | 277.6 | 380.5 | 2.0 | 3.0 | 0 | 1.8 | 16.2 | 64.7 | 99.1 | 0 | 51.0 |
+| phone_in_hand_whole_trip | ekf_zupt |  | 300 | 108.9 | 242.1 | 277.6 | 380.5 | 2.0 | 3.0 | 0 | 1.8 | 16.2 | 64.7 | 99.1 | 0 | 53.1 |
+| phone_in_hand_whole_trip | pf |  | 300 | 104.3 | 241.0 | 296.5 | 372.4 | 2.0 | 3.0 | 1 | 2.1 | 16.2 | 62.2 | 99.1 | 0 | 72.4 |
+| short_straight_500m | baseline |  | 300 | 12.4 | 28.8 | 34.0 | 42.2 | 3.0 | 3.0 | 0 | 34.8 | 68.5 | 9.3 | 99.6 | – | 0.6 |
+| short_straight_500m | ekf |  | 300 | 2.5 | 6.6 | 8.1 | 11.2 | 0.0 | 0.0 | 0 | 0.4 | 480.6 | 1.9 | 79.5 | – | 40.1 |
+| short_straight_500m | ekf_zupt |  | 300 | 2.5 | 6.6 | 8.1 | 11.2 | 0.0 | 0.0 | 0 | 0.4 | 480.6 | 1.9 | 79.5 | – | 42.4 |
+| short_straight_500m | pf |  | 300 | 2.6 | 6.8 | 7.9 | 11.2 | 0.0 | 0.0 | 0 | 2.1 | 480.6 | 2.0 | 81.0 | – | 51.8 |
+| speed_changes_3km | baseline |  | 300 | 1046.1 | 1352.7 | 1431.1 | 1500.0 | 3.0 | 3.0 | 0 | 1065.0 | 1478.7 | 603.4 | 25.0 | 0 | 0.5 |
+| speed_changes_3km | ekf |  | 300 | 88.3 | 235.4 | 270.1 | 431.2 | 1.0 | 3.0 | 0 | 1.3 | 19.3 | 40.5 | 92.3 | 0 | 38.6 |
+| speed_changes_3km | ekf_zupt |  | 300 | 88.3 | 235.4 | 270.1 | 431.2 | 1.0 | 3.0 | 0 | 1.3 | 19.3 | 40.5 | 92.3 | 0 | 41.3 |
+| speed_changes_3km | pf |  | 300 | 89.4 | 237.5 | 263.9 | 431.6 | 1.0 | 3.0 | 0 | 2.6 | 19.3 | 41.0 | 95.1 | 0 | 56.3 |
+| stop_and_go_3km | baseline |  | 300 | 1500.0 | 1500.0 | 1500.0 | 1500.0 | 3.0 | 3.0 | 0 | 1418.7 | 1478.9 | 1829.8 | 8.7 | 0 | 0.4 |
+| stop_and_go_3km | ekf |  | 300 | 85.8 | 834.8 | 1084.2 | 1500.0 | 2.0 | 3.0 | 0 | 1.7 | 32.8 | 46.4 | 96.8 | 0 | 34.4 |
+| stop_and_go_3km | ekf_zupt |  | 300 | 17.5 | 37.9 | 43.5 | 75.9 | 1.0 | 3.0 | 0 | 1.0 | 32.8 | 12.4 | 96.4 | 0 | 37.6 |
+| stop_and_go_3km | pf |  | 300 | 18.7 | 43.0 | 51.1 | 103.2 | 1.0 | 3.0 | 0 | 1.8 | 32.8 | 13.5 | 99.0 | 0 | 56.2 |
+| traffic_before_tunnel | baseline |  | 300 | 457.5 | 831.4 | 886.8 | 1151.5 | 3.0 | 3.0 | 0 | 456.3 | 1141.3 | 259.0 | 36.6 | 0 | 0.7 |
+| traffic_before_tunnel | ekf |  | 300 | 52.2 | 129.7 | 149.0 | 243.4 | 2.0 | 3.0 | 0 | 1.3 | 2.4 | 24.0 | 94.8 | 0 | 48.5 |
+| traffic_before_tunnel | ekf_zupt |  | 300 | 48.1 | 123.9 | 155.4 | 248.8 | 1.0 | 3.0 | 0 | 1.3 | 2.4 | 22.3 | 93.9 | 0 | 51.1 |
+| traffic_before_tunnel | pf |  | 300 | 47.2 | 125.3 | 151.9 | 244.3 | 1.0 | 3.0 | 0 | 2.7 | 2.9 | 22.1 | 96.8 | 0 | 63.3 |
+| twin_tunnels_short_gap | baseline | T0 | 300 | 31.9 | 74.8 | 85.0 | 113.1 | 3.0 | 3.0 | 79 | 56.2 | 149.4 | 23.3 | 98.6 | 0 | 0.5 |
+| twin_tunnels_short_gap | baseline | T1 | 300 | 33.2 | 67.0 | 77.8 | 119.6 | 3.0 | 3.0 | 0 |  |  |  |  | – |  |
+| twin_tunnels_short_gap | ekf | T0 | 300 | 14.7 | 34.7 | 43.3 | 61.7 | 0.0 | 2.7 | 16 | 1.3 | 20.9 | 8.4 | 89.9 | 0 | 34.3 |
+| twin_tunnels_short_gap | ekf | T1 | 300 | 12.7 | 33.9 | 36.8 | 64.6 | 0.0 | 3.0 | 0 |  |  |  |  | – |  |
+| twin_tunnels_short_gap | ekf_zupt | T0 | 300 | 14.7 | 34.7 | 43.3 | 61.7 | 0.0 | 2.7 | 16 | 1.3 | 20.9 | 8.4 | 89.9 | 0 | 36.9 |
+| twin_tunnels_short_gap | ekf_zupt | T1 | 300 | 12.7 | 33.9 | 36.8 | 64.6 | 0.0 | 3.0 | 0 |  |  |  |  | – |  |
+| twin_tunnels_short_gap | pf | T0 | 300 | 15.2 | 34.8 | 42.2 | 61.6 | 0.0 | 2.7 | 16 | 2.1 | 20.9 | 8.5 | 93.3 | 0 | 49.2 |
+| twin_tunnels_short_gap | pf | T1 | 300 | 12.5 | 32.9 | 36.5 | 65.4 | 0.0 | 3.0 | 0 |  |  |  |  | – |  |
+| undersea_3km_dip | baseline |  | 300 | 60.5 | 139.8 | 168.8 | 241.4 | 3.0 | 3.0 | 0 | 62.9 | 223.1 | 37.2 | 97.2 | 0 | 0.5 |
+| undersea_3km_dip | ekf |  | 300 | 18.6 | 43.7 | 50.8 | 85.3 | 2.0 | 3.0 | 0 | 1.3 | 17.7 | 11.9 | 94.1 | 0 | 34.9 |
+| undersea_3km_dip | ekf_zupt |  | 300 | 18.6 | 43.7 | 50.8 | 85.3 | 2.0 | 3.0 | 0 | 1.3 | 17.7 | 11.9 | 94.1 | 0 | 37.4 |
+| undersea_3km_dip | pf |  | 300 | 19.5 | 43.3 | 52.1 | 88.3 | 2.0 | 3.0 | 0 | 2.1 | 17.7 | 11.7 | 95.7 | 0 | 51.0 |
 
 ## Callout timing
 
-Git hashes in the CSV: `8e180c2`, `f191672`
+Git hashes in the CSV: `915462e`
 
 | Scenario | Estimator | 500 m: median / median abs. / p90 abs. (s) | 200 m: median / median abs. / p90 abs. (s) | 0 m: median / median abs. / p90 abs. (s) |
 | --- | --- | --- | --- | --- |
