@@ -12,7 +12,7 @@ alignment (finding the car's forward axis from the sensors, also after the phone
 
 ## Quick start
 
-Prerequisites: Python 3.11 or newer, Node.js 20 or newer (with npm), and `make`.
+Prerequisites: Python 3.11 or newer, Node.js 20.19 or newer (with npm; Vite 8 needs it), and `make`.
 
 ```
 git clone https://github.com/hfelek/through-the-tunnel.git
@@ -24,7 +24,7 @@ pip install -e '.[dev]'
 make dev
 ```
 
-Open http://localhost:5173 in a browser (the API runs on port 8000). `make dev` starts both servers and reloads on edits;
+Open http://localhost:5173 in a browser (the API runs on port 8000). Checked on a clean clone: install about 1 min, `make test` about 80 s. `make dev` starts both servers and reloads on edits;
 Ctrl+C stops them.
 
 ## Using the simulator
