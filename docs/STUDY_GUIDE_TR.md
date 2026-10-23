@@ -296,11 +296,14 @@ yönteme **bir bilgi kaynağı ekler**, böylece her katmanın katkısı ölçü
 ### 4.1 Baseline (sim/estimators/baseline.py)
 
 - **Girdi.** Yalnızca GNSS fix'leri. **Çıktı.** `s, v, sigma_s`.
-- **Çalışma.** Son fix'in konumunu ve hızını tutar; fix gelmediğinde son hızlarla sabit hızda ilerler:
-  `s = s_fix + v · dt` ve belirsizlik doğrusal büyür: `sigma = sigma_fix + sigma_rate_mps · dt` (`estimate`, :69).
-  `gap_timeout_s` boyunca son fix hızı kullanılır; sonra son hızların ortalaması kullanılır.
+- **Çalışma.** Son fix'in konumunu ve hızını tutar. Son fix'ten sonra `gap_timeout_s` = **1,5 s** geçene kadar son fix'in hızını
+  kullanır; GNSS bundan daha uzun süre yoksa son `n_speed_fixes` (3) fix'in hızının **ortalamasını** kullanır. Tünelin içinde
+  bu ortalamayla sabit hızda ilerler: `s = s_fix + v_ort · dt`. Belirsizlik doğrusal büyür:
+  `sigma = sigma_fix + sigma_rate_mps · dt` (`estimate`, baseline.py:69; satır 75).
 - **Ne zaman iyi.** Araç gerçekten sabit hızda gidiyorsa sabit hız doğru modeldir; uzun, düz, sabit hızlı tüneller (WRITEUP bölüm 5.2).
-- **Anahtar parametre.** `sigma_rate_mps` belirsizliğin büyüme hızıdır; değeri bu kılavuz için kontrol edilmedi.
+- **Anahtar parametreler.** `gap_timeout_s` = 1,5 s (eski fix'e ne kadar güvenileceği; artırırsan eski fix daha uzun süre kullanılır),
+  `n_speed_fixes` = 3 (ortalamaya giren fix sayısı), `sigma_rate_mps` = 0,5 m/s (bildirilen belirsizliğin saniyedeki büyümesi;
+  yalnızca bildirilen sigma'yı değiştirir, konumu değil).
 
 ### 4.2 Hizalayıcı (Aligner, sim/estimators/alignment.py)
 
@@ -369,8 +372,10 @@ Yani son 1,5 s'de bir fix kabul edilmediyse, ivmeölçer yalnızca filtrenin ofs
 altındaysa integre edilir. Aksi halde hız sabit tutulur ve tahmin baseline gibi davranır.
 
 **Belirsizlik nasıl hareket eder (WRITEUP ile uyumlu).** `b`'nin belirsizliği `bias_rw` hızıyla **yalnızca ivmeölçer
-kullanıldığı sürece** büyür (Q'nun `b` terimi yalnızca o dalda eklenir). Sabit hız dalında büyümez. Küçülmesi ise yalnızca
-GNSS fix'leri ve algılanan duruşlar (ZUPT'un ofset ölçümü) ile olur. Böylece kötü kalibre edilmiş veya hızlı kayan bir
+kullanıldığı sürece** büyür (Q'nun `b` terimi yalnızca o dalda eklenir); sabit hız dalında büyümez. Telefonun montajı
+değiştiğinde ayrıca **sıçrar** (`P_bb += (g · sigma_tilt)²`, `_imu` içinde). Ölçümler onu küçültür: en çok GNSS fix'leri ve
+algılanan duruşlar (ZUPT'un ofset ölçümü); işaretçi geçişleri ve zayıf hız-sınırı ön bilgisi ise filtrenin korelasyonları
+aracılığıyla. Böylece kötü kalibre edilmiş veya hızlı kayan bir
 ivmeölçer filtre tarafından **kendiliğinden devre dışı bırakılır**; GNSS'siz yeterince uzun süre kalındığında tahmin
 baseline'a benzer (WRITEUP bölüm 2, EKF maddesi).
 
@@ -494,8 +499,8 @@ tetiklenmeyen callout'tır (`missed_callouts`, :56). 18.000 koşuda hiç kaçır
 
 **S1. İvmeölçerin güvenilmez olduğuna filtre nasıl karar veriyor?**
 C: Güven kuralı: son 1,5 s'de GNSS fix'i kabul edilmediyse ve filtrenin ofset `b` için kendi standart sapması 0,05 m/s²'nin
-üstündeyse ivme kullanılmaz, hız sabit tutulur. `b`'nin belirsizliği ivmeölçer kullanıldıkça `bias_rw` hızıyla büyür; yalnızca GNSS
-ve algılanan duruşlar onu küçültür. Yani kötü kalibre veya hızlı kayan ivmeölçer kendini kapatır ve sistem baseline'a düşer.
+üstündeyse ivme kullanılmaz, hız sabit tutulur. `b`'nin belirsizliği ivmeölçer kullanıldıkça `bias_rw` hızıyla büyür ve montaj değişince sıçrar; ölçümler küçültür (en çok GNSS
+ve algılanan duruşlar, ayrıca işaretçiler ve hız-sınırı ön bilgisi korelasyonlar yoluyla). Yani kötü kalibre veya hızlı kayan ivmeölçer kendini kapatır ve sistem baseline'a düşer.
 
 **S2. Neden parçacık filtresi, neden EKF yetmiyor?**
 C: Virajda tek bir dönme hızı iki farklı konuma uyabilir (iki benzer viraj). Gauss inanç tek tepelidir. Parçacıklar çok tepeli

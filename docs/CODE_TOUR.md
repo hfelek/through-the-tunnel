@@ -158,8 +158,9 @@ Estimators see only the map and time-ordered `Measurement`s (see section 11).
 
 ### `baseline.py`: the baseline
 
-- `update` keeps the last GNSS fix; `estimate` (`:62`) extrapolates with the average of the last speeds:
-  `sigma = self._sigma_fix + self.sigma_rate_mps * dt` (`:68`) grows linearly during an outage. No IMU.
+- `update` keeps the last GNSS fix and the speeds of the last `n_speed_fixes` (3) fixes; `estimate` (`:69`) uses the last fix's
+  speed until `gap_timeout_s` (1.5 s) has passed without a fix, then the average of those speeds, so inside a tunnel it extrapolates
+  with that average: `sigma = self._sigma_fix + self.sigma_rate_mps * dt` (`:75`) grows linearly during an outage. No IMU.
 
 ### `alignment.py`: the `Aligner` (T8.1)
 
@@ -197,7 +198,7 @@ State `[s, v, b, d_psi]`: position, speed, acceleration offset, remaining mount 
   (`:106`), inflates `P_bb` on a new mount (`:111`), then predicts. Aligned prediction (`:127`):
   `acc = a.a_long - b - d * v * w` (acceleration minus offset minus the yaw error's share). Process noise uses only
   `sigma_base`; the yaw error is in `d_psi`, not counted twice.
-- Trust rule (`:125`): `if a.valid and (gnss_current or sqrt(P_bb) <= accel_trust_sigma_b)`: with a poorly known offset and
+- Trust rule (`:169`): `if a.valid and (gnss_current or sqrt(P_bb) <= accel_trust_sigma_b)`: with a poorly known offset and
   no GNSS, the constant-velocity branch is used instead.
 - `_kalman` (`:76`): generic update, chi-square gate (`:80`), Joseph form, and
   `k[3, :] = 0.0` (`:83`): `d_psi` is a consider state, its mean is never updated.
@@ -235,11 +236,11 @@ State `[s, v, b, d_psi]`: position, speed, acceleration offset, remaining mount 
 
 - `PfEstimator` (`:30`, id `pf`) wraps an `EkfZuptEstimator` (`self.ekf`): `update` passes every measurement to the EKF first.
   The EKF stores its aligned sample in `ekf.aligned` (one line in `_imu`) so the PF can read the yaw rate.
-- Particles are `s`, `dv` (speed offset from the EKF speed) and weights `w`. `_redraw` (`:73`) re-samples them from the EKF's
+- Particles are `s`, `dv` (speed offset from the EKF speed) and weights `w`. `_redraw` (`:82`) re-samples them from the EKF's
   belief whenever the EKF accepted a GNSS fix or a beacon update (detected by a change of `ekf._t_acc` / `beacon_updates`).
-- Map matching runs only in the tunnel (`_in_tunnel`, `:65`: first fix done, EKF mode `dead_reckoning`). `_step` (`:104`) every
+- Map matching runs only in the tunnel (`_in_tunnel`, `:65`: first fix done, EKF mode `dead_reckoning`). `_step` (`:114`) every
   0.1 s: `_propagate` (`:121`) moves `s` by `(v_ekf + dv) * dt` and sums each particle's expected yaw rate `v * curvature(s)`;
-  every 1 s `_weigh` (`:132`) first measures the spread of the particles' expected yaw rates; below `informative_ratio * sigma_yaw`
+  every 1 s `_weigh` (`:142`) first measures the spread of the particles' expected yaw rates; below `informative_ratio * sigma_yaw`
   (e.g. a straight road) it does nothing (CR3; the recentring tried in CR3 was removed in CR4). CR6: `_propagate` runs at every step, also while GNSS is current (before, the cloud stood still for the 1.5 s `gnss_timeout_s` after the last fix and started ~33 m behind on straight tunnels); weighting is tunnel-only); otherwise
   `_weigh_and_resample` (`:142`) multiplies the weights by the curvature likelihood and resamples when
   N_eff < N/2 (`systematic_resample`, `:22`, plus jitter). CR2: there is no barometer matching (A34); the barometer stays a sensor

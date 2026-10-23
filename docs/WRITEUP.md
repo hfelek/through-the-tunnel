@@ -43,8 +43,9 @@ speed and one accelerometer offset are tracked.
 
 Four methods, each adding one source of information to the previous one, so the contribution of each layer can be measured.
 
-1. **Baseline.** Keep the last GNSS speed and extrapolate at constant speed; the uncertainty grows linearly. This is what a
-   navigation app does without inertial sensors.
+1. **Baseline.** Use the speed of the last GNSS fix; once GNSS has been missing for 1.5 s (`gap_timeout_s`), use the average
+   speed of the last three fixes. Inside a tunnel the position is extrapolated with that average at constant speed, and the
+   uncertainty grows linearly. This is what a navigation app does without inertial sensors.
 2. **EKF** (extended Kalman filter). It tracks the position `s`, the speed `v` and an accelerometer offset `b` (called bias
    in the code and UI; `bias_rw` is its drift), plus the small remaining error of the forward axis (see alignment below). The
    IMU drives the prediction; GNSS, projected onto the map, corrects it. Every measurement passes a statistical test
@@ -52,8 +53,9 @@ Four methods, each adding one source of information to the previous one, so the 
    filter from the fix. A trust rule decides when the accelerometer may be used: if no GNSS fix has been accepted for 1.5 s
    (`gnss_timeout_s`), the accelerometer is integrated only while the filter's own uncertainty of the offset `b` (its
    standard deviation, taken from the filter's covariance) is below 0.05 m/s² (`accel_trust_sigma_b`). Otherwise the speed
-   is held constant. The uncertainty of `b` grows at the rate set by `bias_rw` while the accelerometer is in use, and only
-   GNSS fixes and detected stops reduce it, so an accelerometer that is badly calibrated or drifts fast is switched off by the
+   is held constant. The uncertainty of `b` grows at the rate set by `bias_rw` while the accelerometer is in use, and jumps when the
+   phone's mount changes. Measurements reduce it: GNSS fixes and detected stops most, and beacon passes and the weak
+   speed-limit prior through the filter's correlations. So an accelerometer that is badly calibrated or drifts fast is switched off by the
    filter itself, and the estimate then behaves like the baseline. Where a scenario has beacons, a beacon
    pass (the peak of the smoothed signal strength) becomes a position measurement.
 3. **EKF + ZUPT** (zero-velocity update). When the vibration of the accelerometer and gyro drops below a threshold, the car
