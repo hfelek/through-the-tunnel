@@ -37,6 +37,14 @@ Ctrl+C stops them.
 - **Monte Carlo panel** (under the metrics table): runs the current scenario and settings with 20 different seeds (about
   30 s on a 4-core laptop) and shows the spread of the exit error per estimator.
 
+## Real recording
+
+The picker's *Source* switch has a second mode, *Real recording*: a 14-minute city drive recorded with a phone (Sensor Logger,
+iPhone in a mount, in `data/real/car_mounted/`). Pick a recording, set the outage window in recording seconds (default 515
+to 625) and press *Run*. GNSS is removed in the window, as if the car were in a tunnel, and the removed fixes serve as the
+truth. The map comes from the drive's own GNSS, so the result is a replay check and not a map-quality test. Auto-run is
+off here: a replay takes about 10 s. The first run converts the CSV files and caches them in `data/real/cache/`.
+
 ## Scenarios
 
 15 scenarios, described in [scenarios/README.md](scenarios/README.md). The write-up uses eight of them:

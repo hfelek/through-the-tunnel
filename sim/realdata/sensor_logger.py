@@ -32,6 +32,7 @@ DEFAULT_SPAN_S = (110.0, 830.0)  # the city drive without the parked start and e
 ROOT = Path(__file__).resolve().parents[2]
 REAL_DIR = ROOT / "data" / "real"
 CACHE_DIR = REAL_DIR / "cache"
+LOADER_VERSION = 1  # bump when the conversion or the map building changes: the cache file name carries it
 
 
 def _csv(folder: Path, name: str) -> dict[str, np.ndarray]:
@@ -117,7 +118,7 @@ def list_recordings(root: Path = REAL_DIR) -> list[str]:
 
 def load_recording(rec_id: str, root: Path = REAL_DIR, span: tuple[float, float] = DEFAULT_SPAN_S) -> Trace:
     """The converted trace, from the JSON cache when it exists (the conversion takes a few seconds)."""
-    cache = CACHE_DIR / f"{rec_id}_{span[0]:g}_{span[1]:g}.json"
+    cache = CACHE_DIR / f"{rec_id}_{span[0]:g}_{span[1]:g}_v{LOADER_VERSION}.json"
     if cache.is_file():
         return read_trace(cache)
     trace = convert(root / rec_id, *span)

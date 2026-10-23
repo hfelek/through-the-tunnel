@@ -10,9 +10,18 @@ export const initialState = {
   presets: {},
   calloutK: 1.0, // run parameter, not part of the scenario
   autoRun: true,
+  source: 'sim', // 'sim' = scenarios, 'real' = replay of a recording with a GNSS outage (T10.5b)
+  recordings: [], // from GET /api/real: {id, title, span_s, default_outage_s}
+  recordingId: null,
+  outage: ['515', '625'], // recording seconds, kept as text while the user types
   runId: 0, // id of the latest run; responses of older runs are ignored
   loading: false,
   error: null,
+}
+
+function pickRecording(recordings, id) {
+  const rec = recordings.find((r) => r.id === id)
+  return { recordingId: rec?.id ?? null, outage: rec ? rec.default_outage_s.map(String) : initialState.outage }
 }
 
 export function reducer(state, action) {
@@ -41,6 +50,14 @@ export function reducer(state, action) {
       const defaults = state.estimators.find((e) => e.id === action.id)?.params ?? {}
       return { ...state, params: { ...state.params, [action.id]: { ...defaults } }, outdated: state.trace != null }
     }
+    case 'recordings_loaded':
+      return { ...state, recordings: action.recordings, ...pickRecording(action.recordings, action.recordings[0]?.id) }
+    case 'select_recording':
+      return { ...state, ...pickRecording(state.recordings, action.id), trace: null, outdated: false, error: null }
+    case 'set_outage':
+      return { ...state, outage: state.outage.map((v, i) => (i === action.index ? action.value : v)), outdated: state.trace != null }
+    case 'set_source':
+      return { ...state, source: action.source, trace: null, outdated: false, error: null }
     case 'presets_loaded':
       return { ...state, presets: action.presets }
     case 'select_scenario':

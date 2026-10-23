@@ -293,6 +293,7 @@ Pattern to keep: data-heavy layers are memoized and drawn once per trace; only s
 - `App.jsx`: the hub. `latest` ref (`:44`) holds the freshest state for handlers that fire after a render; `runWith` (`:47`)
   sends the scenario, the selected estimators with their params, and `callout_k`; responses of older runs are ignored (`runSeq`,
   `:46`, `run_done` check in `state.js:60`); `applyEdit` (`:59`) applies an edit action and runs when auto-run is on.
+- Real recording (T10.5b): `state.source` is `sim` or `real`. In real mode the toolbar shows a recording picker and the two outage inputs (recording s), `App.jsx::runRecording` calls `runReal` (`api.js`) with only the parameters the user changed from the registry defaults (so the backend's real-drive calibration defaults apply), auto-run is off, and the drive plan, scenario JSON editor, Settings columns and the Monte Carlo panel are not rendered (Settings shows only the Methods picker). The "i" button shows the real-recording note (`Toolbar.jsx::REAL_NOTE`). The map, elevation, timeline and error chart place the truth marker from truth `s` through the map, so the real trace's partial truth works unchanged.
 - `state.js: reducer` (`:18`): scenario (single source of truth), trace, selected estimators and params, `outdated` flag
   (`edit_scenario`, `:48`: an edit keeps the old trace on screen marked outdated).
 - `api.js`: one function per endpoint; `simulate` (`:37`), `monteCarlo` (end of file).

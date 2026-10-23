@@ -13,7 +13,7 @@ export default memo(function Panel({ trace, estimators, outdated }) {
       {outdated && <div className="outdated">Outdated, run to update</div>}
       <h2>
         <span className="swatch" style={{ background: TRUTH_COLOR }} />
-        {vehicle.id} <span className="muted">· simulated duration <b>{fmt(dur, 's')}</b></span>
+        {vehicle.id} <span className="muted">· {trace.source === 'real' ? 'recorded' : 'simulated'} duration <b>{fmt(dur, 's')}</b></span>
       </h2>
       <div className="est-cards">
       {Object.entries(vehicle.metrics ?? {}).map(([id, m]) => {

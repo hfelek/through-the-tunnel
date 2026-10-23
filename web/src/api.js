@@ -47,6 +47,15 @@ export const simulate = (scenario, estimators, decimateHz = 10, calloutK = 1.0) 
   })
 
 
+export const getRecordings = () => request('/api/real')
+
+export const runReal = (id, outageStart, outageEnd, estimators, decimateHz = 10) =>
+  request(`/api/real/${encodeURIComponent(id)}/run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ outage_start_s: outageStart, outage_end_s: outageEnd, estimators, decimate_hz: decimateHz }),
+  })
+
 export const monteCarlo = (scenario, estimators, nSeeds) =>
   request('/api/montecarlo', {
     method: 'POST',

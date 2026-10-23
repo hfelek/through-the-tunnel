@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
-import { getEstimators, getPresets, getScenario, getScenarios, simulate } from './api'
+import { getEstimators, getPresets, getRecordings, getScenario, getScenarios, runReal, simulate } from './api'
 import { initialState, reducer } from './state'
 import Toolbar from './components/Toolbar'
 import Panel from './components/Panel'
@@ -28,6 +28,7 @@ export default function App() {
   useEffect(() => {
     getPresets().then((presets) => dispatch({ type: 'presets_loaded', presets }), fail)
     getEstimators().then((estimators) => dispatch({ type: 'estimators_loaded', estimators }), fail)
+    getRecordings().then((recordings) => dispatch({ type: 'recordings_loaded', recordings }), fail)
     getScenarios().then((scenarios) => {
       dispatch({ type: 'scenarios_loaded', scenarios })
       if (scenarios.length) dispatch({ type: 'select_scenario', id: scenarios[0].id })
@@ -55,15 +56,38 @@ export default function App() {
       (e) => dispatch({ type: 'run_failed', runId, message: e.message }),
     )
   }, [])
-  const run = useCallback(() => runWith(latest.current.scenario), [runWith])
+  const runRecording = useCallback(() => {
+    const { selected, params, estimators, recordingId, outage } = latest.current
+    const runId = ++runSeq.current
+    dispatch({ type: 'run_start', runId })
+    // send only the parameters the user changed: the backend then applies its real-drive calibration defaults (T10.5a)
+    const changed = (id) => {
+      const defaults = estimators.find((e) => e.id === id)?.params ?? {}
+      return Object.fromEntries(Object.entries(params[id] ?? {}).filter(([k, v]) => v !== defaults[k]))
+    }
+    const chosen = Object.fromEntries(selected.map((id) => [id, changed(id)]))
+    runReal(recordingId, Number(outage[0]), Number(outage[1]), chosen).then(
+      (trace) => dispatch({ type: 'run_done', runId, trace }),
+      (e) => dispatch({ type: 'run_failed', runId, message: e.message }),
+    )
+  }, [])
+  const run = useCallback(
+    () => (latest.current.source === 'real' ? runRecording() : runWith(latest.current.scenario)),
+    [runWith, runRecording],
+  )
+  // a replay takes about 10 s, so auto-run applies to simulations only
+  const autoOn = () => latest.current.autoRun && latest.current.source === 'sim'
+  const setSource = useCallback((source) => dispatch({ type: 'set_source', source }), [])
+  const selectRecording = useCallback((id) => dispatch({ type: 'select_recording', id }), [])
+  const setOutage = useCallback((index, value) => dispatch({ type: 'set_outage', index, value }), [])
   // an edit action: apply it now (the ref sees it before the next render); run too when it is a commit and auto-run is on
   const applyEdit = useCallback((action, commit) => {
     latest.current = reducer(latest.current, action)
     dispatch(action)
-    if (commit && latest.current.autoRun) runWith(latest.current.scenario)
+    if (commit && autoOn()) runWith(latest.current.scenario)
   }, [runWith])
   const edit = useCallback((scenario, commit) => applyEdit({ type: 'edit_scenario', scenario }, commit), [applyEdit])
-  const commit = useCallback(() => { if (latest.current.autoRun) runWith(latest.current.scenario) }, [runWith])
+  const commit = useCallback(() => { if (autoOn()) runWith(latest.current.scenario) }, [runWith])
   const setCalloutK = useCallback((value) => applyEdit({ type: 'set_callout_k', value }, false), [applyEdit])
   const setAutoRun = useCallback((value) => dispatch({ type: 'set_auto_run', value }), [])
   const toggleEstimator = useCallback((id) => applyEdit({ type: 'toggle_estimator', id }, true), [applyEdit])
@@ -83,8 +107,21 @@ export default function App() {
 
   return (
     <div className="app">
-      <Toolbar state={state} onSelect={select} onRun={run} settingsOpen={settingsOpen} onToggleSettings={toggleSettings} />
-      {settingsOpen && (
+      <Toolbar
+        state={state} onSelect={select} onRun={run} onSource={setSource} onRecording={selectRecording} onOutage={setOutage}
+        settingsOpen={settingsOpen} onToggleSettings={toggleSettings} />
+      {settingsOpen && state.source === 'real' && (
+        <section className="panel controls settings">
+          <h3>Methods</h3>
+          <ErrorBoundary name="Methods">
+            <EstimatorPicker
+              estimators={state.estimators} selected={state.selected} params={state.params}
+              onToggle={toggleEstimator} onParam={setParam} onReset={resetParams}
+            />
+          </ErrorBoundary>
+        </section>
+      )}
+      {settingsOpen && state.source === 'sim' && (
         <ErrorBoundary name="Settings">
           <Controls
             scenario={state.scenario} presets={state.presets} calloutK={state.calloutK} autoRun={state.autoRun}
@@ -127,9 +164,11 @@ export default function App() {
           <ErrorBoundary name="Metrics" resetKey={state.trace}>
             <MetricsTable trace={state.trace} estimators={state.estimators} />
           </ErrorBoundary>
-          <ErrorBoundary name="Monte Carlo">
-            <MonteCarlo scenario={state.scenario} estimators={state.estimators} params={state.params} />
-          </ErrorBoundary>
+          {state.source === 'sim' && (
+            <ErrorBoundary name="Monte Carlo">
+              <MonteCarlo scenario={state.scenario} estimators={state.estimators} params={state.params} />
+            </ErrorBoundary>
+          )}
           <ErrorBoundary name="Charts" resetKey={state.trace}>
             <ChartStack duration={duration} t={t} onSeek={seek}>
               {(w) => (

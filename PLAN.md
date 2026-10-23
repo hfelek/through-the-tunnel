@@ -403,7 +403,7 @@ This phase is optional; no task, including Phase 11, depends on it. Because the 
     - Accept: GNSS points at the tunnel entrance and exit sit within 10 m of the map.
 - [ ] **T10.4 Evaluation on real data.** All methods on the real trace; since there is no truth inside the tunnel, the criteria are: difference between the estimated exit time and position and when/where GNSS returns, and annotation times.
     - Accept: a results table and a simulation–reality comparison go into the write-up.
-- [ ] **T10.5 Real recording playback in the UI.** `GET /api/real` endpoints and a source picker in the UI (sim / real).
+- [x] **T10.5 Real recording playback in the UI.** `GET /api/real` endpoints and a source picker in the UI (sim / real).
     - Accept: the real recording plays in the same views; no true vehicle is drawn where there is no truth.
 
 ### Phase 11 — Delivery

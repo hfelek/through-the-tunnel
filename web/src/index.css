@@ -182,3 +182,6 @@ button.link { background: none; border: 0; padding: 0; margin-top: 4px; color: v
 .mc table { border-collapse: collapse; font-size: 13px; width: 100%; }
 .mc th, .mc td { padding: 4px 8px; text-align: right; border-bottom: 1px solid var(--border); }
 .mc th:first-child { text-align: left; }
+
+.outage { display: inline-flex; align-items: center; gap: 4px; }
+.outage input { width: 4.5em; }
