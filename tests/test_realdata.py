@@ -26,4 +26,5 @@ def test_real_run_baseline() -> None:
     body = r.json()
     assert body["source"] == "real" and [t["id"] for t in body["map"]["tunnels"]] == ["T1"]
     assert body["vehicles"][0]["metrics"]["baseline"]["exit_error_m"]["T1"] < -100  # the baseline stops short (about -563 m)
+    assert body["vehicles"][0]["metrics"]["baseline"]["recovery_time_s"] == {}  # undefined for a replay, not 0 s
     assert client.post("/api/real/car_mounted/run", json={"outage_start_s": 120}).status_code == 422  # under 60 s of GNSS

@@ -43,7 +43,7 @@ The picker's *Source* switch has a second mode, *Real recording*: a 14-minute ci
 iPhone in a mount, in `data/real/car_mounted/`). Pick a recording, set the outage window in recording seconds (default 515
 to 625) and press *Run*. GNSS is removed in the window, as if the car were in a tunnel, and the removed fixes serve as the
 truth. The map comes from the drive's own GNSS, so the result is a replay check and not a map-quality test. Auto-run is
-off here: a replay takes about 10 s. The first run converts the CSV files and caches them in `data/real/cache/`.
+off here: a replay takes about 10 s. Recovery time is not shown: GNSS returns clean after the artificial outage, so it would be about 0 s for every method and would not separate them. The first run converts the CSV files and caches them in `data/real/cache/`.
 
 ## Scenarios
 

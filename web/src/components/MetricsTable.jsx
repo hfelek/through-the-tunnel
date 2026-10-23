@@ -10,7 +10,7 @@ const absScore = (v) => Math.abs(v)
 const consistencyScore = (v) => Math.abs(v - IDEAL_CONSISTENCY_PCT)
 
 /** Columns follow the metrics present in the trace: one per tunnel and per exit / distance. */
-function buildColumns(metrics) {
+function buildColumns(metrics, real) {
   const rows = Object.values(metrics)
   const tunnels = [...new Set(rows.flatMap((m) => Object.keys(m.exit_error_m ?? {})))].sort()
   const exits = [...new Set(rows.flatMap((m) => [...Object.keys(m.callout_timing_error_s ?? {}), ...(m.missed_callouts ?? []).map((c) => c.exit)]))].sort()
@@ -18,7 +18,7 @@ function buildColumns(metrics) {
     { key: 'rmse', label: 'In-tunnel RMSE (m)', get: (m) => m.rmse_in_tunnel_m, fmt: plain, score: absScore },
     { key: 'max', label: 'Max |error| in tunnel (m)', get: (m) => m.max_abs_error_in_tunnel_m, fmt: plain, score: absScore },
     ...tunnels.map((t) => ({ key: `exit${t}`, label: `Exit error ${t} (m)`, get: (m) => m.exit_error_m?.[t], fmt: signed, score: absScore })),
-    ...tunnels.map((t) => ({ key: `rec${t}`, label: `Recovery ${t} (s)`, get: (m) => m.recovery_time_s?.[t], fmt: plain, score: absScore })),
+    ...(real ? [] : tunnels).map((t) => ({ key: `rec${t}`, label: `Recovery ${t} (s)`, get: (m) => m.recovery_time_s?.[t], fmt: plain, score: absScore })),
     { key: 'jump', label: 'Max display jump (m)', get: (m) => m.max_display_jump_m, fmt: plain, score: absScore },
     { key: 'compute', label: 'Compute (µs / measurement)', get: (m) => m.compute_us_per_measurement, fmt: plain, score: absScore },
     { key: 'cons', label: 'Consistency (%)', get: (m) => m.consistency_pct, fmt: plain, score: consistencyScore },
@@ -48,9 +48,9 @@ export default memo(function MetricsTable({ trace, estimators }) {
   const model = useMemo(() => {
     const entries = Object.entries(metrics ?? {})
     if (!entries.length) return null
-    const cols = buildColumns(metrics)
+    const cols = buildColumns(metrics, trace?.source === 'real') // recovery is not defined for a replay (T10.6b)
     return { entries, cols, best: Object.fromEntries(cols.map((c) => [c.key, bestRows(c, entries)])) }
-  }, [metrics])
+  }, [metrics, trace?.source])
 
   if (!trace) return <section className="metrics empty">Run a scenario to see the metrics.</section>
   if (!model) return <section className="metrics empty">No estimator selected.</section>

@@ -35,6 +35,9 @@ def replay(trace: Trace, ta: float, tb: float, estimators: dict[str, dict]) -> T
     metrics = {k: compute_metrics(e.t, e.s, e.sigma_s, e.display_s, truth.t, truth.s, tunnels, gnss["t"].tolist()) for k, e in est.items()}
     for k in est:
         metrics[k]["compute_us_per_measurement"] = compute_us[k]
+        # undefined here: the GNSS returns clean after an artificial outage, so "recovery" is always about 0 s and does
+        # not separate the methods (in a simulation the first fixes after a tunnel are bad on purpose)
+        metrics[k]["recovery_time_s"] = {}
     events = [Event(t=ta, type="tunnel_enter", ref="T1"), Event(t=tb, type="tunnel_exit", ref="T1")]
     veh_out = VehicleTrace(
         id=veh.id, truth=truth, measurements=Measurements(imu=imu, gnss=Gnss(**{c: a.tolist() for c, a in gnss.items()})),
