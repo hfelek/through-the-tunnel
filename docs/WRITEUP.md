@@ -254,16 +254,15 @@ while the bus stood still, which integrated is about 270 m of position error aft
 even at the stop, so the stop detector never fired. Both support the design choice to stop trusting the accelerometer while
 the phone is handled.
 
-**Car, phone lying in the charging tray** (iPhone 13, 14 min urban drive with five stops, 85 m height difference;
+**Car, phone lying in the charging tray** (iPhone 13, 14 min urban drive with four stops, 85 m height difference;
 `data/real/car_mounted/`, published with the driver's permission). The phone was not in a holder: it lay flat and unfixed
 in the car's charging tray and could shift during the drive.
 
 - **Vibration is about twice the simulated level.** Standing 0.05 m/s² (simulated 0.03), 0.44 m/s² above 15 m/s
   (simulated 0.23).
-- **Stop detection works only partly with the simulated thresholds.** It caught 21–72% of the stopped time in four of the
-  five stops and nothing in the fifth, where the idle vibration was 0.11 m/s² against a 0.05 m/s² threshold. A 1.6× higher
-  threshold catches most of four stops but also fires at up to 4 m/s; the threshold should follow the vehicle's measured
-  vibration rather than be a fixed number.
+- **Stop detection works only partly with the simulated thresholds** (`tools/diagnose_real.py`). It caught 20–68% of the
+  stopped time in three of the four stops and nothing in the fourth, where the idle vibration was 0.09 m/s² against a
+  0.05 m/s² threshold. The threshold should follow the vehicle's measured vibration rather than be a fixed number.
 - **On hills, the "offset" seen at a stop is mostly road grade**: the reading changed by up to 0.3 m/s² from stop to stop,
   in line with the grade at each stop. Without the grade from the map (A2), the offset learned at a stop would be wrong by
   g × grade.

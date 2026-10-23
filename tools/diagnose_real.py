@@ -2,7 +2,8 @@
 
 Reproduces the numbers the write-up quotes for data/real/car_mounted:
 
-1. Stops (GNSS speed < 0.5 m/s for at least 3 s) and the share of each stop the ZUPT detector flags as stationary.
+1. Stops (GNSS speed < 0.5 m/s for at least 3 s) over the whole recording (0-830 s, times are recording times), the share
+   of each stop the ZUPT detector flags as stationary and the idle vibration (median 1 s std of the accelerometer magnitude).
 2. Four outage windows, exit error for both offset drift settings (bias_rw 5e-4 and 0.01), real-drive defaults.
 3. In the default window 515-625 s: the EKF's speed against the GNSS speed, and the forward acceleration minus the
    GNSS-derived acceleration before, inside and after the window.
@@ -39,11 +40,21 @@ def exit_errors(trace, a, b, bias_rw):
     return {k: m[k]["exit_error_m"]["T1"] for k in m}
 
 
+def idle_vibration(t, mag, a, b):
+    """Median of the 1 s standard deviation of the accelerometer magnitude inside [a, b]: a centered 1 s window at every
+    sample, 0.5 s left out at each end so that the window stays inside the stop."""
+    h = round(0.5 / np.median(np.diff(t)))  # half a window in samples
+    inside = np.flatnonzero((t >= a + 0.5) & (t <= b - 0.5))
+    return float(np.median([mag[i - h:i + h].std() for i in inside]))
+
+
 def stops(trace):
+    """(start, end, % flagged stationary, idle vibration) per stop; trace time = recording time."""
     tt, v = np.asarray(trace.vehicles[0].truth.t), np.asarray(trace.vehicles[0].truth.v)
     imu = trace.vehicles[0].measurements.imu
     cols = [np.asarray(getattr(imu, k)) for k in ("t", "ax", "ay", "az", "gx", "gy", "gz")]
     t_imu = cols[0]
+    mag = np.sqrt(cols[1] ** 2 + cols[2] ** 2 + cols[3] ** 2)
     det = StationaryDetector(0.05, 0.004)  # the EKF + ZUPT defaults
     flag = np.array([det.update(*(c[i] for c in cols)) for i in range(len(t_imu))])
     still, out, i = v < 0.5, [], 0
@@ -54,7 +65,7 @@ def stops(trace):
                 j += 1
             if tt[j] - tt[i] >= 3.0:
                 k = (t_imu >= tt[i]) & (t_imu <= tt[j])
-                out.append((tt[i] + T0, tt[j] + T0, 100.0 * flag[k].mean()))
+                out.append((tt[i], tt[j], 100.0 * flag[k].mean(), idle_vibration(t_imu, mag, tt[i], tt[j])))
             i = j + 1
         else:
             i += 1
@@ -93,8 +104,9 @@ def main():
     gt, gv = np.asarray(truth.t), np.asarray(truth.v)
 
     print("1. Stops (GNSS speed < 0.5 m/s for >= 3 s) and the share the ZUPT detector flags as stationary")
-    for a, b, pct in stops(trace):
-        print(f"   {a:5.0f}-{b:5.0f} s  ({b - a:3.0f} s)  detected {pct:3.0f}%")
+    for a, b, pct, vib in stops(load_recording(REC, span=(0.0, DEFAULT_SPAN_S[1]))):  # offset 0: recording times
+        note = "  (before the analysed span)" if a < DEFAULT_SPAN_S[0] else ""
+        print(f"   {a:5.0f}-{b:5.0f} s  ({b - a:3.0f} s)  detected {pct:3.0f}%  idle vibration {vib:.3f} m/s²{note}")
 
     print("\n2. Exit error (m) per outage window, real-drive defaults; bias_rw 5e-4 -> 0.01")
     for a, b in WINDOWS:
