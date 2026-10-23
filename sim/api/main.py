@@ -21,6 +21,7 @@ ID_RE = re.compile(r"^[a-z0-9_]+$")
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    mc.start()  # spawn the workers now, so the first Monte Carlo does not pay for it
     yield
     mc.shutdown()  # the pool workers ignore Ctrl+C, so the server stops them
 

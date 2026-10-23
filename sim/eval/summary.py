@@ -25,7 +25,7 @@ def read_rows(path: Path) -> list[dict[str, str]]:
 
 
 def _nums(rows: list[dict[str, str]], col: str) -> np.ndarray:
-    return np.array([float(r[col]) for r in rows if r[col] != ""], dtype=float)
+    return np.array([float(r[col]) for r in rows if r.get(col, "") != ""], dtype=float)  # a column missing in an old CSV counts as empty
 
 
 def _stat(values: np.ndarray, fn, fmt: str = "{:.1f}") -> str:
@@ -61,7 +61,7 @@ def has_variants(rows: list[dict[str, str]]) -> bool:
 def _recovery_cells(g: list[dict[str, str]], i: int, first: bool) -> list[str]:
     """Recovery per tunnel (an empty cell = never recovered, counted); the display jump is per run, so on the first tunnel row."""
     rec = _nums(g, f"recovery_time_s_t{i}")
-    not_rec = sum(1 for r in g if r[f"exit_error_m_t{i}"] != "" and r[f"recovery_time_s_t{i}"] == "")
+    not_rec = sum(1 for r in g if r[f"exit_error_m_t{i}"] != "" and r.get(f"recovery_time_s_t{i}") == "")  # None = column absent
     jump = _nums(g, "max_display_jump_m")
     return [_stat(rec, np.median), _stat(rec, _p90), str(not_rec),
             _stat(jump, np.median) if first else "", _stat(jump, np.max) if first else ""]

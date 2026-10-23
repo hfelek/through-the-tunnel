@@ -35,6 +35,13 @@ def _get_pool() -> ProcessPoolExecutor:
     return _pool
 
 
+def start() -> None:
+    """Start the worker processes (imports included) without waiting for the first request."""
+    pool = _get_pool()
+    for _ in range(WORKERS):
+        pool.submit(os.getpid)  # the executor spawns its workers on demand: one trivial task per worker
+
+
 def shutdown() -> None:
     """Stop the pool (called when the server shuts down); pending tasks are cancelled."""
     global _pool

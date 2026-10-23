@@ -42,7 +42,8 @@ def _constraints(cls: type) -> dict[str, dict[str, Any]]:
 def list_estimators() -> list[dict[str, Any]]:
     """Registry entries with default parameters, display info and constraints (`type` int / float / bool, optional `min` / `gt`)."""
     return [
-        {"id": k, "label": c.label, "params": _defaults(c), "param_info": _param_info(c), "constraints": _constraints(c)}
+        {"id": k, "label": c.label, "params": _defaults(c), "param_info": _param_info(c), "constraints": _constraints(c),
+         "mc_default": getattr(c, "mc_default", True)}  # preselected in the UI Monte Carlo panel
         for k, c in _REGISTRY.items()
     ]
 

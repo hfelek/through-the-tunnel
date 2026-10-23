@@ -6,11 +6,11 @@
 
 Git hashes in the CSV: `f191672`
 
-| Variant | Scenario | Estimator | Tunnel | Runs | Median abs. exit error (m) | p90 abs. exit error (m) | p95 abs. exit error (m) | Max abs. exit error (m) | Median RMSE (m) | Mean consistency (%) | Missed callouts | Median time (µs/meas.) |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| sigma=10 | beacons_5km | ekf_zupt |  | 50 | 2.9 | 9.1 | 15.9 | 102.5 | 5.4 | 96.5 | 0 | 53.0 |
-| sigma=15 | beacons_5km | ekf_zupt |  | 50 | 4.5 | 10.6 | 13.0 | 23.2 | 6.8 | 96.9 | 0 | 53.6 |
-| sigma=5 | beacons_5km | ekf_zupt |  | 50 | 2.7 | 6.8 | 7.0 | 17.2 | 3.8 | 97.2 | 0 | 52.7 |
+| Variant | Scenario | Estimator | Tunnel | Runs | Median abs. exit error (m) | p90 abs. exit error (m) | p95 abs. exit error (m) | Max abs. exit error (m) | Median recovery (s) | p90 recovery (s) | Not recovered | Median max display jump (m) | Max display jump (m) | Median RMSE (m) | Mean consistency (%) | Missed callouts | Median time (µs/meas.) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| sigma=10 | beacons_5km | ekf_zupt |  | 50 | 2.9 | 9.1 | 15.9 | 102.5 | – | – | 0 | – | – | 5.4 | 96.5 | 0 | 53.0 |
+| sigma=15 | beacons_5km | ekf_zupt |  | 50 | 4.5 | 10.6 | 13.0 | 23.2 | – | – | 0 | – | – | 6.8 | 96.9 | 0 | 53.6 |
+| sigma=5 | beacons_5km | ekf_zupt |  | 50 | 2.7 | 6.8 | 7.0 | 17.2 | – | – | 0 | – | – | 3.8 | 97.2 | 0 | 52.7 |
 
 ## Callout timing
 

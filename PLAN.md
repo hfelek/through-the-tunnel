@@ -384,11 +384,11 @@ The runner merges all sensor streams by time, calls `update` in order and sample
 
 ### Phase 9 — Monte Carlo and parameter sweeps
 
-- [ ] **T9.1 Monte Carlo runner.** Parallel runs over N seeds (`multiprocessing`); median, 95th percentile and maximum of the metrics; CLI `python -m sim mc scenarios/x.json --runs 300`.
+- [x] **T9.1 Monte Carlo runner.** Parallel runs over N seeds (`multiprocessing`); median, 95th percentile and maximum of the metrics; CLI `python -m sim mc scenarios/x.json --runs 300`.
     - Accept: the same seed list gives the same summary.
-- [ ] **T9.2 Sweeps and figures.** Tunnel length (0.5, 1, 2, 3, 5 km) × method; bias multiplier × method; stop duration × method. Box plots and heat maps under `docs/figures/`; summary table as CSV.
+- [x] **T9.2 Sweeps and figures.** Tunnel length (0.5, 1, 2, 3, 5 km) × method; bias multiplier × method; stop duration × method. Box plots and heat maps under `docs/figures/`; summary table as CSV.
     - Accept: one command regenerates all figures (`make figures`).
-- [ ] **T9.3 Monte Carlo API and UI tab.** `POST /api/montecarlo` (small N, e.g. 50) and a distribution chart in the frontend.
+- [x] **T9.3 Monte Carlo API and UI tab.** `POST /api/montecarlo` (small N, e.g. 50) and a distribution chart in the frontend.
     - Accept: live, after changing a parameter, a 50-run result appears in under 30 seconds.
 
 ### Phase 10 — Real data (optional, can be added later)
@@ -480,6 +480,8 @@ Every change that touches the contracts or the task list goes here, newest first
 
 | Date | Change | Affected |
 | --- | --- | --- |
+| 2026-10-23 | Phase 9 deviations. T9.1: `make montecarlo` instead of `python -m sim mc`, with a resumable CSV; 300 seeds for the main study, 50 for the side studies; summary reports median, p90, p95 and max. Diagnosis of the first results (no commit) and the fixes it led to were committed as T9.3 (f191672), so the plan's T9.3 (Monte Carlo API and UI) became T9.4. T9.2: tunnel-length and accelerometer-bias sweeps only (stop-duration sweep dropped, line plots instead of heat maps, figures under docs/results/). T9.4: default 20 seeds in the UI. T9.5: recovery metrics added to the Monte Carlo CSV. | T9.1, T9.2, T9.3 |
+| 2026-10-23 | `GET /api/estimators` entries get `mc_default` (preselected in the UI Monte Carlo panel) | Section 3.6, T11.1 |
 | 2026-10-19 | Particle filter uses curvature only; barometer kept as a sensor and chart, not used by estimators | T8.4 |
 | 2026-10-21 | Estimator params get display metadata (param_info); phone presets get display names | Section 3.6, T7.9 |
 | 2026-10-21 | Scenarios get an optional display title; scenario saving removed, edits stay in memory | Sections 3.2, 3.6, T7.9 |

@@ -6,14 +6,14 @@
 
 Git hashes in the CSV: `f191672`
 
-| Variant | Scenario | Estimator | Tunnel | Runs | Median abs. exit error (m) | p90 abs. exit error (m) | p95 abs. exit error (m) | Max abs. exit error (m) | Median RMSE (m) | Mean consistency (%) | Missed callouts | Median time (µs/meas.) | Mean accelerometer use after put-back (%) |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| c1=0.02 | phone_handled_mid_tunnel | ekf_zupt |  | 50 | 46.2 | 117.7 | 125.5 | 159.9 | 22.7 | 95.0 | 0 | 52.2 | 0.0 |
-| c1=0.02 | phone_in_hand_2min | ekf_zupt |  | 50 | 101.6 | 220.9 | 244.1 | 326.3 | 56.2 | 97.6 | 0 | 62.2 | 0.0 |
-| c1=0.03 | phone_handled_mid_tunnel | ekf_zupt |  | 50 | 46.2 | 117.7 | 125.5 | 159.9 | 22.7 | 95.0 | 0 | 52.7 | 0.0 |
-| c1=0.03 | phone_in_hand_2min | ekf_zupt |  | 50 | 101.6 | 220.9 | 244.1 | 326.3 | 56.2 | 97.6 | 0 | 74.4 | 0.0 |
-| c1=1e-9 | phone_handled_mid_tunnel | ekf_zupt |  | 50 | 108.0 | 296.1 | 319.1 | 422.8 | 36.5 | 92.1 | 0 | 52.3 | 100.0 |
-| c1=1e-9 | phone_in_hand_2min | ekf_zupt |  | 50 | 785.7 | 1890.7 | 1899.3 | 2130.4 | 303.8 | 87.2 | 0 | 60.3 | 100.0 |
+| Variant | Scenario | Estimator | Tunnel | Runs | Median abs. exit error (m) | p90 abs. exit error (m) | p95 abs. exit error (m) | Max abs. exit error (m) | Median recovery (s) | p90 recovery (s) | Not recovered | Median max display jump (m) | Max display jump (m) | Median RMSE (m) | Mean consistency (%) | Missed callouts | Median time (µs/meas.) | Mean accelerometer use after put-back (%) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| c1=0.02 | phone_handled_mid_tunnel | ekf_zupt |  | 50 | 46.2 | 117.7 | 125.5 | 159.9 | – | – | 0 | – | – | 22.7 | 95.0 | 0 | 52.2 | 0.0 |
+| c1=0.02 | phone_in_hand_2min | ekf_zupt |  | 50 | 101.6 | 220.9 | 244.1 | 326.3 | – | – | 0 | – | – | 56.2 | 97.6 | 0 | 62.2 | 0.0 |
+| c1=0.03 | phone_handled_mid_tunnel | ekf_zupt |  | 50 | 46.2 | 117.7 | 125.5 | 159.9 | – | – | 0 | – | – | 22.7 | 95.0 | 0 | 52.7 | 0.0 |
+| c1=0.03 | phone_in_hand_2min | ekf_zupt |  | 50 | 101.6 | 220.9 | 244.1 | 326.3 | – | – | 0 | – | – | 56.2 | 97.6 | 0 | 74.4 | 0.0 |
+| c1=1e-9 | phone_handled_mid_tunnel | ekf_zupt |  | 50 | 108.0 | 296.1 | 319.1 | 422.8 | – | – | 0 | – | – | 36.5 | 92.1 | 0 | 52.3 | 100.0 |
+| c1=1e-9 | phone_in_hand_2min | ekf_zupt |  | 50 | 785.7 | 1890.7 | 1899.3 | 2130.4 | – | – | 0 | – | – | 303.8 | 87.2 | 0 | 60.3 | 100.0 |
 
 ## Callout timing
 

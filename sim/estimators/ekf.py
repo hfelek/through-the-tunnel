@@ -30,6 +30,7 @@ BIAS_MIN_STD = 0.02  # m/s^2, lower bound for the noise measured in a window (a 
 class EkfEstimator:
     id = "ekf"
     label = "EKF"
+    mc_default = False  # same as ekf_zupt where there are no stops, at four times the cost: off in the UI Monte Carlo (T11.1)
     default_params: ClassVar[dict[str, float]] = {  # A31
         "bias_rw": 5e-4, "v_rw": 0.3, "init_bias_sigma": 0.1, "sigma_v": 0.2, "lateral_k": 3.0, "gate_chi2": 13.8,
         "speed_limit_factor": 1.3, "v_prior_sigma": 2.0, "accel_trust_sigma_b": 0.05,
@@ -56,7 +57,7 @@ class EkfEstimator:
         "display_max_catchup": {"label": "Display speed limit", "unit": "m/s", "description": "The displayed position never moves faster than the speed plus this. Affects the display only (T8.6, A31)."},
         "beacon_min_dbm": {"label": "Beacon detection level", "unit": "dBm", "description": "A beacon pass is recognised only while the 1 s average signal is above this level (T8.5, A33)."},
         "beacon_drop_db": {"label": "Beacon peak drop", "unit": "dB", "description": "A pass ends, and its peak time is fixed, when the signal falls this far below its maximum (T8.5, A33)."},
-        "beacon_sigma": {"label": "Beacon position noise", "unit": "m", "description": "Position error of the beacon peak time alone. The update also adds the speed uncertainty times the detection age on top of this (T8.5, A33)."},
+        "beacon_sigma": {"label": "Beacon position error (1σ, m)", "unit": "", "description": "Position error of the beacon peak time alone. The update also adds the speed uncertainty times the detection age on top of this (T8.5, A33)."},
     }
     constraints: ClassVar[dict[str, dict[str, object]]] = {
         **{k: {"type": "float", "gt": 0} for k in default_params
@@ -187,7 +188,7 @@ class EkfEstimator:
         lim = self._limit(float(self.x[0]))
         if lim is not None and self.x[1] > self.speed_limit_factor * lim:  # weak speed prior
             self._kalman(_H_V, np.array([lim]), np.array([[self.v_prior_sigma**2]]))
-        if self.zupt:
+        if self.zupt and a.mode != "in_hand":  # a hand-held phone moves with the hand: the stationary detector means nothing (bus recording)
             self._stationary_updates(m, a.valid, a.a_long)
 
     def _advance_display(self, dt: float) -> None:
@@ -312,6 +313,7 @@ class EkfZuptEstimator(EkfEstimator):
 
     id = "ekf_zupt"
     label = "EKF + ZUPT"
+    mc_default = True
     zupt = True
     default_params: ClassVar[dict[str, float]] = {
         **EkfEstimator.default_params,

@@ -26,7 +26,7 @@ def dummy():
 
 def test_register_and_list(dummy):
     entries = list_estimators()
-    assert {"id": "dummy", "label": "Dummy", "params": {}, "param_info": {}, "constraints": {}} in entries
+    assert {"id": "dummy", "label": "Dummy", "params": {}, "param_info": {}, "constraints": {}, "mc_default": True} in entries
     for e in entries:  # the UI shows these instead of the code names (T7.9-CR1)
         for name in e["params"]:
             info = e["param_info"].get(name, {})

@@ -4,8 +4,6 @@ import InfoModal from './InfoModal'
 import { monteCarlo } from '../api'
 import { estimatorColor } from '../colors'
 
-// Plain `ekf` is off by default: it equals `ekf_zupt` wherever there are no stops and costs about a quarter of the time.
-const DEFAULT_ON = ['baseline', 'ekf_zupt', 'pf']
 const FLOOR_M = 0.1 // |error| below this is drawn at this value, like the overview plot of the full study
 const INFO = 'One dot per seed: the absolute tunnel exit error of a small Monte Carlo run on the scenario and the settings '
   + 'currently in the panel (the dash is the median). A seed changes all random draws (sensor noise, GNSS, beacons, '
@@ -89,7 +87,7 @@ export default memo(function MonteCarlo({ scenario, estimators, params }) {
   const [tunnel, setTunnel] = useState(null)
   const [info, setInfo] = useState(false)
 
-  const on = picked ?? estimators.filter((e) => DEFAULT_ON.includes(e.id)).map((e) => e.id)
+  const on = picked ?? estimators.filter((e) => e.mc_default).map((e) => e.id)
   const toggle = (id) => setPicked(estimators.map((e) => e.id).filter((x) => (x === id ? !on.includes(x) : on.includes(x))))
   const seeds = Math.min(50, Math.max(1, Math.round(nSeeds) || 1))
 
