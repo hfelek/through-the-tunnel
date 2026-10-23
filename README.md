@@ -34,6 +34,7 @@ Ctrl+C stops them.
 - **Settings** (top bar): the phone preset, sensor options, the estimators and their parameters, and the scenario JSON.
   With *auto-run* on, every change runs again at once.
 - **Driving plan**: edit the speed points, stops and traffic sections of the car and see the effect immediately.
+- **Error chart**: the *Bands* switch shows the ±2σ bands overlaid, in one row per method on a shared scale, or not at all.
 - **Monte Carlo panel** (under the metrics table): runs the current scenario and settings with 20 different seeds (about
   30 s on a 4-core laptop) and shows the spread of the exit error per estimator.
 

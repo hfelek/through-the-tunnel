@@ -311,7 +311,7 @@ Pattern to keep: data-heavy layers are memoized and drawn once per trace; only s
   time `t`.
 - Charts: `ChartStack.jsx` (`:15` click-to-seek) measures the width and draws the one shared cursor; all charts use the
   geometry in `lib/plotGeometry.js` (`timeToX`, `xToTime`, `:12-15`) so one x mapping fits all. `ErrorChart.jsx`:
-  `buildRows` (`:14`) → error line and ±2σ band per estimator, `staggerLabels` (`:46`) for the callout labels.
+  `buildRows` (`:14`) → error line and ±2σ band per estimator, `staggerLabels` (`:46`) for the callout labels. The "Bands" select (T10.6d): Overlay (all lines and bands in one plot), Separate (one 140 px row per method, `Plot` called once per method, every row on the y range from `sharedDomain`: the min and max of error ± 2σ over all methods, rounded outwards to a 1-2-5 step; the fixed ±50 / ±200 choices apply to every row) and Off (lines only). One method selected: Separate falls back to Overlay.
   `SensorCharts.jsx` (`:52`; each chart's title and series legend sit in a strip above the plot area, `TITLE_H`; the error chart does the same; `lib/plotGeometry.js` `Y_PAD` and `X_TICK_MARGIN` keep tick labels off the axes) with `lib/sensorSeries.js` (`buildCharts`, `:33`; `breakGaps`, `:15` inserts nulls so GNSS lines
   break in tunnels). Recharts never receives `t`.
 - `MetricsTable.jsx`: columns are generated from the metrics present (`buildColumns`, `:13`); best value per column
