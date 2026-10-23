@@ -6,11 +6,11 @@ from pydantic import BaseModel, Field
 
 from sim.contracts.trace import decimate
 from sim.estimators import EstimatorFailed, list_estimators
-from sim.realdata.replay import REAL_CALIBRATION, replay
+from sim.realdata.replay import REAL_DEFAULTS, replay
 from sim.realdata.sensor_logger import DEFAULT_SPAN_S, list_recordings, load_recording
 
 router = APIRouter()
-DEFAULT_OUTAGE_S = (515.0, 625.0)  # recording time; a stretch with turns, hills and a stop
+DEFAULT_OUTAGE_S = (515.0, 625.0)  # recording time; turns and hills, the car speeds up from 52 to 90 km/h
 MIN_GNSS_BEFORE_S = 60.0  # the filters need this long with GNSS to calibrate the phone and learn the bias
 
 
@@ -30,7 +30,8 @@ def _known(rec_id: str) -> str:
 @router.get("/api/real")
 def recordings() -> list[dict]:
     return [
-        {"id": r, "title": r.replace("_", " "), "span_s": list(DEFAULT_SPAN_S), "default_outage_s": list(DEFAULT_OUTAGE_S)}
+        {"id": r, "title": r.replace("_", " "), "span_s": list(DEFAULT_SPAN_S), "default_outage_s": list(DEFAULT_OUTAGE_S),
+         "default_params": REAL_DEFAULTS}
         for r in list_recordings()
     ]
 
@@ -50,9 +51,9 @@ def run(rec_id: str, req: RealRunRequest) -> Response:
     if a < t0 + MIN_GNSS_BEFORE_S or b > t1 or b <= a:
         raise HTTPException(422, f"outage must satisfy {t0 + MIN_GNSS_BEFORE_S:g} <= start < end <= {t1:g} s (recording time)")
     check_estimators(req.estimators)
-    # real-drive calibration defaults only for the estimators that have those parameters; the request overrides them
-    with_cal = {e["id"] for e in list_estimators() if "flat_grade" in e["params"]}
-    estimators = {k: ({**REAL_CALIBRATION, **p} if k in with_cal else p) for k, p in req.estimators.items()}
+    # the recording's defaults, only for the estimators that have the parameter; values in the request win
+    known = {e["id"]: e["params"] for e in list_estimators()}
+    estimators = {k: {**{n: v for n, v in REAL_DEFAULTS.items() if n in known[k]}, **p} for k, p in req.estimators.items()}
     trace = load_recording(_known(rec_id))
     try:  # trace time counts from the start of the span
         out = replay(trace, a - t0, b - t0, estimators)

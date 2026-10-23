@@ -13,9 +13,10 @@ from sim.eval.metrics import compute_metrics
 from sim.realdata.sensor_logger import map_of
 from sim.runner import _map_columns, _run_estimators
 
-# A real city drive is hillier and more curved than the simulator's roads, so the aligner's calibration conditions are
-# relaxed (found in the T10 check). Applied only to estimators that have the two parameters.
-REAL_CALIBRATION = {"flat_grade": 0.03, "straight_curvature": 2e-3}
+# relaxed for a hilly city drive (T10 check, car_mounted); not validated on other drives. Replace the registry defaults
+# of the estimators that have these parameters. bias_rw stays at its simulation default: 0.01 fits the default window
+# only (checked on four windows, T10.6c).
+REAL_DEFAULTS = {"flat_grade": 0.03, "straight_curvature": 2e-3}
 AFTER_EXIT_S = 60.0  # keep running this long after the outage, to see the recovery
 OUTPUT_HZ = 10.0
 

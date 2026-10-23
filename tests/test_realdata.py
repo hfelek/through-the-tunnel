@@ -20,7 +20,8 @@ def test_ios_signs_and_units() -> None:
 
 def test_real_run_baseline() -> None:
     client = TestClient(app)
-    assert client.get("/api/real").json()[0]["id"] == "car_mounted"
+    listed = client.get("/api/real").json()[0]
+    assert listed["id"] == "car_mounted" and listed["default_params"]["flat_grade"] == 0.03
     r = client.post("/api/real/car_mounted/run", json={"estimators": {"baseline": {}}})
     assert r.status_code == 200
     body = r.json()

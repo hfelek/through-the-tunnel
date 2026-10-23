@@ -1,3 +1,5 @@
+import { realParamsFor, withRealDefaults } from './lib/realDefaults'
+
 export const initialState = {
   scenarios: [],
   scenarioId: null,
@@ -5,6 +7,7 @@ export const initialState = {
   estimators: [], // registry entries: {id, label, params, constraints}
   selected: [], // ids of the estimators that Run sends
   params: {}, // current parameter values per estimator id
+  realParams: {}, // the same for real mode: starts at the recording's default_params (T10.6c)
   trace: null, // replaced as a whole, never mutated
   outdated: false, // the scenario was edited after the shown trace was computed
   presets: {},
@@ -19,9 +22,17 @@ export const initialState = {
   error: null,
 }
 
-function pickRecording(recordings, id) {
-  const rec = recordings.find((r) => r.id === id)
-  return { recordingId: rec?.id ?? null, outage: rec ? rec.default_outage_s.map(String) : initialState.outage }
+const paramsKey = (state) => (state.source === 'real' ? 'realParams' : 'params')
+
+/** Select a recording: its outage window and its default parameters replace the current ones. */
+function withRecording(state, id) {
+  const rec = state.recordings.find((r) => r.id === id)
+  return {
+    ...state,
+    recordingId: rec?.id ?? null,
+    outage: rec ? rec.default_outage_s.map(String) : initialState.outage,
+    realParams: realParamsFor(state.estimators, rec),
+  }
 }
 
 export function reducer(state, action) {
@@ -34,26 +45,32 @@ export function reducer(state, action) {
         estimators: action.estimators,
         selected: action.estimators.map((e) => e.id),
         params: Object.fromEntries(action.estimators.map((e) => [e.id, { ...e.params }])),
+        realParams: realParamsFor(action.estimators, state.recordings.find((r) => r.id === state.recordingId)),
       }
     case 'toggle_estimator': {
       const on = state.selected.includes(action.id)
       const selected = state.estimators.map((e) => e.id).filter((id) => (id === action.id ? !on : state.selected.includes(id)))
       return { ...state, selected, outdated: state.trace != null }
     }
-    case 'set_param':
+    case 'set_param': {
+      const key = paramsKey(state) // the store of the active mode
       return {
         ...state,
-        params: { ...state.params, [action.id]: { ...state.params[action.id], [action.name]: action.value } },
+        [key]: { ...state[key], [action.id]: { ...state[key][action.id], [action.name]: action.value } },
         outdated: state.trace != null,
       }
+    }
     case 'reset_params': {
-      const defaults = state.estimators.find((e) => e.id === action.id)?.params ?? {}
-      return { ...state, params: { ...state.params, [action.id]: { ...defaults } }, outdated: state.trace != null }
+      const key = paramsKey(state)
+      const recording = state.recordings.find((r) => r.id === state.recordingId)
+      const known = state.source === 'real' ? withRealDefaults(state.estimators, recording) : state.estimators
+      const defaults = known.find((e) => e.id === action.id)?.params ?? {}
+      return { ...state, [key]: { ...state[key], [action.id]: { ...defaults } }, outdated: state.trace != null }
     }
     case 'recordings_loaded':
-      return { ...state, recordings: action.recordings, ...pickRecording(action.recordings, action.recordings[0]?.id) }
+      return withRecording({ ...state, recordings: action.recordings }, action.recordings[0]?.id)
     case 'select_recording':
-      return { ...state, ...pickRecording(state.recordings, action.id), trace: null, outdated: false, error: null }
+      return withRecording({ ...state, trace: null, outdated: false, error: null }, action.id)
     case 'set_outage':
       return { ...state, outage: state.outage.map((v, i) => (i === action.index ? action.value : v)), outdated: state.trace != null }
     case 'set_source':

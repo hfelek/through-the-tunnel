@@ -17,6 +17,7 @@ import MonteCarlo from './components/MonteCarlo'
 import SensorCharts from './components/SensorCharts'
 import { vehicleDuration } from './lib/trace'
 import { usePlayback } from './lib/usePlayback'
+import { withRealDefaults } from './lib/realDefaults'
 
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState)
@@ -57,15 +58,11 @@ export default function App() {
     )
   }, [])
   const runRecording = useCallback(() => {
-    const { selected, params, estimators, recordingId, outage } = latest.current
+    const { selected, realParams, recordingId, outage } = latest.current
     const runId = ++runSeq.current
     dispatch({ type: 'run_start', runId })
-    // send only the parameters the user changed: the backend then applies its real-drive calibration defaults (T10.5a)
-    const changed = (id) => {
-      const defaults = estimators.find((e) => e.id === id)?.params ?? {}
-      return Object.fromEntries(Object.entries(params[id] ?? {}).filter(([k, v]) => v !== defaults[k]))
-    }
-    const chosen = Object.fromEntries(selected.map((id) => [id, changed(id)]))
+    // every value is sent: the picker shows the recording's defaults, so what is shown is what runs (T10.6c)
+    const chosen = Object.fromEntries(selected.map((id) => [id, realParams[id] ?? {}]))
     runReal(recordingId, Number(outage[0]), Number(outage[1]), chosen).then(
       (trace) => dispatch({ type: 'run_done', runId, trace }),
       (e) => dispatch({ type: 'run_failed', runId, message: e.message }),
@@ -98,6 +95,11 @@ export default function App() {
     if (id) getScenario(id).then((scenario) => edit(scenario, true), fail)
   }, [edit])
 
+  // the registry with the recording's default parameters: what the Methods picker shows in real mode
+  const realEstimators = useMemo(
+    () => withRealDefaults(state.estimators, state.recordings.find((r) => r.id === state.recordingId)),
+    [state.estimators, state.recordings, state.recordingId],
+  )
   const [settingsOpen, setSettingsOpen] = useState(false) // closed by default: the header shows a summary instead
   const toggleSettings = useCallback(() => setSettingsOpen((o) => !o), [])
   const [editing, setEditing] = useState(false)
@@ -115,7 +117,7 @@ export default function App() {
           <h3>Methods</h3>
           <ErrorBoundary name="Methods">
             <EstimatorPicker
-              estimators={state.estimators} selected={state.selected} params={state.params}
+              estimators={realEstimators} selected={state.selected} params={state.realParams}
               onToggle={toggleEstimator} onParam={setParam} onReset={resetParams}
             />
           </ErrorBoundary>

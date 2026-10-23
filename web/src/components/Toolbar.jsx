@@ -2,7 +2,7 @@ import { memo, useState } from 'react'
 import InfoModal from './InfoModal'
 import { settingsSummary } from '../lib/summary'
 
-const REAL_NOTE = 'A real drive recorded with a phone. GNSS is removed in the outage window, as if the car were in a tunnel, and the removed fixes serve as the truth (the GNSS projected on the map, accurate to about 5 m). The map comes from the drive\'s own GNSS. Times are recording seconds. Calibration parameters left at their default use the real-drive values (max grade 0.03, max curvature 0.002). A replay takes about 10 s.'
+const REAL_NOTE = 'A real drive recorded with a phone. GNSS is removed in the outage window, as if the car were in a tunnel, and the removed fixes serve as the truth (the GNSS projected on the map, accurate to about 5 m). The map comes from the drive\'s own GNSS. Times are recording seconds. The Methods picker starts at the recording\'s own defaults: the calibration limits are relaxed for a hilly city drive (max grade 0.03, max curvature 0.002). A replay takes about 10 s.'
 
 export default memo(function Toolbar({ state, onSelect, onRun, onSource, onRecording, onOutage, settingsOpen, onToggleSettings }) {
   const { scenarios, scenarioId, scenario, loading, error, source, recordings, recordingId, outage } = state
