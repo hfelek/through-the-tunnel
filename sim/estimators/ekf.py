@@ -37,6 +37,7 @@ class EkfEstimator:
         "initial_sigma_s": 50.0, "initial_sigma_v": 5.0, "gnss_timeout_s": 1.5, "recover_fixes": 3,
         "gate_reset_n": 5, "display_k": 0.5, "display_max_catchup": 10.0,  # T8.6, A31
         "beacon_min_dbm": -85.0, "beacon_drop_db": 3.0, "beacon_sigma": 10.0,  # T8.5, A33
+        "flat_grade": 0.005, "straight_curvature": 1e-4,  # calibration conditions of the aligner (T10.5a); same as Aligner defaults
     }
     param_info: ClassVar[dict[str, dict[str, str]]] = {  # display metadata for the UI (T7.9-CR1); A31 = EKF tuning, A33 = beacons
         "bias_rw": {"label": "Accelerometer bias drift", "unit": "m/s²/√s", "description": "How fast the accelerometer bias may drift (process noise on the bias). Raising it relearns the bias faster but makes the estimate noisier (A31)."},
@@ -58,6 +59,8 @@ class EkfEstimator:
         "beacon_min_dbm": {"label": "Beacon detection level", "unit": "dBm", "description": "A beacon pass is recognised only while the 1 s average signal is above this level (T8.5, A33)."},
         "beacon_drop_db": {"label": "Beacon peak drop", "unit": "dB", "description": "A pass ends, and its peak time is fixed, when the signal falls this far below its maximum (T8.5, A33)."},
         "beacon_sigma": {"label": "Beacon position error (1σ, m)", "unit": "", "description": "Position error of the beacon peak time alone. The update also adds the speed uncertainty times the detection age on top of this (T8.5, A33)."},
+        "flat_grade": {"label": "Calibration: max grade", "unit": "rise/run", "description": "The phone's mounting is calibrated only on road that is flatter than this over 50 m. Real hilly roads need a larger value than the simulator's (T10.5a)."},
+        "straight_curvature": {"label": "Calibration: max curvature", "unit": "1/m", "description": "The forward axis is calibrated only on road straighter than this curvature. Real city roads need a larger value than the simulator's (T10.5a)."},
     }
     constraints: ClassVar[dict[str, dict[str, object]]] = {
         **{k: {"type": "float", "gt": 0} for k in default_params
@@ -72,7 +75,7 @@ class EkfEstimator:
         for k, v in {**self.default_params, **params}.items():
             setattr(self, k, float(v))
         self.road = road
-        self.aligner = Aligner(road)
+        self.aligner = Aligner(road, {"flat_grade": self.flat_grade, "straight_curvature": self.straight_curvature})
         self.x = np.zeros(4)  # s, v, b, d_psi (remaining mount yaw error)
         self.P = np.diag([self.initial_sigma_s**2, self.initial_sigma_v**2, self.init_bias_sigma**2, 0.1**2])
         self._d_ready = False  # d_psi starts with the aligner's sigma_psi at the first aligned sample

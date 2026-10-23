@@ -80,6 +80,13 @@ class RoadMap:
         self.speed_limits: list[SpeedLimit] = road.speed_limits
         self.beacons: list[tuple[str, float]] = []  # (beacon id, s); set by the runner when beacons are enabled (T8.5)
 
+    @classmethod
+    def from_columns(cls, line: Centerline) -> "RoadMap":
+        """A map from measured centerline columns (real recording, T10.5a); no tunnels, exits or limits until set."""
+        rm = cls(Road(start_heading_deg=0, segments=[{"type": "straight", "length_m": float(line.s[-1])}]))  # placeholder road
+        rm.line, rm.length_m = line, float(line.s[-1])
+        return rm
+
     def at(self, s: float | np.ndarray) -> dict[str, np.ndarray]:
         """Interpolate x, y, z, heading, curvature, grade at arc length s (clamped to the road)."""
         c = self.line

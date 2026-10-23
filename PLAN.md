@@ -397,7 +397,7 @@ This phase is optional; no task, including Phase 11, depends on it. Because the 
 
 - [ ] **T10.1 Static noise analysis.** Recording with a phone lying on a table (Section 5); noise density, bias and Allan deviation; presets are updated with the measured values and their `source` becomes "measured".
     - Accept: Allan deviation plot under `docs/figures/`.
-- [ ] **T10.2 Sensor Logger loader.** Zip or folder → trace: time alignment, iOS → Android axis and unit conversion, lat/lon → local ENU, separating the phone's own "estimated" positions with an `h_acc` threshold, importing annotations into `events`.
+- [x] **T10.2 Sensor Logger loader.** Zip or folder → trace: time alignment, iOS → Android axis and unit conversion, lat/lon → local ENU, separating the phone's own "estimated" positions with an `h_acc` threshold, importing annotations into `events`.
     - Accept: a sample recording loads and matches the trace schema.
 - [ ] **T10.3 Real tunnel map.** Centerline JSON for the recorded tunnel (from OSM and the GNSS track before/after the tunnel), tunnel length with source.
     - Accept: GNSS points at the tunnel entrance and exit sit within 10 m of the map.
@@ -486,6 +486,7 @@ Every change that touches the contracts or the task list goes here, newest first
 | 2026-10-21 | Estimator params get display metadata (param_info); phone presets get display names | Section 3.6, T7.9 |
 | 2026-10-21 | Scenarios get an optional display title; scenario saving removed, edits stay in memory | Sections 3.2, 3.6, T7.9 |
 | 2026-10-19 | Vehicle profile replaced by a position-based driving plan (speed points, stops, traffic sections) | Section 3.2, T2.2 |
+| 2026-10-23 | `POST /api/real/{id}/run` added (GNSS outage replay of a recording, outage as tunnel T1, metrics against the partial truth); `GET /api/real` returns id, title, span and default outage; EKF gets the parameters `flat_grade` and `straight_curvature` | Sections 3.6, T10.2, T10.5 |
 | 2026-10-19 | Beacon positions are part of the map (RoadMap.beacons, trace map.beacons), like exits | Section 3, T8.5 |
 | 2026-10-18 | API decimation also applies to truth (UI needs ~10 Hz; truth was sent at the IMU rate) | Section 3.3, T6.1 |
 | 2026-10-18 | convoy_3_cars removed; multi-vehicle scenarios are out of scope (the T2.3 code stays). Traffic is represented by a single vehicle in stop_and_go_3km. The 3-vehicle demo item and the T7.2 "3 vehicles" criterion are removed | T4.2, T7.2, Section 6 |

@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from sim.api import mc
+from sim.api.real import router as real_router
 from sim.contracts.scenario import Scenario
 from sim.contracts.trace import decimate
 from sim.estimators import EstimatorFailed, list_estimators, validate_params
@@ -27,6 +28,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="Through the Tunnel", lifespan=lifespan)
+app.include_router(real_router)
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173"], allow_methods=["GET", "POST"])
 
 

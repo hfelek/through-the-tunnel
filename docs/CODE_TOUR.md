@@ -15,7 +15,7 @@ the screen, z out of the screen). Details and the trace format: `docs/CONTRACTS.
 scenarios/*.json ──► sim/contracts/scenario.py   Scenario (validated, extra keys forbidden)
                           │
                           ▼
-                     sim/world/road.py           RoadMap: centerline (x, y, z, heading, curvature, grade) per 1 m,
+                     sim/world/road.py           RoadMap (`from_columns` builds one from measured columns, T10.5a): centerline (x, y, z, heading, curvature, grade) per 1 m,
                           │                      at(s), project(x, y), in_tunnel(s)
                           ▼
                      sim/world/vehicle.py        VehicleMotion = TRUTH: t, s, v, a, yaw, yaw_rate, pitch, a_lat, a_vert
@@ -188,6 +188,8 @@ detects the phone being handled. One per estimator. Design: PLAN T8.1, assumptio
 
 ### `ekf.py`: the EKF (T8.2, `docs/design/T8.2_ekf.md`, A31)
 
+`flat_grade` and `straight_curvature` (T10.5a) are passed to the `Aligner` in `reset`; the defaults equal the Aligner's, so simulation runs are unchanged. The real recording uses 0.03 and 2e-3.
+
 State `[s, v, b, d_psi]`: position, speed, acceleration offset, remaining mount yaw error (a consider state).
 
 - Parameters and constraints: `:27-37`. `reset` (`:40`) creates one `Aligner`.
@@ -279,6 +281,10 @@ estimator; the EKF owns one instance.
 `main.py` (FastAPI): `GET /api/scenarios` (`:35`), `GET /api/scenarios/{id}` (`:44`), (no save endpoint since T7.9: edits stay in memory), `GET /api/estimators` (`:72`), `GET /api/presets` (`:77`), `POST /api/montecarlo` (T9.4, end of file: `async`, runs `sim/api/mc.py::run` in a thread so the event loop and `/api/simulate` stay free),
 `POST /api/simulate` (`:82`): validates estimator ids and parameters (`:90`), runs `run_scenario` (`:94`), decimates
 (`decimate_hz` default 10), returns JSON without nulls. `cli.py` runs a scenario to a trace file.
+
+`real.py` (T10.5a, an `APIRouter` included by `main.py`): `GET /api/real` lists the recordings in `data/real/` (id, span, default outage), `GET /api/real/{id}` returns the converted trace, `POST /api/real/{id}/run` takes the outage in recording time (start at least 60 s after the span start, end inside the span), adds the real-drive calibration defaults (`flat_grade` 0.03, `straight_curvature` 2e-3) to the estimators that have those parameters, and returns the same trace shape as `/api/simulate` with the outage as tunnel `T1`. Trace time counts from the span start (110 s).
+
+`sim/realdata/sensor_logger.py` (T10.5a): `load_arrays` reads the Sensor Logger CSVs with the standard library and converts iOS signs and units (accelerometer `-G * raw`, lat/lon to ENU, bearing to ENU course), `build_map` fits a smoothing spline through the GNSS track (needs scipy; 1 m resolution, grade from the altitude) and returns `RoadMap.from_columns`, `convert` makes the trace (`source: "real"`, imu, gnss, truth `t, s, v` = GNSS projected on the map), `load_recording` caches it as JSON in `data/real/cache/` (git-ignored). `sim/realdata/replay.py::replay` removes the GNSS inside the window, declares it tunnel `T1`, runs the estimators with `runner._run_estimators` and computes the metrics against the partial truth.
 
 ## 10. `web/src`: the UI (React + Vite, plain JavaScript)
 
@@ -418,6 +424,7 @@ Edit `vehicles[0].plan` in the scenario (`docs/CONTRACTS.md` 3.2) or use the "Dr
 | `test_alignment.py` | Aligner on noise-free data: mount yaw and gyro bias found, handling detected and re-aligned, no false detection |
 | `test_pf.py` | particle filter: `curved_5km_exit_inside` in-tunnel RMSE below `ekf_zupt`; `undersea_3km_dip` exit error bounded |
 | `test_ekf.py` | EKF in-tunnel consistency on `curved_2km`; EKF+ZUPT in-tunnel RMSE below half of the EKF's on `hard_brake_inside`; the beacon peak time of a symmetric pass is the true pass time (the moving-average delay is removed); a `v = 0` update with `keep_s=False` leaves s unchanged; beacons bound the `beacons_5km` error (RMSE < 20 m) and change nothing without beacons (the 15 s standstill); the stationary detector never fires on the raw IMU of the constant-speed `curved_2km` and `beacons_5km`; EKF+ZUPT `display_s` is non-decreasing, its max display jump is below the baseline's and recovery exists in `short_straight_500m`, `hard_brake_inside`, `stop_and_go_3km` (T8.6) |
+| `test_realdata.py` | real drive (skipped without the recording): iOS sign checks (accelerometer z about +g, gyro z correlates with the GNSS course rate), `/api/real` list and a baseline run with the default window, 422 for a window with under 60 s of GNSS before it |
 | `test_metrics.py` | RMSE, exit error, consistency, recovery time |
 | `test_sweep.py` | the sweep with N = 2, two values and one short scenario into a temporary directory: CSV rows per value, figures made from the CSV |
 | `test_montecarlo.py` | N = 2 on `short_straight_500m` into a temporary directory: CSV columns, resume adds nothing, summary table |
