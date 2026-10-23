@@ -4,8 +4,8 @@
 
 ## Summary
 
-This project builds a simulator and four position estimators for a car in a GNSS-denied tunnel, and measures how well
-each one works. In short, we did the following:
+This project builds a simulator and four methods that estimate a car's position along the road inside a GNSS-denied
+tunnel, and measures how well each method works. In short:
 
 1. **Built a road map first:** the centerline, curvature and grade of the road, the tunnels, the exits and, in some
    scenarios, Bluetooth beacons.
@@ -36,8 +36,8 @@ known from navigation (A1) and the map gives the centerline, curvature and grade
 the distance travelled along the road, `s`. Every measurement becomes information about `s` or its derivatives: a GNSS fix
 is projected onto the map, a beacon pass is a known `s`, a curve is a place where the gyro must see a known yaw rate. This
 keeps the estimators small and every term explainable. A general inertial navigation system in 3D tracks fifteen numbers
-(position, velocity, orientation and two sensor offsets, three values each); here we track the position along the road, the
-speed and one accelerometer offset.
+(position, velocity, orientation and two sensor offsets, three values each); here the position along the road, the
+speed and one accelerometer offset are tracked.
 
 ## 2. Approach: layers on top of each other
 
@@ -49,8 +49,12 @@ Four methods, each adding one source of information to the previous one, so the 
    in the code and UI; `bias_rw` is its drift), plus the small remaining error of the forward axis (see alignment below). The
    IMU drives the prediction; GNSS, projected onto the map, corrects it. Every measurement passes a statistical test
    (chi-square gate) and is rejected if it does not fit the filter's belief; five rejections in a row re-initialise the
-   filter from the fix. A trust rule switches to a constant-speed model when the offset is too uncertain and there is no
-   GNSS, so a badly calibrated accelerometer cannot do more harm than the baseline. Where a scenario has beacons, a beacon
+   filter from the fix. A trust rule decides when the accelerometer may be used: if no GNSS fix has been accepted for 1.5 s
+   (`gnss_timeout_s`), the accelerometer is integrated only while the filter's own uncertainty of the offset `b` (its
+   standard deviation, taken from the filter's covariance) is below 0.05 m/s² (`accel_trust_sigma_b`). Otherwise the speed
+   is held constant. The uncertainty of `b` grows with time without GNSS (at the rate set by `bias_rw`) and is reduced when
+   GNSS or a stop gives information, so an accelerometer that is badly calibrated or drifts fast is switched off by the
+   filter itself, and the estimate then behaves like the baseline. Where a scenario has beacons, a beacon
    pass (the peak of the smoothed signal strength) becomes a position measurement.
 3. **EKF + ZUPT** (zero-velocity update). When the vibration of the accelerometer and gyro drops below a threshold, the car
    is standing: `v = 0` is applied as a measurement, and the mean acceleration measures the offset `b` directly.
@@ -145,7 +149,7 @@ Metrics:
 
 ### 5.1 Main study (300 seeds)
 
-Absolute exit error in metres, as **median / p90** over 300 seeds: the median is the middle run (half of the runs are
+**Table 1. Main study, 300 seeds per scenario and method.** Absolute exit error in metres, as **median / p90** over 300 seeds: the median is the middle run (half of the runs are
 better), p90 is the value 9 out of 10 runs stay below. Lower is better; the best method of a row is in bold.
 
 | Scenario | What it tests | Baseline | EKF | EKF + ZUPT | PF |
@@ -163,26 +167,28 @@ better), p90 is the value 9 out of 10 runs stay below. Lower is better; the best
 
 ![Median exit error, all scenarios](results/overview_median_exit_error.png)
 
+*Figure 1. Median absolute exit error per scenario and method (the median values of Table 1 and of the remaining scenarios, see `docs/results/summary.md`).*
+
 **No method wins everywhere; the physics of the scenario decides which one does.**
 
 - **Speed changes: the accelerometer pays off.** The baseline keeps the last speed; the EKF follows the changes
-  (1046 m → 88 m).
-- **Stops: ZUPT pays off.** Without it the EKF has a heavy tail (p90 835 m in `stop_and_go_3km`); with it, 18 m (p90 38 m).
+  (1046 m → 88 m, Table 1).
+- **Stops: ZUPT pays off.** Without it the EKF has a heavy tail (p90 835 m in `stop_and_go_3km`); with it, 18 m (p90 38 m; Table 1).
 - **Map features: the particle filter pays off.** Curves anchor the position: 142 m → 21 m in `curved_5km_exit_inside`,
   259 m → 43 m with the budget phone, 105 m → 13 m when the phone is handled mid-tunnel. Beacons do the same for the EKF on
-  a straight tunnel (3.3 m).
+  a straight tunnel (3.3 m). All values of this list are from Table 1.
 - **Long, straight, constant speed: the baseline is hard to beat.** If the car really keeps its speed, constant speed is the
   right model and the accelerometer adds only its drift (5.2). With the phone in the hand for the whole trip, no method
   beats it: the filter cannot relate the accelerometer to the car and falls back to constant speed, as designed.
 
-**Callouts**
+**Callouts** (source: `docs/results/summary.md`, section "Callout timing")
 
 - None was missed in 18,000 runs (a callout is missed if it never fires before the exit).
 - Timing: with the method that suits each scenario the median error is within about 2 s, mostly early, as the `s + k·σ`
   rule intends. Examples: `stop_and_go_3km` with EKF + ZUPT, at 500 m: median −1.2 s, and 9 out of 10 runs within 4.7 s;
   `curved_5km_exit_inside` with the PF, at 500 m: median −0.4 s.
 
-**Recovery**
+**Recovery** (source: `docs/results/summary.md`, section "Accuracy")
 
 - Median recovery time is 0–2 s for the filters and 3 s for the baseline, so the times alone hardly separate them.
 - The difference is what the driver sees: the baseline's map arrow jumps by almost its whole exit error at the first fix
@@ -190,12 +196,12 @@ better), p90 is the value 9 out of 10 runs stay below. Lower is better; the best
 - In `twin_tunnels_short_gap` the 200 m gap is sometimes too short to recover before the second tunnel (16 of 300 runs for
   the filters, 79 for the baseline).
 
-**Consistency**
+**Consistency** (same source)
 
 - 90–99% for the filters in most scenarios, so their stated uncertainty is about right.
 - In a 0.5 km tunnel the EKF is at 79%: somewhat over-confident.
 
-**Cost**
+**Cost** (same source)
 
 - The PF costs about 1.4× the EKF per measurement. The absolute time (about 50 µs per measurement for the EKF) was measured
   with several processes running in parallel, so only the ratio is reliable; both are far below the 10 ms between IMU
@@ -205,14 +211,18 @@ better), p90 is the value 9 out of 10 runs stay below. Lower is better; the best
 
 ![Tunnel length sweep](results/sweeps/tunnel_length_exit_error.png)
 
-**Tunnel length** (straight, constant speed, 0.5–5 km). The EKF beats the baseline up to 2 km (2.5 m vs 13 m at 0.5 km,
+*Figure 2. Median absolute exit error against tunnel length, baseline and EKF (30 seeds per point; data: `docs/results/sweeps/tunnel_length_summary.md`).*
+
+**Tunnel length** (straight, constant speed, 0.5–5 km; Figure 2). The EKF beats the baseline up to 2 km (2.5 m vs 13 m at 0.5 km,
 19 m vs 43 m at 2 km), they are about equal at 3 km, and at 5 km the baseline wins (89 m vs 167 m). An accelerometer offset
 becomes a position error that grows with t²; in a long tunnel without speed changes it outgrows what the accelerometer
 gains. The PF cannot help: a straight road has no features.
 
 ![Accelerometer bias sweep, consistency](results/sweeps/accel_bias_consistency.png)
 
-**Accelerometer bias** (0.5–5× the simulated phone's bias while the filter keeps assuming the original phone). Errors grow
+*Figure 3. Consistency against the accelerometer bias factor (30 seeds per point; data: `docs/results/sweeps/accel_bias_summary.md`).*
+
+**Accelerometer bias** (0.5–5× the simulated phone's bias while the filter keeps assuming the original phone; Figure 3 and the exit-error values in `docs/results/sweeps/accel_bias_summary.md`; 30 seeds per point, so `speed_changes_3km` differs slightly from Table 1). Errors grow
 but the ranking holds: at 5× the EKF is still 4× better than the baseline in `speed_changes_3km` (228 m (?) vs 1012 m), and
 stops limit the damage (`hard_brake_inside`: 6 m → 13 m). The real cost is honesty: a filter that assumes a better phone
 than it has becomes over-confident (consistency 90% → 62% (?) in `stop_and_go_3km`). Measuring the real phone's bias is
@@ -268,7 +278,9 @@ an adjustable window. The default window is 110 s (2.2 km, recording time 515–
 
 ![Real drive with an artificial tunnel](results/real_replay.png)
 
-Exit error in metres:
+*Figure 4. Along-track error of the baseline, EKF and PF in the default window; left: default offset drift, right: 20 times larger. Calibration relaxed in both; the EKF and PF curves of the left panel lie on top of each other. Made by `tools/plot_real_replay.py`.*
+
+**Table 2. Real drive, default window (recording time 515–625 s).** Exit error in metres:
 
 | Setting | Baseline | EKF | PF |
 |---|---|---|---|
@@ -302,11 +314,11 @@ the replay: GNSS returns clean after an artificial outage, so it is always about
     position (a diagnostic run only, since it uses the truth) reduces the exit error from −1693 m to −1301 m.
   - **The PF goes blind.** It uses the EKF's speed, and a curve is expected to produce a yaw rate of `v · curvature`; with a
     speed near zero every particle expects no turning, so the curves carry no information.
-- **With a 20× larger offset drift** (`bias_rw` 0.01 instead of 5·10⁻⁴), the offset uncertainty crosses the trust limit
+- **With a 20× larger offset drift** (Table 2; `bias_rw` 0.01 instead of 5·10⁻⁴), the offset uncertainty crosses the trust limit
   after about 14 s and the EKF holds constant speed from there: −335 m, better than the baseline. The PF, anchored by the
   curves in the window, ends at +61 m.
 
-**Other windows of the same drive** (calibration relaxed; exit error in metres; `bias_rw` is the offset drift setting, 5·10⁻⁴
+**Table 3. Other windows of the same drive** (calibration relaxed; exit error in metres; `bias_rw` is the offset drift setting, 5·10⁻⁴
 is the default):
 
 | Window (s) | Baseline | EKF 5·10⁻⁴ | EKF 0.01 | PF 5·10⁻⁴ | PF 0.01 |
@@ -327,7 +339,7 @@ Vibration averages out; a permanent change does not, and its position error grow
 error of 0.05 m/s² (the gravity component of a 0.3° tilt) costs about 90 m after 60 s and 1.6 km at the end of a 5 km
 tunnel driven at 72 km/h. A change of this size can happen even in a fixed holder: a bump, the car's pitch, a grade the
 map does not know. The simulator assumed the offset changes as slowly as sensor datasheets say; this drive shows it can
-change much faster in a real car, and other windows of the same drive disagree on the best drift setting (table above), so the default was not retuned. The accelerometer is
+change much faster in a real car, and other windows of the same drive disagree on the best drift setting (Table 3), so the default was not retuned. The accelerometer is
 therefore useful for short outages and speed changes, but it cannot carry a long tunnel alone. The design's safety nets
 are falling back to constant speed when the offset is uncertain and resetting the position from absolute references:
 stops, curves, beacons, or vehicle speed where available. The real drive is the strongest argument for those references,
@@ -348,11 +360,11 @@ and for installing beacons in long tunnels.
 - **Fixed stop-detection thresholds** miss stops when the idle is loud (section 6).
 - **The grade is looked up at the estimated position,** so a position error feeds back into the acceleration (section 6).
   The accelerometer's noise should grow with the grade change over the position uncertainty.
-- **Short tunnels:** the EKF is over-confident (79% consistency at 0.5 km); EKF + ZUPT is still about 16 m behind on
+- **Short tunnels:** the EKF is over-confident (79% consistency at 0.5 km; `docs/results/summary.md`, `short_straight_500m`); EKF + ZUPT is still about 16 m behind on
   average in `stop_and_go_3km`.
 - **Phone in hand:** the simulated hand motion is probably gentler than a real one, so the PF result in
   `phone_in_hand_2min` is probably optimistic.
-- **A false beacon peak is not recovered from** (1 of 300 seeds of `beacons_5km`, exit error 102 m): the five-rejection
+- **A false beacon peak is not recovered from** (1 of 300 seeds of `beacons_5km`, exit error 102 m; the maximum in `docs/results/summary.md`): the five-rejection
   reset covers GNSS only.
 - **Reflected GNSS fixes that report a small accuracy** at the exit are not modelled.
 - **Sensors are delay-free and synchronised** (A8); BLE scanning on real phones adds latency.
@@ -372,18 +384,21 @@ and for installing beacons in long tunnels.
 
 ## 9. Conclusions
 
-- **Accelerometer:** pays off when the speed changes (`speed_changes_3km`: 1046 m → 88 m median exit error, baseline to EKF).
-- **Stop detection:** pays off when the car stops (`stop_and_go_3km`: 86 m → 18 m, EKF to EKF + ZUPT).
-- **Map matching in curves:** pays off with the particle filter (`curved_5km_exit_inside`: 142 m → 21 m; budget phone
-  259 m → 43 m; phone handled mid-tunnel 105 m → 13 m).
-- **Beacons:** a median of 3.3 m on a straight 5 km tunnel with beacons every 400 m.
-- **Long, straight, constant-speed tunnels:** the constant-speed baseline is hard to beat (at 5 km: 89 m against 167 m for
-  the EKF).
-- **Callouts:** none missed in 18,000 runs; typically within about 2 s of the ideal time and early rather than late.
-- **Real data (one drive, one phone lying in a tray, not fixed):** the simulation is optimistic. A small permanent change
-  of the accelerometer offset cost more than a kilometre in a 110 s outage, and the best offset-drift setting differs from
-  window to window. The accelerometer cannot carry a long tunnel alone; absolute references (stops, curves, beacons,
-  vehicle speed) are essential.
+Values are median absolute exit errors from Table 1 unless another source is named.
+
+- **Accelerometer:** pays off when the speed changes (`speed_changes_3km`: 1046 m for the baseline, 88 m for the EKF).
+- **Stop detection:** pays off when the car stops (`stop_and_go_3km`: 86 m for the EKF, 18 m for EKF + ZUPT).
+- **Map matching in curves:** pays off with the particle filter (`curved_5km_exit_inside`: 142 m for the EKF, 21 m for the PF;
+  `budget_phone_5km`: 259 m, 43 m; `phone_in_hand_2min`: 105 m, 13 m).
+- **Beacons:** a median of 3.3 m on a straight 5 km tunnel with beacons every 400 m (`beacons_5km`).
+- **Long, straight, constant-speed tunnels:** the constant-speed baseline is hard to beat (5 km tunnel: 89 m for the baseline,
+  167 m for the EKF; Figure 2).
+- **Callouts:** none missed in 18,000 runs; typically within about 2 s of the ideal time and early rather than late
+  (`docs/results/summary.md`).
+- **Real data** (one drive, one phone lying in a tray, not fixed; Tables 2 and 3): the simulation is optimistic. A small
+  permanent change of the accelerometer offset cost more than a kilometre in a 110 s outage, and the best offset-drift setting
+  differs from window to window. The accelerometer cannot carry a long tunnel alone; absolute references (stops, curves,
+  beacons, vehicle speed) are essential.
 
 ## 10. Method of work
 

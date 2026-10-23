@@ -54,12 +54,13 @@ off here: a replay takes about 10 s. Recovery time is not shown: GNSS returns cl
 
 ## Results
 
-Median absolute exit error over 300 seeds per scenario:
+Simulation results: median absolute exit error over 300 seeds per scenario:
 
 - Speed changes: 1046 m for the baseline, 88 m for the EKF.
 - Stop-and-go: 18 m with ZUPT (the baseline saturates at 1500 m).
 - 5 km curved tunnel: 21 m with the particle filter, 109 m for the baseline.
 - No missed callout in 18,000 runs.
+- On one real drive with an artificial tunnel the simulation proved optimistic (see section 6 of the write-up).
 
 Details: [docs/WRITEUP.md](docs/WRITEUP.md) and [docs/results/summary.md](docs/results/summary.md).
 

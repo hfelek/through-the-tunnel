@@ -1,8 +1,9 @@
 """Replay a Sensor Logger recording (iOS, CSV export) through the estimators with an artificial GNSS outage.
 
-Raw recordings stay out of the repository (they contain a real location trace); put the CSV files in one folder and run:
+The project's recording is in data/real/car_mounted/ (the simulator's "Real recording" mode uses it). Any other Sensor Logger
+export can be replayed too: put its CSV files in one folder (data/real/raw/ is git-ignored) and run:
 
-    python tools/replay_real.py data/real/raw/<folder> --outage 515 625 --start 110 --end 830
+    python tools/replay_real.py data/real/car_mounted --outage 515 625 --start 110 --end 830
 
 What it does (written for the T10 check, not part of the simulator):
 - converts iOS units and signs to the contract (CONTRACTS 3.1): specific force in m/s^2 (iOS reports -g on a face-up
