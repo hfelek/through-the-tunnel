@@ -52,8 +52,8 @@ Four methods, each adding one source of information to the previous one, so the 
    filter from the fix. A trust rule decides when the accelerometer may be used: if no GNSS fix has been accepted for 1.5 s
    (`gnss_timeout_s`), the accelerometer is integrated only while the filter's own uncertainty of the offset `b` (its
    standard deviation, taken from the filter's covariance) is below 0.05 m/s² (`accel_trust_sigma_b`). Otherwise the speed
-   is held constant. The uncertainty of `b` grows with time without GNSS (at the rate set by `bias_rw`) and is reduced when
-   GNSS or a stop gives information, so an accelerometer that is badly calibrated or drifts fast is switched off by the
+   is held constant. The uncertainty of `b` grows at the rate set by `bias_rw` while the accelerometer is in use, and only
+   GNSS fixes and detected stops reduce it, so an accelerometer that is badly calibrated or drifts fast is switched off by the
    filter itself, and the estimate then behaves like the baseline. Where a scenario has beacons, a beacon
    pass (the peak of the smoothed signal strength) becomes a position measurement.
 3. **EKF + ZUPT** (zero-velocity update). When the vibration of the accelerometer and gyro drops below a threshold, the car
@@ -129,8 +129,8 @@ tunnels (A23).
 
 ## 5. Results
 
-Single runs are misleading: with one seed, EKF + ZUPT left `speed_changes_3km` with a 45 m error (?); over 300 seeds the median
-is 88 m. All numbers therefore come from Monte Carlo runs: **300 seeds** per scenario and method for the main study, 50 for
+Single runs are misleading: over 300 seeds, EKF + ZUPT leaves `speed_changes_3km` with a median exit error of 88 m, but one
+run in ten ends more than 235 m off (Table 1). All numbers therefore come from Monte Carlo runs: **300 seeds** per scenario and method for the main study, 50 for
 side studies, 30 per point for sweeps. A seed changes every random draw (noise, driver, traffic, GNSS errors).
 
 Metrics:
@@ -223,14 +223,14 @@ gains. The PF cannot help: a straight road has no features.
 *Figure 3. Consistency against the accelerometer bias factor (30 seeds per point; data: `docs/results/sweeps/accel_bias_summary.md`).*
 
 **Accelerometer bias** (0.5–5× the simulated phone's bias while the filter keeps assuming the original phone; Figure 3 and the exit-error values in `docs/results/sweeps/accel_bias_summary.md`; 30 seeds per point, so `speed_changes_3km` differs slightly from Table 1). Errors grow
-but the ranking holds: at 5× the EKF is still 4× better than the baseline in `speed_changes_3km` (228 m (?) vs 1012 m), and
+but the ranking holds: at 5× EKF + ZUPT is still 4× better than the baseline in `speed_changes_3km` (228 m vs 1012 m), and
 stops limit the damage (`hard_brake_inside`: 6 m → 13 m). The real cost is honesty: a filter that assumes a better phone
-than it has becomes over-confident (consistency 90% → 62% (?) in `stop_and_go_3km`). Measuring the real phone's bias is
+than it has becomes over-confident (consistency 90% → 62% in `stop_and_go_3km`). Measuring the real phone's bias is
 therefore the first step on real hardware.
 
 ### 5.3 What the Monte Carlo study found and fixed
 
-*The numbers in this subsection and in section 6 come from earlier diagnosis runs; marked (?) or not, they were not re-checked against the result files when this text was edited.*
+*Before-fix numbers: the 50-seed results at `59d919a` (commit `296dd5d`); after-fix numbers: Table 1.*
 
 The first 50-seed run showed errors that all seeds had on the same side, i.e. biases rather than bad luck:
 
@@ -299,10 +299,10 @@ the replay: GNSS returns clean after an artificial outage, so it is always about
 - **With conditions real roads can meet** (3% grade, 500 m radius) the phone was calibrated after about 5 min, and with
   GNSS the forward acceleration followed the GNSS speed change closely (correlation 0.90). In the outage, however, the EKF's
   speed fell from 12 m/s to almost zero within 60 s while the car accelerated, and it ended 1.7 km behind with 0%
-  consistency. A diagnosis against the removed GNSS shows three causes:
+  consistency. A diagnosis against the removed GNSS (`tools/diagnose_real.py`) shows three causes:
   - **An offset that appeared at highway speed.** Before the outage, at city speed, the forward acceleration matched the
-    GNSS-derived acceleration within 0.03 m/s²; at 70–90 km/h it read on average 0.14 m/s² lower (0.18 in the first
-    40 s), and back at city speed after the outage the difference was 0.05. The filter believed its offset to within
+    GNSS-derived acceleration within 0.03 m/s²; at 70–90 km/h it read on average 0.14 m/s² lower (0.19 in the first
+    40 s), and back at city speed after the outage the difference was 0.06. The filter believed its offset to within
     0.005 m/s² and integrated the difference. This recording cannot tell the cause. Candidates: a vibration-dependent
     offset of the accelerometer (vibration at highway speed was more than twice the city level, and the difference shrank
     again at city speed), a change of the sensor's own offset (for example with temperature; the phone lay in the

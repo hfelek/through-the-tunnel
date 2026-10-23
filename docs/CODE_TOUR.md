@@ -286,6 +286,8 @@ estimator; the EKF owns one instance.
 
 `sim/realdata/sensor_logger.py` (T10.5a): `load_arrays` reads the Sensor Logger CSVs with the standard library and converts iOS signs and units (accelerometer `-G * raw`, lat/lon to ENU, bearing to ENU course), `build_map` fits a smoothing spline through the GNSS track (needs scipy; 1 m resolution, grade from the altitude) and returns `RoadMap.from_columns`, `convert` makes the trace (`source: "real"`, imu, gnss, truth `t, s, v` = GNSS projected on the map), `load_recording` caches it as JSON in `data/real/cache/` (git-ignored). `sim/realdata/replay.py::replay` removes the GNSS inside the window, declares it tunnel `T1`, runs the estimators with `runner._run_estimators` and computes the metrics against the partial truth.
 
+Scripts in `tools/` (run from the repository root, not part of the simulator): `replay_real.py` replays a Sensor Logger folder with an outage window from the command line; `plot_real_replay.py` draws the write-up's Figure 4 (`docs/results/real_replay.png`); `diagnose_real.py` reproduces the real-drive numbers of write-up section 6.3 and Table 3 (stops, four outage windows, speed and forward-acceleration checks, the grade-at-true-position counterfactual; it reads the removed GNSS, so it is a diagnosis only).
+
 ## 10. `web/src`: the UI (React + Vite, plain JavaScript)
 
 Pattern to keep: data-heavy layers are memoized and drawn once per trace; only small overlays depend on playback time `t`.
