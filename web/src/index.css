@@ -138,13 +138,16 @@ body { margin: 0; }
 .picker-item { border-top: 1px solid var(--border); padding-top: 6px; margin-top: 6px; font-size: 14px; }
 .picker-item details { margin: 4px 0 0 22px; font-size: 13px; }
 .picker-item summary { cursor: pointer; color: var(--muted); }
-.param { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 2px 8px; margin: 3px 0; }
-.param input { width: 80px; font: inherit; padding: 2px 4px; border: 1px solid var(--border); border-radius: 4px; }
+/* one shared grid per method: name | input | unit, so every input and unit lines up whatever the name length */
+.params { display: grid; grid-template-columns: 1fr 80px fit-content(9em); gap: 6px 8px; align-items: center; margin: 4px 0; }
+.param { display: contents; }
+.param input { width: 100%; box-sizing: border-box; font: inherit; padding: 2px 4px; border: 1px solid var(--border); border-radius: 4px; }
+.param input[type=checkbox] { width: auto; justify-self: start; }
 .param-name { display: inline-flex; align-items: center; gap: 4px; }
 .param-unit { color: var(--muted); font-size: 12px; }
-.param-desc { flex-basis: 100%; font-size: 12px; color: var(--muted); line-height: 1.35; }
+.param-desc { grid-column: 1 / -1; font-size: 12px; color: var(--muted); line-height: 1.35; }
 .controls button.info-i { width: 15px; height: 15px; min-width: 15px; padding: 0; border-radius: 50%; border: 1px solid var(--muted); background: var(--card); color: var(--muted); font: italic 700 10px/1 serif; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
-.param-err { flex-basis: 100%; color: var(--danger); font-size: 12px; }
+.param-err { grid-column: 1 / -1; color: var(--danger); font-size: 12px; }
 button.link { background: none; border: 0; padding: 0; margin-top: 4px; color: var(--accent); cursor: pointer; font: inherit; text-decoration: underline; }
 .metrics { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; overflow-x: auto; }
 .metrics.empty { color: var(--muted); border-style: dashed; text-align: center; }

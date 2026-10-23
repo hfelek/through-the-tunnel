@@ -11,24 +11,26 @@ function violation(c = {}, value) {
 }
 
 /** Number input that keeps a text draft and commits on blur / Enter; a bad value is rejected with a hint. */
-function ParamName({ name, info }) {
-  const [open, setOpen] = useState(false)
+function ParamName({ name, info, onToggle }) {
   return (
-    <>
-      <span className="param-name">
-        {info?.label ?? name}
-        {info?.description && (
-          <button type="button" className="info-i" title={info.description} aria-label={`About ${info.label}`} onClick={() => setOpen((o) => !o)}>i</button>
-        )}
-      </span>
-      {open && <span className="param-desc">{info.description} <span className="muted">({name})</span></span>}
-    </>
+    <span className="param-name">
+      {info?.label ?? name}
+      {info?.description && (
+        <button type="button" className="info-i" title={info.description} aria-label={`About ${info.label}`} onClick={onToggle}>i</button>
+      )}
+    </span>
   )
+}
+
+/** The long description opens in its own row below the input (a full-width cell of the parameter grid). */
+function ParamDesc({ name, info }) {
+  return <span className="param-desc">{info.description} <span className="muted">({name})</span></span>
 }
 
 function ParamInput({ name, info, value, constraint, onCommit }) {
   const [draft, setDraft] = useState(null)
   const [err, setErr] = useState(null)
+  const [open, setOpen] = useState(false)
   const commit = () => {
     if (draft === null) return
     const v = draft.trim() === '' ? NaN : Number(draft)
@@ -40,7 +42,7 @@ function ParamInput({ name, info, value, constraint, onCommit }) {
   const isInt = constraint?.type === 'int'
   return (
     <label className="param">
-      <ParamName name={name} info={info} />
+      <ParamName name={name} info={info} onToggle={() => setOpen((o) => !o)} />
       <input
         type="number" step={isInt ? 1 : 'any'} min={constraint?.min ?? constraint?.gt}
         value={draft ?? value}
@@ -48,7 +50,8 @@ function ParamInput({ name, info, value, constraint, onCommit }) {
         onBlur={commit}
         onKeyDown={(e) => e.key === 'Enter' && commit()}
       />
-      {info?.unit && <span className="param-unit">{info.unit}</span>}
+      <span className="param-unit">{info?.unit}</span>{/* always rendered: an empty cell keeps the columns aligned */}
+      {open && info?.description && <ParamDesc name={name} info={info} />}
       {err && <span className="param-err">{err}</span>}
     </label>
   )
@@ -56,10 +59,13 @@ function ParamInput({ name, info, value, constraint, onCommit }) {
 
 /** On/off parameter (constraint type "bool"): a checkbox that commits at once. */
 function BoolInput({ name, info, value, onCommit }) {
+  const [open, setOpen] = useState(false)
   return (
     <label className="param">
-      <ParamName name={name} info={info} />
+      <ParamName name={name} info={info} onToggle={() => setOpen((o) => !o)} />
       <input type="checkbox" checked={Boolean(value)} onChange={(e) => onCommit(e.target.checked)} />
+      <span className="param-unit" />
+      {open && info?.description && <ParamDesc name={name} info={info} />}
     </label>
   )
 }
@@ -78,6 +84,7 @@ export default memo(function EstimatorPicker({ estimators, selected, params, onT
           {Object.keys(e.params).length > 0 && (
             <details>
               <summary>Params</summary>
+              <div className="params">
               {Object.keys(e.params).map((name) => {
                 const value = params[e.id]?.[name] ?? e.params[name]
                 const onCommit = (v) => onParam(e.id, name, v)
@@ -85,6 +92,7 @@ export default memo(function EstimatorPicker({ estimators, selected, params, onT
                   ? <BoolInput key={name} name={name} info={e.param_info?.[name]} value={value} onCommit={onCommit} />
                   : <ParamInput key={name} name={name} info={e.param_info?.[name]} value={value} constraint={e.constraints?.[name]} onCommit={onCommit} />
               })}
+              </div>
               <button className="link" onClick={() => onReset(e.id)}>Reset</button>
             </details>
           )}
