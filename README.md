@@ -98,5 +98,4 @@ Add `--jobs N` inside `ARGS` to set the number of processes. An interrupted run 
 | [docs/ASSUMPTIONS.md](docs/ASSUMPTIONS.md) | Numbered assumptions (A1, A2, ...) with sources |
 | [docs/CODE_TOUR.md](docs/CODE_TOUR.md) | Where everything is in the code, data flow, recipes for common changes |
 | [docs/CONTRACTS.md](docs/CONTRACTS.md) | The data shapes: scenario, trace, API, units and frames |
-| [docs/AI_LOG.md](docs/AI_LOG.md) | How AI assistance was used |
 | [PLAN.md](PLAN.md) | The task plan and its change log |
