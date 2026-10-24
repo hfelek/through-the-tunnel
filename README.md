@@ -1,5 +1,7 @@
 # Through the Tunnel
 
+[![CI](https://github.com/hfelek/through-the-tunnel/actions/workflows/ci.yml/badge.svg)](https://github.com/hfelek/through-the-tunnel/actions/workflows/ci.yml)
+
 A simulator and a set of position estimators for a car driving through a GPS-denied tunnel (the Pointr case study, see
 [docs/CASE.md](docs/CASE.md)). The key insight: inside a single-lane tunnel on a known route the problem is
 one-dimensional, so the only unknown that matters is the distance travelled along the road. The methods are layered on top
@@ -26,7 +28,7 @@ make dev
 
 For the exact versions the project was tested with, run `pip install -r requirements-lock.txt` before `pip install -e '.[dev]'` (optional).
 
-Open http://localhost:5173 in a browser (the API runs on port 8000). Checked on a clean clone: install about 1 min, `make test` about 80 s. `make dev` starts both servers and reloads on edits;
+Open http://localhost:5173 in a browser (the API runs on port 8000). The tests and the UI build run in CI on Linux, macOS and Windows (Python 3.12), and the tests also on Python 3.11. Measured on a clean clone: install about 1 min, `make test` about 80 s. `make dev` starts both servers and reloads on edits;
 Ctrl+C stops them.
 
 ### Windows
