@@ -37,6 +37,9 @@ Ctrl+C stops them.
 - **Error chart**: the *Bands* switch shows the ±2σ bands overlaid, in one row per method on a shared scale, or not at all.
 - **Monte Carlo panel** (under the metrics table): runs the current scenario and settings with 20 different seeds (about
   30 s on a 4-core laptop) and shows the spread of the exit error per estimator.
+- The backend simulates several vehicles in one tunnel: each follows the one ahead with a 15 m minimum gap (A10, A13)
+  and has its own sensors and estimators. The UI shows only the first vehicle, and all evaluation scenarios have a
+  single vehicle.
 
 ## Real recording
 
