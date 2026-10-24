@@ -26,7 +26,7 @@ pip install -e '.[dev]'
 make dev
 ```
 
-For the exact versions the project was tested with, run `pip install -r requirements-lock.txt` before `pip install -e '.[dev]'` (optional).
+For the exact versions the project was tested with, run `pip install -r requirements-lock.txt` before `pip install -e '.[dev]'` (optional) (needs Python 3.12 or newer; on 3.11 use the normal install).
 
 Open http://localhost:5173 in a browser (the API runs on port 8000). The tests and the UI build run in CI on Linux, macOS and Windows (Python 3.12), and the tests also on Python 3.11. Measured on a clean clone: install about 1 min, `make test` about 80 s. `make dev` starts both servers and reloads on edits;
 Ctrl+C stops them.
