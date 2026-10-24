@@ -38,7 +38,7 @@ LOADER_VERSION = 1  # bump when the conversion or the map building changes: the 
 def _csv(folder: Path, name: str) -> dict[str, np.ndarray]:
     """One Sensor Logger CSV as float columns sorted by time; empty cells become NaN."""
     matches = [p for p in folder.glob("*.csv") if p.name == f"{name}.csv" or p.name.endswith(f"_{name}.csv")]
-    with open(matches[0], newline="") as f:
+    with open(matches[0], newline="", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
     cols = {k: np.array([float(r[k]) if r[k] != "" else np.nan for r in rows]) for k in rows[0]}
     order = np.argsort(cols["seconds_elapsed"], kind="stable")

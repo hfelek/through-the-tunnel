@@ -124,11 +124,11 @@ class Trace(_Model):
 
 def write_trace(trace: Trace, path: str | Path) -> None:
     """Write trace JSON; absent sensors and null fields are omitted."""
-    Path(path).write_text(trace.model_dump_json(exclude_none=True))
+    Path(path).write_text(trace.model_dump_json(exclude_none=True), encoding="utf-8")
 
 
 def read_trace(path: str | Path) -> Trace:
-    return Trace.model_validate_json(Path(path).read_text())
+    return Trace.model_validate_json(Path(path).read_text(encoding="utf-8"))
 
 
 def _decimate_columns(block: BaseModel, hz: float) -> BaseModel:

@@ -245,4 +245,4 @@ class Scenario(_Model):
 
 def load_scenario(path: str | Path) -> Scenario:
     """Read and validate a scenario JSON file."""
-    return Scenario.model_validate(json.loads(Path(path).read_text()))
+    return Scenario.model_validate(json.loads(Path(path).read_text(encoding="utf-8")))

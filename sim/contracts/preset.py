@@ -52,4 +52,4 @@ PRESET_DIR = Path(__file__).resolve().parents[2] / "presets"
 
 
 def load_preset(name: str) -> Preset:
-    return Preset.model_validate(json.loads((PRESET_DIR / f"{name}.json").read_text()))
+    return Preset.model_validate(json.loads((PRESET_DIR / f"{name}.json").read_text(encoding="utf-8")))

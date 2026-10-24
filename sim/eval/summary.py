@@ -20,7 +20,7 @@ FLOOR_M = 0.1  # the log-scale overview clips |exit error| at this floor (zero c
 
 
 def read_rows(path: Path) -> list[dict[str, str]]:
-    with path.open(newline="") as f:
+    with path.open(newline="", encoding="utf-8") as f:
         return list(csv.DictReader(f))
 
 
@@ -126,7 +126,7 @@ def write_summary(rows: list[dict[str, str]], path: Path, title: str) -> None:
         "## Accuracy", "", git_line, "", *accuracy_table(rows), "",
         "## Callout timing", "", git_line, "", *callout_table(rows), "",
     ])
-    path.write_text(text)
+    path.write_text(text, encoding="utf-8")
     print(f"wrote {path} ({n_seeds} scenario-seed pairs)")
 
 

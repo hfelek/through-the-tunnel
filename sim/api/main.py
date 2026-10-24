@@ -48,7 +48,7 @@ class SimulateRequest(BaseModel):
 def scenarios() -> list[dict[str, str]]:
     out = []
     for path in sorted(SCENARIOS.glob("*.json")):
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
         out.append({"id": data["id"], "title": data.get("title") or data["id"], "description": data.get("description", "")})
     return sorted(out, key=lambda x: x["id"])
 
@@ -60,7 +60,7 @@ def scenario(scenario_id: str) -> dict:
     path = SCENARIOS / f"{scenario_id}.json"
     if not path.is_file():
         raise HTTPException(404, f"unknown scenario: {scenario_id}")
-    return json.loads(path.read_text())
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 @app.get("/api/estimators")
@@ -70,7 +70,7 @@ def estimators() -> list[dict]:
 
 @app.get("/api/presets")
 def presets() -> dict[str, dict]:
-    return {p.stem: json.loads(p.read_text()) for p in sorted(PRESETS.glob("*.json"))}
+    return {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in sorted(PRESETS.glob("*.json"))}
 
 
 def check_estimators(estimators: dict[str, dict]) -> None:

@@ -256,13 +256,13 @@ def inline_tasks(sc: Scenario, params: dict[str, dict], n_seeds: int) -> list[tu
 def _read_done(path: Path) -> set[tuple[str, str, int, str]]:
     if not path.exists():
         return set()
-    with path.open(newline="") as f:
+    with path.open(newline="", encoding="utf-8") as f:
         return {(r["scenario"], r["variant"], int(r["seed"]), r["estimator"]) for r in csv.DictReader(f)}
 
 
 def _append(path: Path, rows: list[dict[str, Any]]) -> None:
     new = not path.exists() or path.stat().st_size == 0
-    with path.open("a", newline="") as f:
+    with path.open("a", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=COLUMNS)
         if new:
             w.writeheader()
