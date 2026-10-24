@@ -20,12 +20,46 @@ cd through-the-tunnel
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -e '.[dev]'
-(cd web && npm install)
+(cd web && npm ci)
 make dev
 ```
 
+For the exact versions the project was tested with, run `pip install -r requirements-lock.txt` before `pip install -e '.[dev]'` (optional).
+
 Open http://localhost:5173 in a browser (the API runs on port 8000). Checked on a clean clone: install about 1 min, `make test` about 80 s. `make dev` starts both servers and reloads on edits;
 Ctrl+C stops them.
+
+### Windows
+
+`make` is not needed. In PowerShell, from the repository root:
+
+```
+py -m venv .venv
+.venv\Scripts\Activate.ps1      # if PowerShell blocks it: Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+pip install -e ".[dev]"
+cd web; npm ci; cd ..
+```
+
+Then start the two servers in two terminals:
+
+```
+# Terminal 1 (venv active)
+uvicorn sim.api.main:app --port 8000
+
+# Terminal 2
+cd web; npm run dev
+```
+
+Open http://localhost:5173. The `make` targets as plain commands (arguments go at the end of each line):
+
+| make target | Windows command |
+| --- | --- |
+| `make test` | `pytest -q` |
+| `make lint` | `ruff check -q` |
+| `make montecarlo ARGS="..."` | `python -m sim.eval.montecarlo ...` |
+| `make summary` | `python -m sim.eval.summary` |
+| `make sweep ARGS="..."` | `python -m sim.eval.sweep ...` |
+| `make figures` | `python -m sim.eval.summary`, then `python -m sim.eval.sweep --figures` |
 
 ## Using the simulator
 
@@ -44,7 +78,7 @@ Ctrl+C stops them.
 ## Real recording
 
 The picker's *Source* switch has a second mode, *Real recording*: a 14-minute city drive recorded with a phone (Sensor Logger,
-iPhone in a mount, in `data/real/car_mounted/`). Pick a recording, set the outage window in recording seconds (default 515
+iPhone placed in the car's charging tray, in `data/real/car_mounted/`). Pick a recording, set the outage window in recording seconds (default 515
 to 625) and press *Run*. GNSS is removed in the window, as if the car were in a tunnel, and the removed fixes serve as the
 truth. The map comes from the drive's own GNSS, so the result is a replay check and not a map-quality test. Auto-run is
 off here: a replay takes about 10 s. Recovery time is not shown: GNSS returns clean after the artificial outage, so it would be about 0 s for every method and would not separate them. The first run converts the CSV files and caches them in `data/real/cache/`.
@@ -79,6 +113,7 @@ root with the virtual environment active.
 | `make sweep ARGS="--sweep accel_bias --seeds 30"` | Accelerometer-bias sweep (or `--sweep tunnel_length`) | about 15 min on 4 cores; 3 min for the tunnel-length sweep |
 | `make summary` | Tables and the overview plot from the CSVs | seconds |
 | `make figures` | Every table and figure, including the sweeps, from the CSVs | seconds |
+| `python tools/diagnose_real.py` | The real-drive diagnosis (write-up section 6.3 and Table 3) | about 2 min |
 
 Add `--jobs N` inside `ARGS` to set the number of processes. An interrupted run continues where it stopped.
 
