@@ -122,6 +122,7 @@ body { margin: 0; }
 .ctl { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
 .ctl input[type=range] { width: 100%; margin: 0; }
 .ctl-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
+.ctl-info { font-size: 12px; line-height: 1.35; color: var(--muted); }
 .seed { width: 90px; }
 .plan h3 { margin: 4px 0; font-size: 14px; }
 .plan { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }

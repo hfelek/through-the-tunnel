@@ -1,22 +1,41 @@
-import { memo } from 'react'
+import { memo,useState } from 'react'
 import * as E from '../lib/scenarioEdits'
 import DrivingPlan from './DrivingPlan'
 
 const COMMIT_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown']
 
+/** Small "i" button: hover shows the text, click toggles it below the control. */
+function InfoButton({ label, text, onToggle }) {
+  return (
+    <button type="button" className="info-i" title={text} aria-label={`About ${label}`}
+      onClick={(e) => { e.preventDefault(); onToggle() }}>i</button>
+  )
+}
+
 /** Range input that edits the JSON on every step but only commits (runs) on release. */
-function Slider({ label, value, min, max, step, unit, hint, onChange, onCommit }) {
+function Slider({ label, value, min, max, step, unit, hint, info, onChange, onCommit }) {
+  const [open, setOpen] = useState(false)
   return (
     <label className="ctl">
-      <span>{label}: <b>{Number(value.toFixed(2))}{unit}</b>{hint && <span className="muted"> {hint}</span>}</span>
+      <span>
+        {label}: <b>{Number(value.toFixed(2))}{unit}</b>{hint && <span className="muted"> {hint}</span>}
+        {info && <> <InfoButton label={label} text={info} onToggle={() => setOpen((o) => !o)} /></>}
+      </span>
       <input
         type="range" min={min} max={max} step={step} value={Math.min(Math.max(value, min), max)}
         onChange={(e) => onChange(Number(e.target.value))}
         onPointerUp={onCommit}
         onKeyUp={(e) => COMMIT_KEYS.includes(e.key) && onCommit()}
       />
+      {open && <span className="ctl-info">{info}</span>}
     </label>
   )
+}
+
+const INFO = {
+  preset: 'Which phone\'s sensor quality is simulated. Flagship: datasheet values of a phone IMU (Bosch BMI260), barometer and GNSS. Budget: the flagship values made 2-4x worse, since budget datasheets are rarely public. Sources: presets/README.md.',
+  pitch: 'How the phone is tilted in its holder. 0° = lying flat, screen up, top pointing forward; 65° = top tilted up toward the driver. The estimators do not know this angle; they learn the phone\'s orientation from GNSS before the tunnel. Yaw and roll are set in Edit JSON.',
+  calloutK: 'How early the exit callouts come when the position is uncertain. A callout fires when position + k x uncertainty reaches the callout point. 0 uses the estimate alone (late about half the time); higher values announce earlier. Default 1.',
 }
 
 /**
@@ -32,6 +51,7 @@ export default memo(function Controls({ scenario, presets, calloutK, autoRun, on
   if (!presetIds.includes(car.phone.preset)) presetIds.push(car.phone.preset)
   const live = (fn) => (v) => onEdit(fn(scenario, v), false)
   const now = (fn) => (v) => onEdit(fn(scenario, v), true)
+  const [presetOpen, setPresetOpen] = useState(false)
   return (
     <section className="panel controls settings">
       <div className="ctl-row settings-top">
@@ -54,12 +74,15 @@ export default memo(function Controls({ scenario, presets, calloutK, autoRun, on
         <div className="settings-col">
           <h3>Phone and sensors</h3>
           <label className="ctl">
-            <span>Phone preset</span>
+            <span>Phone preset{' '}  
+              <InfoButton label="Phone preset" text={INFO.preset} onToggle={() => setPresetOpen((o) => !o)} />
+            </span>
             <select value={car.phone.preset} onChange={(e) => now(E.setPhonePreset)(e.target.value)}>
               {presetIds.map((id) => <option key={id} value={id}>{presets[id]?.name || id}</option>)}
             </select>
+            {presetOpen && <span className="ctl-info">{INFO.preset}</span>}
           </label>
-          <Slider label="Mount pitch" value={car.phone.mount.pitch_deg} unit="°" min={0} max={90} step={1} onChange={live(E.setMountPitch)} onCommit={onCommit} />
+          <Slider label="Mount pitch" value={car.phone.mount.pitch_deg} unit="°" min={0} max={90} step={1} info={INFO.pitch} onChange={live(E.setMountPitch)} onCommit={onCommit} />          
           <label className="ctl-row">
             <input type="checkbox" checked={scenario.beacons.enabled} onChange={(e) => onEdit(E.setBeacons(scenario, { enabled: e.target.checked }), true)} /> Beacons
           </label>
@@ -70,7 +93,7 @@ export default memo(function Controls({ scenario, presets, calloutK, autoRun, on
               onChange={(e) => Number.isInteger(Number(e.target.value)) && e.target.value !== '' && now(E.setSeed)(Number(e.target.value))} /></label>
             <button className="secondary" onClick={() => now(E.setSeed)(Math.floor(Math.random() * 100000))}>New seed</button>
           </div>
-          <Slider label="Callout k" value={calloutK} unit="" min={0} max={3} step={0.1} onChange={onCalloutK} onCommit={onCommit} />
+          <Slider label="Callout k" value={calloutK} unit="" min={0} max={3} step={0.1} info={INFO.calloutK} onChange={onCalloutK} onCommit={onCommit} />
         </div>
         <div className="settings-col">
           <h3>Methods</h3>
