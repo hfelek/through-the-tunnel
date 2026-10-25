@@ -11,7 +11,8 @@ tunnel, and measures how well each method works. In short:
    scenarios, Bluetooth beacons.
 2. **Drove a simulated car along it,** with cruising, speed changes, stops and traffic.
 3. **Generated what the phone's sensors would read:** accelerometer and gyroscope, GNSS, barometer, magnetometer and
-   beacon signal, each with a noise model from datasheets, an unknown phone orientation and tunnel effects (no GNSS inside).
+   beacon signal, each with a noise model from manufacturers' published specifications, an unknown phone orientation and
+   tunnel effects (no GNSS inside).
 4. **Gave the estimators only the map and the sensor readings,** never the true position. The truth is used only to score
    them afterwards.
 5. **Tried four methods, each adding one source of information:** a constant-speed baseline, an EKF that fuses
@@ -96,11 +97,11 @@ shape the results:
 - **A3, A4 phone in a mount, at least 60 s of GNSS before the tunnel**: the mount is calibrated in this window; with less,
   the EKF falls back to constant speed. Handling is modelled as separate scenarios.
 - **A6 no positioning inside the tunnel** (no repeaters, cellular or Wi-Fi); beacons only where a scenario enables them.
-- **A14, A16 sensor quality** from datasheets; the budget phone is the flagship scaled by 2–4×. The bias sweep (5.2) tests
-  how much the conclusions depend on this.
+- **A14, A16 sensor quality** from published specifications; the budget phone is the flagship scaled by 2–4×. The bias
+  sweep (5.2) tests how much the conclusions depend on this.
 - **A17 vibration**, chosen so that standing and moving are separable; stop detection depends on it. A real drive measured
   about twice the simulated level (section 6).
-- **A5 no vehicle speed** (OBD, CarPlay, Android Auto); it is the obvious upgrade (section 8).
+- **A5 no vehicle speed** (OBD-II or a vehicle-data API); it is the obvious upgrade (section 8).
 
 ## 4. What is simulated and how
 
@@ -110,9 +111,10 @@ computed on the truth side.
 - **World.** A road map at 1 m resolution (curvature, grade, tunnels, exits, beacons) and a vehicle that follows a driving
   plan with cruising, speed changes, stops and traffic, with comfortable, jerk-limited accelerations (A11) and a cruising
   speed that wanders by a few km/h (A27).
-- **Sensors.** A 100 Hz IMU with datasheet bias and temperature drift (A14), vibration that grows with speed (A17), a mount
-  orientation unknown to the estimator, and handling events. GNSS at 1 Hz with time-correlated errors (A15), degraded near
-  portals (A19), absent in the tunnel. Barometer, magnetometer and BLE beacons are simulated as well (A20–A26).
+- **Sensors.** A 100 Hz IMU with bias and temperature drift from published specifications (A14), vibration that grows with
+  speed (A17), a mount orientation unknown to the estimator, and handling events. GNSS at 1 Hz with time-correlated errors
+  (A15), degraded near portals (A19), absent in the tunnel. Barometer, magnetometer and BLE beacons are simulated as well
+  (A20–A26).
 - **Scenarios.** Fifteen, each testing one thing (`scenarios/README.md`); eight are discussed here, all are in
   `docs/results/summary.md`.
 - **The simulator.** A web app (FastAPI and React) shows the true position next to each method's estimate, its uncertainty
@@ -186,8 +188,11 @@ better), p90 is the value 9 out of 10 runs stay below. Lower is better; the best
 **Callouts** (source: `docs/results/summary.md`, section "Callout timing")
 
 - None was missed in 18,000 runs (a callout is missed if it never fires before the exit).
-- Timing: with the method that suits each scenario the median error is within about 2 s, mostly early, as the `s + k·σ`
-  rule intends. Examples: `stop_and_go_3km` with EKF + ZUPT, at 500 m: median −1.2 s, and 9 out of 10 runs within 4.7 s;
+- Timing: with the method that suits each scenario, the median 500 m callout came 0.4 to 4.3 s early, as the `s + k·σ`
+  rule intends, but some came late: in `speed_changes_3km` (EKF) 8% came more than 2 s late, the latest by 10 s, and in
+  `stop_and_go_3km` (EKF + ZUPT) the latest was 30 s late, which in slow traffic is only 38 m. Choosing the method per
+  scenario is hindsight; the submitted write-up reports callouts in metres with one fixed configuration. Examples:
+  `stop_and_go_3km` with EKF + ZUPT, at 500 m: median −1.2 s, and 9 out of 10 runs within 4.7 s;
   `curved_5km_exit_inside` with the PF, at 500 m: median −0.4 s.
 
 **Recovery** (source: `docs/results/summary.md`, section "Accuracy")
@@ -289,7 +294,10 @@ an adjustable window. The default window is 110 s (2.2 km, recording time 515–
 | Calibration relaxed for real roads | −563 | −1693 (consistency 0%) | −1692 |
 | Relaxed, and offset drift 20× larger | −563 | −335 | +61 |
 
-EKF + ZUPT equals the EKF in every row, because there is no stop in the window. Recovery time is not reported for
+EKF + ZUPT equals the EKF in every row: with the replay starting at 110 s, it learned no offset at a stop before this
+window. With the replay starting at the beginning of the drive it did, and that changes the result: EKF + ZUPT entered
+this window with an offset of 0.23 m/s² (uncertainty 0.005 m/s²) learned at earlier stops and ended 1.85 km behind,
+against 0.41 km for the plain EKF. The calibration history matters as much as the settings. Recovery time is not reported for
 the replay: GNSS returns clean after an artificial outage, so it is always about 0 s and does not separate the methods.
 
 ### 6.3 Why the default window fails
@@ -339,8 +347,9 @@ Without GNSS, the phone's accelerometer is only as good as the offset it was cal
 Vibration averages out; a permanent change does not, and its position error grows with the square of time: an offset
 error of 0.05 m/s² (the gravity component of a 0.3° tilt) costs about 90 m after 60 s and 1.6 km at the end of a 5 km
 tunnel driven at 72 km/h. A change of this size can happen even in a fixed holder: a bump, the car's pitch, a grade the
-map does not know. The simulator assumed the offset changes as slowly as sensor datasheets say; this drive shows it can
-change much faster in a real car, and other windows of the same drive disagree on the best drift setting (Table 3), so the default was not retuned. The accelerometer is
+map does not know. The simulator assumed the offset changes as slowly as the published sensor specifications suggest; this
+drive shows it can change much faster in a real car, and other windows of the same drive disagree on the best drift
+setting (Table 3), so the default was not retuned. The accelerometer is
 therefore useful for short outages and speed changes, but it cannot carry a long tunnel alone. The design's safety nets
 are falling back to constant speed when the offset is uncertain and resetting the position from absolute references:
 stops, curves, beacons, or vehicle speed where available. The real drive is the strongest argument for those references,
@@ -352,13 +361,15 @@ and for installing beacons in long tunnels.
   degree, which one real drive produced and the simulator does not, grows into hundreds of metres within two minutes.
   The simulated offset is too stable, so the simulated EKF results are optimistic; the ranking of what helps (stops,
   curves, beacons) is more trustworthy than the metres.
-- **Simulation only, and probably optimistic.** The estimators and the simulator share the same models, so the filter
+- **The simulation is probably optimistic.** The estimators and the simulator share the same models, so the filter
   knows its noise better than it would in reality. Rankings and mechanisms are more trustworthy than absolute metres.
 - **The map is assumed perfect** (A2) and the route known (A1). Curvature errors would directly hurt the PF; repeated,
   identical curves could confuse it.
 - **Map matching can hurt on real data:** in one of four replay windows the PF ended farther off than the EKF (section 6.3);
   one drive is too little to say how often.
 - **Fixed stop-detection thresholds** miss stops when the idle is loud (section 6).
+- **Offsets learned at stops may not hold at speed:** the zero-velocity update can carry a wrong offset into a later
+  outage (section 6.2).
 - **The grade is looked up at the estimated position,** so a position error feeds back into the acceleration (section 6).
   The accelerometer's noise should grow with the grade change over the position uncertainty.
 - **Short tunnels:** the EKF is over-confident (79% consistency at 0.5 km; `docs/results/summary.md`, `short_straight_500m`); EKF + ZUPT is still about 16 m behind on
@@ -375,10 +386,10 @@ and for installing beacons in long tunnels.
 1. **Retune on recordings, then validate.** Set the offset drift, calibration conditions and stop threshold from several
    real drives with the phone in a fixed holder; repeat the artificial-tunnel replay over many windows to get statistics;
    then record a drive through a real tunnel, with the barometer on, to test map matching on slopes.
-2. **Port to a phone.** Android `SensorManager` and iOS Core Motion deliver the IMU at 100–200 Hz; the EKF's cost is
-   negligible next to the sensors' own power use.
-3. **Use vehicle speed when available.** CarPlay, Android Auto or OBD wheel speed removes the tilt problem and most of the
-   drift.
+2. **Port to a phone.** Android `SensorManager` and iOS Core Motion deliver the IMU at 100–200 Hz; the EKF costs about
+   50 µs per measurement; battery use and background sensor access remain to be tested.
+3. **Use vehicle speed when available.** Wheel speed from OBD-II or a vehicle-data API, where available, removes the tilt
+   problem and most of the drift.
 4. **Blend motion models.** An interacting multiple model (IMM) filter could switch between constant speed and
    accelerometer-driven motion, removing the long-straight-tunnel weakness (5.2).
 5. **Maps.** Tunnel geometry and beacon positions from the operator; a smoother can refine past positions after the exit.
@@ -394,8 +405,8 @@ Values are median absolute exit errors from Table 1 unless another source is nam
 - **Beacons:** a median of 3.3 m on a straight 5 km tunnel with beacons every 400 m (`beacons_5km`).
 - **Long, straight, constant-speed tunnels:** the constant-speed baseline is hard to beat (5 km tunnel: 89 m for the baseline,
   167 m for the EKF; Figure 2).
-- **Callouts:** none missed in 18,000 runs; typically within about 2 s of the ideal time and early rather than late
-  (`docs/results/summary.md`).
+- **Callouts:** none missed in 18,000 runs; with the method that suits each scenario, the median 500 m callout came 0.4 to
+  4.3 s early, but a minority came late, up to 10 s with speed changes (`docs/results/summary.md`).
 - **Real data** (one drive, one phone lying in a tray, not fixed; Tables 2 and 3): the simulation is optimistic. A small
   permanent change of the accelerometer offset cost more than a kilometre in a 110 s outage, and the best offset-drift setting
   differs from window to window. The accelerometer cannot carry a long tunnel alone; absolute references (stops, curves,
@@ -406,4 +417,4 @@ Values are median absolute exit errors from Table 1 unless another source is nam
 The project was built in small tasks, each with a written goal and acceptance criteria. For every task the agent first
 proposed a plan, the plan was approved, the code and a few light tests were written, a short report was reviewed, and the
 change was committed on its own. The simulator was developed first, the estimators second, and real data last, so every
-layer could be measured against the one below. The full AI log is delivered as a separate report.
+layer could be measured against the one below.

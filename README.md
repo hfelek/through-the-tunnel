@@ -14,22 +14,50 @@ alignment (finding the car's forward axis from the sensors, also after the phone
 
 ## Quick start
 
-Prerequisites: Python 3.11 or newer, Node.js 20.19 or newer (with npm; Vite 8 needs it), and `make`.
+Prerequisites: Python 3.11 or newer, Node.js 20.19 or newer (with npm; Vite 8 needs it), and `make` (macOS and Linux only).
+
+### macOS
+
+The `python3` that ships with macOS is version 3.9 and cannot install this project. Use Python 3.12 from
+[Homebrew](https://brew.sh) instead; if it is not installed yet, run `brew install python@3.12` once. Then:
 
 ```
 git clone https://github.com/hfelek/through-the-tunnel.git
 cd through-the-tunnel
-python -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
 pip install -e '.[dev]'
 (cd web && npm ci)
 make dev
 ```
 
-For the exact versions the project was tested with, run `pip install -r requirements-lock.txt` before `pip install -e '.[dev]'` (optional) (needs Python 3.12 or newer; on 3.11 use the normal install).
+### Linux
+
+Check that `python3 --version` shows 3.11 or newer; if not, install a newer Python from your distribution and use it
+in the third line (for example `python3.12 -m venv .venv`). Then:
+
+```
+git clone https://github.com/hfelek/through-the-tunnel.git
+cd through-the-tunnel
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -e '.[dev]'
+(cd web && npm ci)
+make dev
+```
 
 Open http://localhost:5173 in a browser (the API runs on port 8000). The tests and the UI build run in CI on Linux, macOS and Windows (Python 3.12), and the tests also on Python 3.11. Measured on a clean clone: install about 1 min, `make test` about 80 s. `make dev` starts both servers and reloads on edits;
 Ctrl+C stops them.
+
+For the exact versions the project was tested with, run `pip install -r requirements-lock.txt` before `pip install -e '.[dev]'` (optional) (needs Python 3.12 or newer; on 3.11 use the normal install).
+
+**If something goes wrong.** `File "setup.py" or "setup.cfg" not found`, `uvicorn: command not found` or a browser page
+without data (`ECONNREFUSED` in the terminal) all mean that the virtual environment was created with a Python older
+than 3.11. Stop `make dev` with Ctrl+C, check `python --version` inside the environment, then run `rm -rf .venv` and
+repeat the steps from the `venv` line with a newer Python. A few `ECONNREFUSED` or `ETIMEDOUT` lines right after
+`make dev` starts are normal: the browser asked before the API was ready; reload the page.
 
 ### Windows
 
@@ -82,7 +110,7 @@ Open http://localhost:5173. The `make` targets as plain commands (arguments go a
 The picker's *Source* switch has a second mode, *Real recording*: a 14-minute city drive recorded with a phone (Sensor Logger,
 iPhone placed in the car's charging tray, in `data/real/car_mounted/`). Pick a recording, set the outage window in recording seconds (default 515
 to 625) and press *Run*. GNSS is removed in the window, as if the car were in a tunnel, and the removed fixes serve as the
-truth. The map comes from the drive's own GNSS, so the result is a replay check and not a map-quality test. Auto-run is
+reference. The map comes from the drive's own GNSS, so the result is a replay check and not a map-quality test. Auto-run is
 off here: a replay takes about 10 s. Recovery time is not shown: GNSS returns clean after the artificial outage, so it would be about 0 s for every method and would not separate them. The first run converts the CSV files and caches them in `data/real/cache/`.
 
 ## Scenarios

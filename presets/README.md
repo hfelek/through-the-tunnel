@@ -6,8 +6,8 @@ Each file has an `id` (the file name, used in scenarios) and an optional `name`,
 
 | Preset | Meaning | Basis |
 | --- | --- | --- |
-| `flagship_2024` | A current high-end smartphone | Bosch BMI260 (IMU marketed for smartphones) and BMP390 (barometer) datasheets, GPS.gov smartphone accuracy |
-| `budget` | A low-cost smartphone | Flagship values scaled by 2–4× (assumption A16), since budget-phone sensor datasheets are rarely public |
+| `flagship_2024` | A current high-end smartphone | Bosch BMI260 (IMU marketed for smartphones) and BMP390 (barometer) published specifications, GPS.gov smartphone accuracy |
+| `budget` | A low-cost smartphone | Flagship values scaled by 2–4× (assumption A16), since budget-phone sensor specifications are rarely public |
 
 The flagship preset is a representative smartphone-class IMU, not a specific phone. The BMI260 was chosen because Bosch markets it for smartphones and publishes its specifications. Teardowns show that the IMU market in phones is shared by STMicroelectronics, Bosch Sensortec and TDK InvenSense with specifications of the same order; iFixit identifies a Bosch Sensortec accelerometer and gyroscope in the iPhone 17 Pro, but not the exact part.
 
@@ -33,7 +33,7 @@ For dead reckoning in a tunnel, a constant accelerometer bias `b` grows into a p
 
 ## Derived drift values (assumption A14)
 
-Datasheets give temperature coefficients rather than drift over time. Assuming the phone warms or cools by about 2 K during a 3-minute tunnel, the drift over 180 s is coefficient × 2 K, modelled as a random walk:
+The published specifications give temperature coefficients rather than drift over time. Assuming the phone warms or cools by about 2 K during a 3-minute tunnel, the drift over 180 s is coefficient × 2 K, modelled as a random walk:
 
 | Sensor | Temperature coefficient | Drift over 180 s | Random walk = drift / √180 |
 | --- | --- | --- | --- |
@@ -43,7 +43,7 @@ Datasheets give temperature coefficients rather than drift over time. Assuming t
 
 ## Assumed values (assumption A15)
 
-Not taken from a datasheet: GNSS error correlation time (30 s), GNSS speed noise (0.15 m/s) and magnetometer noise (0.3 µT). The magnetometer is simulated only to show why it is unusable inside a tunnel.
+Not taken from published specifications: GNSS error correlation time (30 s), GNSS speed noise (0.15 m/s) and magnetometer noise (0.3 µT). The magnetometer is simulated only to show why it is unusable inside a tunnel.
 
 ## GNSS
 
