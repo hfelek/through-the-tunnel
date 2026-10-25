@@ -12,7 +12,7 @@ export const initialState = {
   outdated: false, // the scenario was edited after the shown trace was computed
   presets: {},
   calloutK: 1.0, // run parameter, not part of the scenario
-  autoRun: true,
+  autoRun: false,
   source: 'sim', // 'sim' = scenarios, 'real' = replay of a recording with a GNSS outage (T10.5b)
   recordings: [], // from GET /api/real: {id, title, span_s, default_outage_s}
   recordingId: null,
